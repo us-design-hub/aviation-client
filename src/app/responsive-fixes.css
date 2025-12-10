@@ -1,0 +1,212 @@
+/* Mobile Responsive and Dark Mode Fixes */
+
+@layer utilities {
+  /* Mobile Container Padding */
+  @media (max-width: 640px) {
+    .mx-auto.p-6 {
+      padding: 1rem;
+    }
+    
+    /* Reduce header padding on mobile */
+    [class*="CardHeader"] {
+      padding: 1rem;
+    }
+    
+    [class*="CardContent"] {
+      padding: 1rem;
+    }
+  }
+  
+  /* Sheet/Dialog Responsive Width */
+  @media (max-width: 768px) {
+    [data-slot="sheet-content"] {
+      max-width: 100vw !important;
+      width: 100vw !important;
+    }
+    
+    /* Ensure sheets don't overflow */
+    .w-\[600px\],
+    .w-\[700px\],
+    .sm\:w-\[700px\] {
+      width: 100vw !important;
+      max-width: 100vw !important;
+    }
+  }
+  
+  /* Table Horizontal Scroll */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix Table Cell Padding on Mobile */
+  @media (max-width: 640px) {
+    [data-slot="table-cell"] {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    
+    [data-slot="table-head"] {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+  }
+  
+  /* Schedule View Mobile */
+  @media (max-width: 768px) {
+    .min-w-\[800px\] {
+      min-width: 600px;
+    }
+  }
+  
+  /* Form Field Stacking on Mobile */
+  @media (max-width: 640px) {
+    .grid.grid-cols-2 {
+      grid-template-columns: 1fr;
+    }
+    
+    .flex.gap-4 {
+      flex-direction: column;
+    }
+  }
+}
+
+@layer components {
+  /* Dark Mode Card Fixes */
+  .dark [data-slot="card"] {
+    background-color: oklch(0.205 0 0);
+    border-color: oklch(1 0 0 / 10%);
+  }
+  
+  /* Dark Mode Input Fixes */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: oklch(0.269 0 0);
+    border-color: oklch(1 0 0 / 15%);
+    color: oklch(0.985 0 0);
+  }
+  
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: oklch(0.708 0 0);
+  }
+  
+  /* Dark Mode Table Fixes */
+  .dark table {
+    border-color: oklch(1 0 0 / 10%);
+  }
+  
+  .dark [data-slot="table-row"]:hover {
+    background-color: oklch(0.269 0 0);
+  }
+  
+  .dark [data-slot="table-head"] {
+    background-color: oklch(0.205 0 0);
+    border-bottom-color: oklch(1 0 0 / 10%);
+  }
+  
+  /* Dark Mode Badge Fixes */
+  .dark .bg-blue-100 {
+    background-color: oklch(0.3 0.1 240) !important;
+  }
+  
+  .dark .text-blue-800 {
+    color: oklch(0.8 0.1 240) !important;
+  }
+  
+  .dark .bg-green-100 {
+    background-color: oklch(0.3 0.1 150) !important;
+  }
+  
+  .dark .text-green-800 {
+    color: oklch(0.8 0.1 150) !important;
+  }
+  
+  .dark .bg-purple-100 {
+    background-color: oklch(0.3 0.1 300) !important;
+  }
+  
+  .dark .text-purple-800 {
+    color: oklch(0.8 0.1 300) !important;
+  }
+  
+  .dark .bg-orange-100 {
+    background-color: oklch(0.3 0.12 50) !important;
+  }
+  
+  .dark .text-orange-800 {
+    color: oklch(0.8 0.12 50) !important;
+  }
+  
+  /* Dark Mode Schedule View */
+  .dark .bg-muted\/50 {
+    background-color: oklch(0.269 0 0 / 50%);
+  }
+  
+  .dark .bg-blue-50 {
+    background-color: oklch(0.25 0.05 240);
+  }
+  
+  .dark .border-blue-200 {
+    border-color: oklch(0.35 0.08 240);
+  }
+  
+  /* Dark Mode Popover/Dropdown */
+  .dark [data-slot="popover-content"],
+  .dark [data-slot="dropdown-menu-content"] {
+    background-color: oklch(0.205 0 0);
+    border-color: oklch(1 0 0 / 10%);
+  }
+  
+  /* Mobile: Stack Stat Cards */
+  @media (max-width: 768px) {
+    .grid.grid-cols-2.md\:grid-cols-5,
+    .grid.grid-cols-4 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .grid.grid-cols-2 {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  
+  /* Mobile: Better Button Sizing */
+  @media (max-width: 640px) {
+    button {
+      min-height: 44px; /* Touch target size */
+    }
+    
+    /* Smaller icon buttons */
+    .h-8.w-8 {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Dark Mode: Ensure Proper Text Contrast */
+  .dark .text-gray-700 {
+    color: oklch(0.85 0 0) !important;
+  }
+  
+  .dark .text-gray-600 {
+    color: oklch(0.75 0 0) !important;
+  }
+  
+  .dark .text-muted-foreground {
+    color: oklch(0.708 0 0);
+  }
+  
+  /* Fix Select Trigger in Dark Mode */
+  .dark [data-slot="select-trigger"] {
+    background-color: oklch(0.269 0 0);
+    border-color: oklch(1 0 0 / 15%);
+    color: oklch(0.985 0 0);
+  }
+  
+  .dark [data-slot="select-trigger"]:hover {
+    background-color: oklch(0.3 0 0);
+  }
+}
+
