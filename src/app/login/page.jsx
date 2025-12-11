@@ -13,8 +13,8 @@ import { toast } from 'sonner';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({
-    email: "admin@wingsofanangel.com",
-    password: "pass1234",
+    email: "",
+    password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
