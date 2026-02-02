@@ -64,6 +64,10 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  validateResetToken: (token) => api.post('/auth/validate-reset-token', { token }),
+  getMe: () => api.get('/auth/me'),
 };
 
 // Users API
@@ -74,7 +78,7 @@ export const usersAPI = {
   create: (userData) => api.post('/users', userData),
   update: (id, userData) => api.patch(`/users/${id}`, userData),
   delete: (id) => api.delete(`/users/${id}`),
-  resetPassword: (id) => api.post(`/users/${id}/reset-password`),
+  resetPassword: (id, password) => api.post(`/users/${id}/reset-password`, { password }),
   // Instructor assignments
   getAssignments: (instructorId) => api.get(`/users/instructors/${instructorId}/students`),
   assignStudent: (instructorId, studentId) => api.post(`/users/instructors/${instructorId}/students`, { studentId }),
@@ -163,6 +167,13 @@ export const availabilityAPI = {
 // Admin API
 export const adminAPI = {
   clearCache: () => api.post('/admin/clear-cache'),
+};
+
+// Settings API (Admin only)
+export const settingsAPI = {
+  getSmtp: () => api.get('/settings/smtp'),
+  updateSmtp: (config) => api.post('/settings/smtp', config),
+  testSmtp: (sendTestTo) => api.post('/settings/smtp/test', { sendTestTo }),
 };
 
 // Notifications API (placeholder for future implementation)

@@ -100,6 +100,15 @@ export default function LoginPage() {
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </GoldenButton>
+
+            <div className="text-center">
+              <a 
+                href="/forgot-password" 
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Forgot your password?
+              </a>
+            </div>
           </form>
         </CardContent>
       </Card>

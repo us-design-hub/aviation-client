@@ -14,6 +14,7 @@ import { UsersTable } from "./users-table";
 import { UserForm } from "./user-form";
 import { UserDetails } from "./user-details";
 import { AssignmentsManager } from "./assignments-manager";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function UsersClient() {
@@ -26,8 +27,10 @@ export function UsersClient() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -112,20 +115,20 @@ export function UsersClient() {
     }
   };
 
-  const handleResetPassword = async (user) => {
-    const confirmed = await showConfirm({
-      title: "Reset Password",
-      description: `Reset password for ${user.name || user.email}? The new password will be 'pass1234'.`,
-    });
+  const handleOpenResetPassword = (user) => {
+    setResetPasswordUser(user);
+    setIsResetPasswordOpen(true);
+  };
 
-    if (!confirmed) return;
-
+  const handleResetPassword = async (userId, password) => {
     try {
-      await usersAPI.resetPassword(user.id);
+      await usersAPI.resetPassword(userId, password);
       toast.success("Password reset successfully");
     } catch (error) {
       console.error("Error resetting password:", error);
-      toast.error("Failed to reset password");
+      const errorMsg = error.response?.data?.error || "Failed to reset password";
+      toast.error(errorMsg);
+      throw error; // Re-throw to let dialog handle it
     }
   };
 
@@ -383,7 +386,7 @@ export function UsersClient() {
         users={filteredUsers}
         onUserClick={handleUserClick}
         onEditUser={handleEditUser}
-        onResetPassword={handleResetPassword}
+        onResetPassword={handleOpenResetPassword}
         onDeleteUser={handleDeleteUser}
         onManageAssignments={handleManageAssignments}
       />
@@ -399,7 +402,8 @@ export function UsersClient() {
                 handleEditUser(selectedUser);
               }}
               onResetPassword={() => {
-                handleResetPassword(selectedUser);
+                setIsDetailsOpen(false);
+                handleOpenResetPassword(selectedUser);
               }}
               onDeleteUser={() => {
                 setIsDetailsOpen(false);
@@ -425,6 +429,14 @@ export function UsersClient() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Reset Password Dialog */}
+      <ResetPasswordDialog
+        open={isResetPasswordOpen}
+        onOpenChange={setIsResetPasswordOpen}
+        user={resetPasswordUser}
+        onResetPassword={handleResetPassword}
+      />
 
       {/* Confirmation Dialog */}
       {ConfirmDialog}

@@ -43,6 +43,7 @@ const allNavigation = [
   { name: "Squawks", href: "/squawks", icon: AlertTriangle, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Availability", href: "/availability", icon: Clock, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
   { name: "Users", href: "/users", icon: Users, roles: ["ADMIN"] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: ["ADMIN"] },
 ];
 
 export function Sidebar() {
