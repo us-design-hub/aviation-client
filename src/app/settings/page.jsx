@@ -66,6 +66,7 @@ function SettingsClient() {
   // Active configuration (what's actually being used)
   const [activeConfig, setActiveConfig] = useState(null);
   const [defaults, setDefaults] = useState(null);
+  const [resendConfig, setResendConfig] = useState(null);
 
   // Fetch current settings and user info
   useEffect(() => {
@@ -105,6 +106,7 @@ function SettingsClient() {
 
       setActiveConfig(data.activeConfig);
       setDefaults(data.defaults);
+      setResendConfig(data.resend);
     } catch (error) {
       console.error("Error fetching settings:", error);
       toast.error("Failed to load settings");
@@ -239,32 +241,55 @@ function SettingsClient() {
         </CardHeader>
         <CardContent>
           {activeConfig && (
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                {activeConfig.host && activeConfig.user ? (
-                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                    <Check className="h-3 w-3 mr-1" />
-                    Configured
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  {(resendConfig?.configured || (activeConfig.host && activeConfig.user)) ? (
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      <Check className="h-3 w-3 mr-1" />
+                      Configured
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <X className="h-3 w-3 mr-1" />
+                      Not Configured
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Provider:</span>
+                  <Badge variant="outline" className={resendConfig?.configured ? "border-green-500 text-green-700" : ""}>
+                    {activeConfig.provider === "resend" ? "Resend (API)" : "SMTP"}
                   </Badge>
-                ) : (
-                  <Badge variant="secondary">
-                    <X className="h-3 w-3 mr-1" />
-                    Not Configured
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Source:</span>
+                  <Badge variant="outline">
+                    {activeConfig.source === "database"
+                      ? "Custom Settings"
+                      : activeConfig.source === "environment"
+                      ? "Environment Variables"
+                      : "Default"}
                   </Badge>
-                )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Source:</span>
-                <Badge variant="outline">
-                  {activeConfig.source === "database"
-                    ? "Custom Settings"
-                    : activeConfig.source === "environment"
-                    ? "Environment Variables"
-                    : "Default"}
-                </Badge>
-              </div>
-              {activeConfig.host && (
+              
+              {/* Resend status */}
+              {resendConfig?.configured && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    <span><strong>Resend</strong> is configured and will be used for all emails.</span>
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    From: {resendConfig.from}
+                  </p>
+                </div>
+              )}
+              
+              {/* SMTP status when Resend is not configured */}
+              {!resendConfig?.configured && activeConfig.host && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Server:</span>
                   <code className="text-sm bg-muted px-2 py-0.5 rounded">
