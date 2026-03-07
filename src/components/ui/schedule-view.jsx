@@ -156,6 +156,30 @@ export function WeekScheduleView({
     onDateChange(new Date());
   };
 
+  // Parse an event's start/end into local Date objects.
+  // Lessons have start_at/end_at as proper UTC ISO strings → new Date() handles conversion.
+  // Availability events store local time with a "Z" suffix in start_date → we must
+  // reconstruct from the date string + start_time to avoid a false UTC→local shift.
+  const parseEventTimes = (event) => {
+    if (event.start_at) {
+      return {
+        start: new Date(event.start_at),
+        end: new Date(event.end_at || event.end_date),
+      };
+    }
+    if (event.start_time) {
+      const dateStr = (event.start_date || '').split('T')[0];
+      return {
+        start: new Date(`${dateStr}T${event.start_time}:00`),
+        end: new Date(`${dateStr}T${event.end_time || '23:59'}:00`),
+      };
+    }
+    return {
+      start: new Date(event.start_date),
+      end: new Date(event.end_date),
+    };
+  };
+
   // Get events for a specific time slot (using filtered events)
   const getEventsForSlot = (date, hour, resourceId = null) => {
     const slotStart = new Date(date);
@@ -163,20 +187,18 @@ export function WeekScheduleView({
     const slotEnd = new Date(date);
     slotEnd.setHours(hour + 1, 0, 0, 0);
 
+    const slotDateOnly = new Date(date);
+    slotDateOnly.setHours(0, 0, 0, 0);
+
     return filteredEvents.filter(event => {
-      // Handle all-day events (no start_time/end_time)
-      const isAllDay = !event.start_time && !event.end_time;
-      
-      if (isAllDay) {
-        // All-day event - check if date is within range
+      // All-day events: no start_at AND no start_time
+      if (!event.start_at && !event.start_time && !event.end_time) {
         const eventStartDate = new Date(event.start_date);
         eventStartDate.setHours(0, 0, 0, 0);
         const eventEndDate = new Date(event.end_date);
         eventEndDate.setHours(23, 59, 59, 999);
-        const currentDate = new Date(date);
-        currentDate.setHours(0, 0, 0, 0);
         
-        const isInDateRange = currentDate >= eventStartDate && currentDate <= eventEndDate;
+        const isInDateRange = slotDateOnly >= eventStartDate && slotDateOnly <= eventEndDate;
         
         if (showResourceColumns && resourceId) {
           return isInDateRange && (event.user_id === resourceId || event.aircraft_id === resourceId);
@@ -184,25 +206,18 @@ export function WeekScheduleView({
         return isInDateRange;
       }
       
-      // Timed event - construct date+time correctly to avoid timezone issues
-      const eventDateStr = (event.start_at || event.start_date).split('T')[0]; // Get date part
-      const eventStartTimeStr = event.start_time || '00:00';
-      const eventEndTimeStr = event.end_time || '23:59';
+      const { start: eventStart, end: eventEnd } = parseEventTimes(event);
       
-      // First check if event's date matches the slot's date (avoid timezone issues)
-      const slotDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      if (eventDateStr !== slotDateStr) {
-        return false; // Event is on a different day
+      // Compare local dates
+      const eventDateOnly = new Date(eventStart);
+      eventDateOnly.setHours(0, 0, 0, 0);
+      if (eventDateOnly.getTime() !== slotDateOnly.getTime()) {
+        return false;
       }
       
-      // Now construct the full datetime for this event on this specific day
-      const eventStart = new Date(`${eventDateStr}T${eventStartTimeStr}:00`);
-      const eventEnd = new Date(`${eventDateStr}T${eventEndTimeStr}:00`);
-      
-      // Check if event overlaps with this slot
+      // Check if event overlaps with this hour slot
       const overlaps = eventStart < slotEnd && eventEnd > slotStart;
       
-      // If resources are shown, filter by resource
       if (showResourceColumns && resourceId) {
         return overlaps && (event.user_id === resourceId || event.aircraft_id === resourceId || event.instructor_id === resourceId);
       }
@@ -222,13 +237,7 @@ export function WeekScheduleView({
 
   // Calculate event positioning
   const getEventStyle = (event, slotHour) => {
-    // For timed events, use start_time/end_time to avoid timezone issues
-    const eventDateStr = (event.start_at || event.start_date).split('T')[0];
-    const eventStartTimeStr = event.start_time || '00:00';
-    const eventEndTimeStr = event.end_time || '23:59';
-    
-    const eventStart = new Date(`${eventDateStr}T${eventStartTimeStr}:00`);
-    const eventEnd = new Date(`${eventDateStr}T${eventEndTimeStr}:00`);
+    const { start: eventStart, end: eventEnd } = parseEventTimes(event);
     
     const slotStart = new Date(eventStart);
     slotStart.setHours(slotHour, 0, 0, 0);
@@ -403,7 +412,7 @@ export function WeekScheduleView({
               <thead className="sticky top-0 z-20 bg-muted">
                 <tr>
                   <th className="sticky left-0 z-40 p-4 border-r border-b text-sm font-semibold bg-muted text-left shadow-[2px_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_8px_rgba(0,0,0,0.4)]" style={{ width: '200px', minWidth: '200px' }}>
-                    {showResourceColumns ? (resources[0]?.role ? 'Instructor' : 'Aircraft') : 'Date'}
+                    {showResourceColumns ? 'Resources' : 'Date'}
                   </th>
                   {timeSlots.map(({ hour, label }) => (
                     <th key={hour} className="px-2 py-3 border-r border-b last:border-r-0 text-center bg-muted/50 text-sm font-medium text-foreground" style={{ width: '120px', minWidth: '120px' }}>
@@ -418,8 +427,17 @@ export function WeekScheduleView({
                     filteredResources.map(resource => (
                       <tr key={resource.id} className="border-b last:border-b-0" style={{ height: '120px' }}>
                         <td className="sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]" style={{ width: '200px' }}>
-                          <div className="font-semibold text-base truncate">{resource.name || resource.tail_number}</div>
-                          <div className="text-xs text-muted-foreground truncate uppercase">{resource.type || resource.model || resource.role}</div>
+                          <div className="flex items-center gap-2">
+                            {resource.resourceType === 'aircraft' && <span className="text-base">✈️</span>}
+                            <div>
+                              <div className="font-semibold text-base truncate">{resource.name || resource.tail_number}</div>
+                              <div className="text-xs text-muted-foreground truncate uppercase">
+                                {resource.resourceType === 'aircraft' 
+                                  ? (resource.notes || resource.model || 'Aircraft')
+                                  : (resource.is_lead_instructor ? 'Lead Instructor' : resource.role)}
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         {timeSlots.map(({ hour }) => {
                           const slotEvents = getEventsForSlot(displayDates[0], hour, resource.id);
@@ -594,26 +612,17 @@ function TimeSlotCell({
 
 // Default Event Block Component
 function DefaultEventBlock({ event }) {
-  // Use start_time/end_time fields if available to avoid timezone issues
-  const startTime = event.start_time 
-    ? (() => {
-        const [hours, minutes] = event.start_time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minutes} ${ampm}`;
-      })()
-    : format(new Date(event.start_at || event.start_date), "h:mm a");
-  
-  const endTime = event.end_time
-    ? (() => {
-        const [hours, minutes] = event.end_time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minutes} ${ampm}`;
-      })()
-    : format(new Date(event.end_at || event.end_date), "h:mm a");
+  const parseTime = (evt) => {
+    if (evt.start_at) return { s: new Date(evt.start_at), e: new Date(evt.end_at || evt.end_date) };
+    if (evt.start_time) {
+      const d = (evt.start_date || '').split('T')[0];
+      return { s: new Date(`${d}T${evt.start_time}:00`), e: new Date(`${d}T${evt.end_time || '23:59'}:00`) };
+    }
+    return { s: new Date(evt.start_date), e: new Date(evt.end_date) };
+  };
+  const { s: evtStart, e: evtEnd } = parseTime(event);
+  const startTime = format(evtStart, "h:mm a");
+  const endTime = format(evtEnd, "h:mm a");
   
   // Determine event colors and styles
   const getEventStyle = () => {

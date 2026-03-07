@@ -21,31 +21,20 @@ export function LessonsTable({
 }) {
   const { user } = useAuth();
   
-  const getUserName = (userId) => {
+  const getUserName = (userId, fallbackName) => {
+    if (fallbackName) return fallbackName;
     const foundUser = users.find(u => u.id === userId);
     return foundUser ? foundUser.name : "Unknown";
   };
 
-  const getAircraftTail = (aircraftId) => {
-    if (!aircraftId) return "N/A";
-    const ac = aircraft.find(a => a.id === aircraftId);
+  const getAircraftTail = (lesson) => {
+    if (!lesson.aircraft_id) return "N/A";
+    if (lesson.aircraft_tail) return lesson.aircraft_tail;
+    const ac = aircraft.find(a => a.id === lesson.aircraft_id);
     return ac ? ac.tail_number : "Unknown";
   };
 
-  const formatDateTime = (dateTime) => {
-    return format(new Date(dateTime), "MMM dd, yyyy HH:mm");
-  };
-
-  const formatTime = (dateTime, timeString) => {
-    // Use timeString if available (e.g., "09:00"), otherwise parse dateTime
-    if (timeString) {
-      // Convert 24-hour to 12-hour format
-      const [hours, minutes] = timeString.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour % 12 || 12;
-      return `${displayHour}:${minutes} ${ampm}`;
-    }
+  const formatTime = (dateTime) => {
     return format(new Date(dateTime), "h:mm a");
   };
 
@@ -139,10 +128,10 @@ export function LessonsTable({
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {format(new Date(lesson.start_at.split('T')[0]), "MMM dd, yyyy")}
+                          {format(new Date(lesson.start_at), "MMM dd, yyyy")}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {formatTime(lesson.start_at, lesson.start_time)} - {formatTime(lesson.end_at, lesson.end_time)}
+                          {formatTime(lesson.start_at)} - {formatTime(lesson.end_at)}
                         </div>
                       </div>
                     </TableCell>
@@ -150,14 +139,14 @@ export function LessonsTable({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{getUserName(lesson.student_id)}</span>
+                        <span>{getUserName(lesson.student_id, lesson.student_name)}</span>
                       </div>
                     </TableCell>
                     
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{getUserName(lesson.instructor_id)}</span>
+                        <span>{getUserName(lesson.instructor_id, lesson.instructor_name)}</span>
                       </div>
                     </TableCell>
                     
@@ -165,7 +154,7 @@ export function LessonsTable({
                       {lesson.aircraft_id ? (
                         <div className="flex items-center gap-2">
                           <Plane className="h-4 w-4 text-muted-foreground" />
-                          <span>{getAircraftTail(lesson.aircraft_id)}</span>
+                          <span>{getAircraftTail(lesson)}</span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground">N/A</span>

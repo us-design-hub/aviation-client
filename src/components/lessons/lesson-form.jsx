@@ -34,6 +34,10 @@ const lessonSchema = z.object({
   program: z.string().optional(),
   stage: z.string().optional(),
   lesson: z.string().optional(),
+  tachStart: z.union([z.number(), z.string()]).optional().transform(v => v === "" || v === undefined ? undefined : Number(v)),
+  tachEnd: z.union([z.number(), z.string()]).optional().transform(v => v === "" || v === undefined ? undefined : Number(v)),
+  hobbsStart: z.union([z.number(), z.string()]).optional().transform(v => v === "" || v === undefined ? undefined : Number(v)),
+  hobbsEnd: z.union([z.number(), z.string()]).optional().transform(v => v === "" || v === undefined ? undefined : Number(v)),
 });
 
 export function LessonForm({ 
@@ -63,6 +67,10 @@ export function LessonForm({
       program: lesson?.program || initialValues?.program || "",
       stage: lesson?.stage || initialValues?.stage || "",
       lesson: lesson?.lesson || initialValues?.lesson || "",
+      tachStart: lesson?.tach_start ?? "",
+      tachEnd: lesson?.tach_end ?? "",
+      hobbsStart: lesson?.hobbs_start ?? "",
+      hobbsEnd: lesson?.hobbs_end ?? "",
     },
   });
 
@@ -129,6 +137,10 @@ export function LessonForm({
         program: data.program || "",
         stage: data.stage || "",
         lesson: data.lesson || "",
+        tachStart: data.tachStart || null,
+        tachEnd: data.tachEnd || null,
+        hobbsStart: data.hobbsStart || null,
+        hobbsEnd: data.hobbsEnd || null,
       };
 
       await onSubmit(lessonData);
@@ -444,6 +456,84 @@ export function LessonForm({
             )}
           </CardContent>
         </Card>
+
+        {/* Tach / Hobbs Readings (Flight lessons only) */}
+        {watchedValues.kind === "FLIGHT" && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Tach / Hobbs Readings</CardTitle>
+              <CardDescription>
+                Record meter readings for this flight
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tachStart"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tach Start</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="e.g. 4067.2" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tachEnd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tach End</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="e.g. 4069.0" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="hobbsStart"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hobbs Start</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="e.g. 29.5" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hobbsEnd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hobbs End</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="e.g. 32.1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {watchedValues.tachStart && watchedValues.tachEnd && Number(watchedValues.tachEnd) > Number(watchedValues.tachStart) && (
+                <p className="text-sm text-muted-foreground">
+                  Tach time: <span className="font-medium">{(Number(watchedValues.tachEnd) - Number(watchedValues.tachStart)).toFixed(1)}</span> &nbsp;|&nbsp;
+                  {watchedValues.hobbsStart && watchedValues.hobbsEnd && Number(watchedValues.hobbsEnd) > Number(watchedValues.hobbsStart) && (
+                    <>Hobbs time: <span className="font-medium">{(Number(watchedValues.hobbsEnd) - Number(watchedValues.hobbsStart)).toFixed(1)}</span></>
+                  )}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Syllabus Information */}
         {syllabus && (

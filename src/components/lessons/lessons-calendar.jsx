@@ -122,9 +122,12 @@ export function LessonsCalendar({
       return ac ? ac.tail_number : null;
     };
 
-    // Use start_time/end_time if available, otherwise extract from date
-    const startTime = lesson.start_time || format(new Date(lesson.start_at), "h:mm a");
-    const endTime = lesson.end_time || format(new Date(lesson.end_at), "h:mm a");
+    const studentName = lesson.student_name
+      ? lesson.student_name.split(' ')[0]
+      : getUserName(lesson.student_id);
+
+    const startTime = format(new Date(lesson.start_at), "h:mm a");
+    const endTime = format(new Date(lesson.end_at), "h:mm a");
 
     return (
       <div
@@ -145,7 +148,7 @@ export function LessonsCalendar({
               <BookOpen className="h-3 w-3" />
             )}
             <span className="font-semibold truncate">
-              {getUserName(lesson.student_id)}
+              {studentName}
             </span>
           </div>
           
@@ -205,13 +208,15 @@ export function LessonsCalendar({
     );
   };
 
-  // Filter instructors only
+  // Build resource rows: instructors + aircraft
   const instructors = users.filter(u => u.role === 'INSTRUCTOR' || u.role === 'ADMIN');
+  const scheduleResources = [
+    ...instructors.map(i => ({ ...i, resourceType: 'instructor' })),
+    ...aircraft.map(a => ({ ...a, name: a.tail_number, resourceType: 'aircraft' })),
+  ];
 
   // Render different views
   if (view === 'schedule') {
-    // Schedule view - Instructor rows (FlightCircle style)
-    // Default to day view
     return (
       <WeekScheduleView
         currentDate={currentDate}
@@ -224,7 +229,7 @@ export function LessonsCalendar({
         renderEvent={renderLessonEvent}
         startHour={6}
         endHour={22}
-        resources={instructors}
+        resources={scheduleResources}
         showResourceColumns={true}
       />
     );
@@ -338,16 +343,6 @@ function CalendarDay({
   onDeleteLesson,
   onCompleteLesson
 }) {
-  const getUserName = (userId) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name : "Unknown";
-  };
-
-  const getAircraftTail = (aircraftId) => {
-    if (!aircraftId) return null;
-    const ac = aircraft.find(a => a.id === aircraftId);
-    return ac ? ac.tail_number : "Unknown";
-  };
 
   return (
     <div
@@ -408,15 +403,15 @@ function LessonItem({
   onDeleteLesson, 
   onCompleteLesson 
 }) {
-  const getUserName = (userId) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name.split(' ')[0] : "Unknown"; // First name only for space
+  const getUserName = (userId, fallbackName) => {
+    if (fallbackName) return fallbackName.split(' ')[0];
+    const u = users.find(u => u.id === userId);
+    return u ? u.name.split(' ')[0] : "Unknown";
   };
 
   const getAircraftTail = (aircraftId) => {
     if (!aircraftId) return null;
-    const ac = aircraft.find(a => a.id === aircraftId);
-    return ac ? ac.tail_number : "Unknown";
+    return lesson.aircraft_tail || aircraft.find(a => a.id === aircraftId)?.tail_number || "Unknown";
   };
 
   const startTime = format(new Date(lesson.start_at), "HH:mm");
@@ -493,7 +488,7 @@ function LessonItem({
       <div className="space-y-1">
         <div className="flex items-center gap-1">
           <User className="h-3 w-3" />
-          <span>{getUserName(lesson.student_id)}</span>
+          <span>{getUserName(lesson.student_id, lesson.student_name)}</span>
         </div>
         
         {lesson.aircraft_id && (
@@ -589,15 +584,15 @@ function LessonCard({
   onDeleteLesson, 
   onCompleteLesson 
 }) {
-  const getUserName = (userId) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name : "Unknown";
+  const getUserName = (userId, fallbackName) => {
+    if (fallbackName) return fallbackName;
+    const u = users.find(u => u.id === userId);
+    return u ? u.name : "Unknown";
   };
 
   const getAircraftTail = (aircraftId) => {
     if (!aircraftId) return null;
-    const ac = aircraft.find(a => a.id === aircraftId);
-    return ac ? ac.tail_number : "Unknown";
+    return lesson.aircraft_tail || aircraft.find(a => a.id === aircraftId)?.tail_number || "Unknown";
   };
 
   const startTime = format(new Date(lesson.start_at), "HH:mm");
@@ -630,8 +625,8 @@ function LessonCard({
           </div>
           
           <div className="space-y-1 text-sm text-muted-foreground">
-            <div>Student: {getUserName(lesson.student_id)}</div>
-            <div>Instructor: {getUserName(lesson.instructor_id)}</div>
+            <div>Student: {getUserName(lesson.student_id, lesson.student_name)}</div>
+            <div>Instructor: {getUserName(lesson.instructor_id, lesson.instructor_name)}</div>
             {lesson.aircraft_id && (
               <div>Aircraft: {getAircraftTail(lesson.aircraft_id)}</div>
             )}

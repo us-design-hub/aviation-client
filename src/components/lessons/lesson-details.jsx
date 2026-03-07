@@ -14,7 +14,8 @@ import {
   Trash2, 
   Check, 
   Plus,
-  MessageSquare 
+  MessageSquare,
+  Gauge
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -94,31 +95,12 @@ export function LessonDetails({
     return aircraft.find(a => a.id === aircraftId);
   };
 
-  const formatDateTime = (dateTime, timeString) => {
-    // Extract date part to avoid timezone issues
-    const datePart = dateTime.split('T')[0];
-    const dateStr = format(new Date(datePart), "EEEE, MMMM d, yyyy");
-    
-    if (timeString) {
-      const [hours, minutes] = timeString.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour % 12 || 12;
-      return `${dateStr} at ${displayHour}:${minutes} ${ampm}`;
-    }
-    
-    return `${dateStr} at ${format(new Date(dateTime), "h:mm a")}`;
+  const formatDateTime = (dateTime) => {
+    const d = new Date(dateTime);
+    return `${format(d, "EEEE, MMMM d, yyyy")} at ${format(d, "h:mm a")}`;
   };
 
-  const formatTime = (dateTime, timeString) => {
-    // Use timeString if available (e.g., "09:00"), otherwise parse dateTime
-    if (timeString) {
-      const [hours, minutes] = timeString.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour % 12 || 12;
-      return `${displayHour}:${minutes} ${ampm}`;
-    }
+  const formatTime = (dateTime) => {
     return format(new Date(dateTime), "h:mm a");
   };
 
@@ -158,7 +140,7 @@ export function LessonDetails({
           {lesson.kind} Lesson
         </SheetTitle>
         <SheetDescription>
-          {formatDateTime(lesson.start_at, lesson.start_time)}
+          {formatDateTime(lesson.start_at)}
         </SheetDescription>
       </SheetHeader>
 
@@ -230,7 +212,7 @@ export function LessonDetails({
                 <div>
                   <p className="text-sm font-medium">Time</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatTime(lesson.start_at, lesson.start_time)} - {formatTime(lesson.end_at, lesson.end_time)}
+                    {formatTime(lesson.start_at)} - {formatTime(lesson.end_at)}
                   </p>
                 </div>
               </div>
@@ -280,6 +262,60 @@ export function LessonDetails({
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tach / Hobbs Readings */}
+      {(lesson.tach_start != null || lesson.tach_end != null || lesson.hobbs_start != null || lesson.hobbs_end != null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Gauge className="h-4 w-4" />
+              Tach / Hobbs Readings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {lesson.tach_start != null && (
+                <div>
+                  <p className="text-sm font-medium">Tach Start</p>
+                  <p className="text-lg font-bold">{lesson.tach_start}</p>
+                </div>
+              )}
+              {lesson.tach_end != null && (
+                <div>
+                  <p className="text-sm font-medium">Tach End</p>
+                  <p className="text-lg font-bold">{lesson.tach_end}</p>
+                </div>
+              )}
+              {lesson.hobbs_start != null && (
+                <div>
+                  <p className="text-sm font-medium">Hobbs Start</p>
+                  <p className="text-lg font-bold">{lesson.hobbs_start}</p>
+                </div>
+              )}
+              {lesson.hobbs_end != null && (
+                <div>
+                  <p className="text-sm font-medium">Hobbs End</p>
+                  <p className="text-lg font-bold">{lesson.hobbs_end}</p>
+                </div>
+              )}
+            </div>
+            {lesson.tach_start != null && lesson.tach_end != null && (
+              <div className="mt-3 pt-3 border-t flex gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tach Time</p>
+                  <p className="text-sm font-semibold">{(lesson.tach_end - lesson.tach_start).toFixed(1)}</p>
+                </div>
+                {lesson.hobbs_start != null && lesson.hobbs_end != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Hobbs Time</p>
+                    <p className="text-sm font-semibold">{(lesson.hobbs_end - lesson.hobbs_start).toFixed(1)}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

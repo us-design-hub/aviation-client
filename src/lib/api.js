@@ -121,7 +121,7 @@ export const lessonsAPI = {
   create: (lessonData) => api.post('/lessons', lessonData),
   update: (id, lessonData) => api.patch(`/lessons/${id}`, lessonData),
   delete: (id) => api.delete(`/lessons/${id}`),
-  complete: (id) => api.post(`/lessons/${id}/complete`),
+  complete: (id, data = {}) => api.post(`/lessons/${id}/complete`, data),
   checkConflicts: (params) => api.get('/lessons/conflicts', { params }),
   // Notes
   getNotes: (id) => api.get(`/lessons/${id}/notes`),

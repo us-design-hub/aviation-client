@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Mail, Shield, Key, UserCheck } from "lucide-react";
+import { User, Mail, Shield, Key, UserCheck, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ const userSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   isLeadInstructor: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  category: z.string().optional(),
 });
 
 export function UserForm({ user, onSubmit, onCancel }) {
@@ -37,6 +38,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
       password: "",
       isLeadInstructor: user?.is_lead_instructor || false,
       is_active: user?.is_active !== undefined ? user.is_active : true,
+      category: user?.category || "",
     },
   });
 
@@ -52,6 +54,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
         role: data.role,
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
+        category: data.role === "STUDENT" ? (data.category || null) : null,
       };
 
       // Include password for new users
@@ -264,6 +267,37 @@ export function UserForm({ user, onSubmit, onCancel }) {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {watchedRole === "STUDENT" && (
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4" />
+                      Student Category
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="PRIVATE_PILOT">Private Pilot</SelectItem>
+                        <SelectItem value="INSTRUMENT">Instrument</SelectItem>
+                        <SelectItem value="COMMERCIAL_PILOT">Commercial Pilot</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Training program the student is enrolled in
+                    </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

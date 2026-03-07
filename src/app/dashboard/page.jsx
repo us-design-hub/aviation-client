@@ -328,7 +328,7 @@ export default function DashboardPage() {
                             <p className="font-medium">{lesson.lesson || 'Flight Lesson'}</p>
                             <p className="text-sm text-muted-foreground">
                               {new Date(lesson.start_at).toLocaleDateString()} at{' '}
-                              {lesson.start_time} • {lesson.instructor_name}
+                              {new Date(lesson.start_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} • {lesson.instructor_name}
                             </p>
                           </div>
                         </div>
