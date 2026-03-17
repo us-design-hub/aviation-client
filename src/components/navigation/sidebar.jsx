@@ -80,6 +80,9 @@ export function Sidebar() {
 
   const handleLogout = () => {
     logout();
+    setIsMobileMenuOpen(false);
+    router.replace('/login');
+    router.refresh();
   };
 
   const handleClearCache = async () => {
