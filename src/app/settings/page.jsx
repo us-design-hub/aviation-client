@@ -15,6 +15,8 @@ import {
   RefreshCw,
   Info,
   Shield,
+  MessageSquare,
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoldenButton } from "@/components/ui/golden-button";
@@ -46,8 +48,10 @@ function SettingsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingSms, setTestingSms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [testEmail, setTestEmail] = useState("");
+  const [testPhone, setTestPhone] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
   // SMTP Configuration state
@@ -207,6 +211,30 @@ function SettingsClient() {
         fromName: defaults.fromName,
       }));
       toast.success("Default values loaded. Enter your username and password.");
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!testPhone.trim()) {
+      toast.error("Enter a phone number first");
+      return;
+    }
+
+    try {
+      setTestingSms(true);
+      const response = await settingsAPI.testSms(testPhone.trim());
+      const result = response.data;
+
+      if (result.success) {
+        toast.success(result.message || "Test SMS sent");
+      } else {
+        toast.error(result.message || result.error || "Test SMS failed");
+      }
+    } catch (error) {
+      console.error("Error testing SMS:", error);
+      toast.error(error.response?.data?.message || error.response?.data?.error || "Failed to send test SMS");
+    } finally {
+      setTestingSms(false);
     }
   };
 
@@ -576,17 +604,56 @@ function SettingsClient() {
 
       {/* Security Note */}
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Temporary SMS Test
+          </CardTitle>
+          <CardDescription>
+            Use this to verify Twilio SMS, then remove after confirmation.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">Security Note</p>
-              <p>
-                SMTP passwords are encrypted before storage. The password is never
-                sent back to the browser after being saved. If environment variables
-                are configured, they will be used as a fallback when custom settings
-                are disabled.
-              </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-phone">Send Test SMS To</Label>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    id="test-phone"
+                    type="tel"
+                    placeholder="+1XXXXXXXXXX"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                  />
+                </div>
+                <Button variant="outline" onClick={handleTestSms} disabled={testingSms}>
+                  {testingSms ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Send Test SMS
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Security Note</p>
+                <p>
+                  SMTP passwords are encrypted before storage. The password is never
+                  sent back to the browser after being saved. If environment variables
+                  are configured, they will be used as a fallback when custom settings
+                  are disabled.
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>

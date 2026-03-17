@@ -179,6 +179,7 @@ export const settingsAPI = {
   getSmtp: () => api.get('/settings/smtp'),
   updateSmtp: (config) => api.post('/settings/smtp', config),
   testSmtp: (sendTestTo) => api.post('/settings/smtp/test', { sendTestTo }),
+  testSms: (to) => api.post('/settings/sms/test', { to }),
 };
 
 // Notifications API (placeholder for future implementation)
