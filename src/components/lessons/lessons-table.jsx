@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { Plane, BookOpen, User, Clock, MoreHorizontal, Eye, Edit, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,7 @@ export function LessonsTable({
   };
 
   const formatTime = (dateTime) => {
-    return format(new Date(dateTime), "h:mm a");
+    return formatET(dateTime, "h:mm a");
   };
 
   const getStatusBadge = (status) => {
@@ -128,7 +129,7 @@ export function LessonsTable({
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {format(new Date(lesson.start_at), "MMM dd, yyyy")}
+                          {formatET(lesson.start_at, "MMM dd, yyyy")}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {formatTime(lesson.start_at)} - {formatTime(lesson.end_at)}

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, User, Plane, Calendar, Clock, Eye } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { useAuth } from "@/contexts/auth-context";
 
 export function AvailabilityTable({ 
@@ -174,7 +175,7 @@ export function AvailabilityTable({
                     
                     <TableCell>
                       <div className="text-sm text-muted-foreground">
-                        {format(parseISO(item.created_at), "MMM d")}
+                        {formatET(item.created_at, "MMM d")}
                       </div>
                     </TableCell>
                     

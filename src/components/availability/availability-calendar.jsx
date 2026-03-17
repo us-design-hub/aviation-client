@@ -317,9 +317,9 @@ export function AvailabilityCalendar({
       return ac ? ac.tail_number : "Unknown Aircraft";
     };
 
-    // Use start_time/end_time if available, otherwise extract from date
-    const startTime = item.start_time || format(new Date(item.start_date), "h:mm a");
-    const endTime = item.end_time || format(new Date(item.end_date), "h:mm a");
+    // Use start_time/end_time if available; fallback strips Z so the "local-as-UTC" dates parse correctly
+    const startTime = item.start_time || format(new Date(String(item.start_date).replace('Z', '')), "h:mm a");
+    const endTime = item.end_time || format(new Date(String(item.end_date).replace('Z', '')), "h:mm a");
 
     return (
       <div

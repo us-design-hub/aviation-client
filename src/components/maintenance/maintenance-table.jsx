@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatDistanceToNow, format, isAfter, isBefore, addDays } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { MoreHorizontal, Edit, Trash2, CheckCircle, Plane, Clock, AlertTriangle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -225,7 +226,7 @@ export function MaintenanceTable({
                       {item.due_date ? (
                         <div>
                           <div className="font-medium">
-                            {format(new Date(item.due_date), 'MMM d, yyyy')}
+                            {formatET(item.due_date, 'MMM d, yyyy')}
                           </div>
                           {dueDateInfo && (
                             <div className={`text-sm ${dueDateInfo.isOverdue ? 'text-red-600' : 'text-muted-foreground'}`}>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { ChevronLeft, ChevronRight, Plane, BookOpen, Clock, User, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,8 +127,8 @@ export function LessonsCalendar({
       ? lesson.student_name.split(' ')[0]
       : getUserName(lesson.student_id);
 
-    const startTime = format(new Date(lesson.start_at), "h:mm a");
-    const endTime = format(new Date(lesson.end_at), "h:mm a");
+    const startTime = formatET(lesson.start_at, "h:mm a");
+    const endTime = formatET(lesson.end_at, "h:mm a");
 
     return (
       <div
@@ -208,10 +209,12 @@ export function LessonsCalendar({
     );
   };
 
-  // Build resource rows: instructors + aircraft
-  const instructors = users.filter(u => u.role === 'INSTRUCTOR' || u.role === 'ADMIN');
+  // Build resource rows: instructors, students, aircraft (no admins)
+  const instructors = users.filter(u => u.role === 'INSTRUCTOR');
+  const students = users.filter(u => u.role === 'STUDENT');
   const scheduleResources = [
     ...instructors.map(i => ({ ...i, resourceType: 'instructor' })),
+    ...students.map(s => ({ ...s, resourceType: 'student' })),
     ...aircraft.map(a => ({ ...a, name: a.tail_number, resourceType: 'aircraft' })),
   ];
 
@@ -227,8 +230,8 @@ export function LessonsCalendar({
         view="day"
         onViewChange={setView}
         renderEvent={renderLessonEvent}
-        startHour={6}
-        endHour={22}
+        startHour={0}
+        endHour={23}
         resources={scheduleResources}
         showResourceColumns={true}
       />
@@ -244,8 +247,8 @@ export function LessonsCalendar({
         view={view}
         onViewChange={setView}
         renderEvent={renderLessonEvent}
-        startHour={6}
-        endHour={22}
+        startHour={0}
+        endHour={23}
       />
     );
   }
@@ -414,8 +417,8 @@ function LessonItem({
     return lesson.aircraft_tail || aircraft.find(a => a.id === aircraftId)?.tail_number || "Unknown";
   };
 
-  const startTime = format(new Date(lesson.start_at), "HH:mm");
-  const endTime = format(new Date(lesson.end_at), "HH:mm");
+  const startTime = formatET(lesson.start_at, "HH:mm");
+  const endTime = formatET(lesson.end_at, "HH:mm");
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -595,8 +598,8 @@ function LessonCard({
     return lesson.aircraft_tail || aircraft.find(a => a.id === aircraftId)?.tail_number || "Unknown";
   };
 
-  const startTime = format(new Date(lesson.start_at), "HH:mm");
-  const endTime = format(new Date(lesson.end_at), "HH:mm");
+  const startTime = formatET(lesson.start_at, "HH:mm");
+  const endTime = formatET(lesson.end_at, "HH:mm");
 
   return (
     <div

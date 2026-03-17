@@ -92,12 +92,12 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString).toLocaleString('en-US', { timeZone: 'America/New_York' });
   };
 
   // Role-based permissions

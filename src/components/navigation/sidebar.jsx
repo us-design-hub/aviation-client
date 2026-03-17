@@ -32,11 +32,13 @@ import {
   X,
   RefreshCw,
   GraduationCap,
+  BookOpen,
 } from "lucide-react";
 
 const allNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Lessons", href: "/lessons", icon: Calendar, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
+  { name: "Syllabus", href: "/syllabus", icon: BookOpen, roles: ["INSTRUCTOR", "ADMIN"] },
   { name: "Progress", href: "/progress", icon: GraduationCap, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
   { name: "Aircraft", href: "/aircraft", icon: PlaneIcon, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Maintenance", href: "/maintenance", icon: Wrench, roles: ["ADMIN", "MAINT"] },

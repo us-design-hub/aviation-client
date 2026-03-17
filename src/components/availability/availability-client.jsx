@@ -251,7 +251,7 @@ export function AvailabilityClient() {
     setFormKey(prev => prev + 1); // Force form remount
     setIsFormOpen(true);
     
-    toast.info(`Creating availability for ${new Date(date).toLocaleDateString()} at ${startTime}`);
+    toast.info(`Creating availability for ${new Date(date).toLocaleDateString('en-US', { timeZone: 'America/New_York' })} at ${startTime}`);
   };
 
   const resetFilters = () => {

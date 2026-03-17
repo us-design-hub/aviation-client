@@ -15,6 +15,7 @@ import {
   Clock, TrendingUp, BookOpen, User
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatET } from '@/lib/format-tz';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StageCheckModal } from '@/components/progress/stage-check-modal';
@@ -298,7 +299,7 @@ export function ProgressClient() {
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
                         By {stage.stageCheck.checker_name} on{' '}
-                        {format(new Date(stage.stageCheck.checked_at), 'MMM d, yyyy')}
+                        {formatET(stage.stageCheck.checked_at, 'MMM d, yyyy')}
                       </div>
                       {stage.stageCheck.notes && (
                         <div className="text-sm mt-2 p-2 bg-background rounded">

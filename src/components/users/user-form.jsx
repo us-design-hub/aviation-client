@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Mail, Shield, Key, UserCheck, GraduationCap } from "lucide-react";
+import { User, Mail, Shield, Key, UserCheck, GraduationCap, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ const userSchema = z.object({
   isLeadInstructor: z.boolean().optional(),
   is_active: z.boolean().optional(),
   category: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 export function UserForm({ user, onSubmit, onCancel }) {
@@ -39,6 +40,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
       isLeadInstructor: user?.is_lead_instructor || false,
       is_active: user?.is_active !== undefined ? user.is_active : true,
       category: user?.category || "",
+      phone: user?.phone || "",
     },
   });
 
@@ -55,6 +57,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
         category: data.role === "STUDENT" ? (data.category || null) : null,
+        phone: data.phone || null,
       };
 
       // Include password for new users
@@ -153,6 +156,30 @@ export function UserForm({ user, onSubmit, onCancel }) {
                   </FormControl>
                   <FormDescription>
                     Display name shown throughout the system
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="tel" 
+                      placeholder="+1 (555) 000-0000" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Used for SMS lesson notifications (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

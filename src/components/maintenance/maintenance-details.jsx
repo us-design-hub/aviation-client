@@ -1,6 +1,7 @@
 "use client"
 
 import { format, formatDistanceToNow, isBefore } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { 
   Plane, 
   Calendar, 
@@ -279,7 +280,7 @@ export function MaintenanceDetails({
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {maintenance.completed_at 
-                    ? `Completed on ${format(new Date(maintenance.completed_at), 'PPP')}`
+                    ? `Completed on ${formatET(maintenance.completed_at, 'PPP')}`
                     : 'Completion date unknown'
                   }
                 </div>

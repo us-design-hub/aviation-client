@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarIcon, Clock, User, Plane, BookOpen } from "lucide-react";
 import { format } from "date-fns";
+import { formatET, etToISO } from "@/lib/format-tz";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -62,8 +63,8 @@ export function LessonForm({
       aircraftId: lesson?.aircraft_id || initialValues?.aircraftId || "none",
       kind: lesson?.kind || initialValues?.kind || "FLIGHT",
       startDate: lesson?.start_at ? new Date(lesson.start_at) : (initialValues?.startDate ? new Date(initialValues.startDate) : new Date()),
-      startTime: lesson?.start_at ? format(new Date(lesson.start_at), "HH:mm") : (initialValues?.startTime || "09:00"),
-      endTime: lesson?.end_at ? format(new Date(lesson.end_at), "HH:mm") : (initialValues?.endTime || "10:00"),
+      startTime: lesson?.start_at ? formatET(lesson.start_at, "HH:mm") : (initialValues?.startTime || "09:00"),
+      endTime: lesson?.end_at ? formatET(lesson.end_at, "HH:mm") : (initialValues?.endTime || "10:00"),
       program: lesson?.program || initialValues?.program || "",
       stage: lesson?.stage || initialValues?.stage || "",
       lesson: lesson?.lesson || initialValues?.lesson || "",
@@ -92,19 +93,13 @@ export function LessonForm({
     try {
       setCheckingConflicts(true);
       const { studentId, instructorId, aircraftId, startDate, startTime, endTime } = watchedValues;
-      
-      const startAt = new Date(startDate);
-      startAt.setHours(parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]));
-      
-      const endAt = new Date(startDate);
-      endAt.setHours(parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]));
 
       const response = await lessonsAPI.checkConflicts({
         studentId,
         instructorId,
         aircraftId: aircraftId && aircraftId !== "none" ? aircraftId : undefined,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
+        startAt: etToISO(startDate, startTime),
+        endAt: etToISO(startDate, endTime),
       });
 
       setConflicts(response.data.conflicts || []);
@@ -120,20 +115,13 @@ export function LessonForm({
     try {
       setLoading(true);
       
-      // Combine date and time
-      const startAt = new Date(data.startDate);
-      startAt.setHours(parseInt(data.startTime.split(':')[0]), parseInt(data.startTime.split(':')[1]));
-      
-      const endAt = new Date(data.startDate);
-      endAt.setHours(parseInt(data.endTime.split(':')[0]), parseInt(data.endTime.split(':')[1]));
-
       const lessonData = {
         studentId: data.studentId,
         instructorId: data.instructorId,
         aircraftId: data.aircraftId && data.aircraftId !== "none" ? data.aircraftId : null,
         kind: data.kind,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
+        startAt: etToISO(data.startDate, data.startTime),
+        endAt: etToISO(data.startDate, data.endTime),
         program: data.program || "",
         stage: data.stage || "",
         lesson: data.lesson || "",

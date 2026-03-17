@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { 
   Plane, 
   BookOpen, 
@@ -96,12 +97,11 @@ export function LessonDetails({
   };
 
   const formatDateTime = (dateTime) => {
-    const d = new Date(dateTime);
-    return `${format(d, "EEEE, MMMM d, yyyy")} at ${format(d, "h:mm a")}`;
+    return `${formatET(dateTime, "EEEE, MMMM d, yyyy")} at ${formatET(dateTime, "h:mm a")}`;
   };
 
   const formatTime = (dateTime) => {
-    return format(new Date(dateTime), "h:mm a");
+    return formatET(dateTime, "h:mm a");
   };
 
   const getDuration = () => {
@@ -407,7 +407,7 @@ export function LessonDetails({
                   <div className="flex items-start justify-between mb-2">
                     <p className="text-sm font-medium">{note.author_name || 'Unknown'}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(note.created_at), "MMM d, yyyy 'at' h:mm a")}
+                      {formatET(note.created_at, "MMM d, yyyy 'at' h:mm a")}
                     </p>
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{note.content}</p>

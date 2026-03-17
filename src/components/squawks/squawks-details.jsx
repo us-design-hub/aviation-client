@@ -1,6 +1,7 @@
 "use client"
 
 import { format } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { AlertTriangle, CheckCircle, Clock, Plane, User, Calendar, FileText, Shield, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ export function SquawksDetails({ squawk, aircraft, onResolve }) {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      return format(new Date(dateString), "EEEE, MMMM d, yyyy 'at' h:mm a");
+      return formatET(dateString, "EEEE, MMMM d, yyyy 'at' h:mm a");
     } catch {
       return "Invalid date";
     }

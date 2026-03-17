@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, startOfDay, addHours, isToday, isPast, isFuture } from "date-fns";
+import { formatET, toET } from "@/lib/format-tz";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Maximize2, Minimize2, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -163,8 +164,8 @@ export function WeekScheduleView({
   const parseEventTimes = (event) => {
     if (event.start_at) {
       return {
-        start: new Date(event.start_at),
-        end: new Date(event.end_at || event.end_date),
+        start: toET(event.start_at),
+        end: toET(event.end_at || event.end_date),
       };
     }
     if (event.start_time) {
@@ -219,7 +220,7 @@ export function WeekScheduleView({
       const overlaps = eventStart < slotEnd && eventEnd > slotStart;
       
       if (showResourceColumns && resourceId) {
-        return overlaps && (event.user_id === resourceId || event.aircraft_id === resourceId || event.instructor_id === resourceId);
+        return overlaps && (event.user_id === resourceId || event.aircraft_id === resourceId || event.instructor_id === resourceId || event.student_id === resourceId);
       }
       
       return overlaps;
@@ -434,7 +435,8 @@ export function WeekScheduleView({
                               <div className="text-xs text-muted-foreground truncate uppercase">
                                 {resource.resourceType === 'aircraft' 
                                   ? (resource.notes || resource.model || 'Aircraft')
-                                  : (resource.is_lead_instructor ? 'Lead Instructor' : resource.role)}
+                                  : resource.resourceType === 'student' ? 'Student'
+                                  : (resource.is_lead_instructor ? 'Lead Instructor' : 'Instructor')}
                               </div>
                             </div>
                           </div>
@@ -613,7 +615,7 @@ function TimeSlotCell({
 // Default Event Block Component
 function DefaultEventBlock({ event }) {
   const parseTime = (evt) => {
-    if (evt.start_at) return { s: new Date(evt.start_at), e: new Date(evt.end_at || evt.end_date) };
+    if (evt.start_at) return { s: toET(evt.start_at), e: toET(evt.end_at || evt.end_date) };
     if (evt.start_time) {
       const d = (evt.start_date || '').split('T')[0];
       return { s: new Date(`${d}T${evt.start_time}:00`), e: new Date(`${d}T${evt.end_time || '23:59'}:00`) };

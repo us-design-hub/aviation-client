@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { format } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { notificationsAPI } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
@@ -265,7 +266,7 @@ export function NotificationBell() {
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{message}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(notification.created_at), "MMM d, h:mm a")}
+                    {formatET(notification.created_at, "MMM d, h:mm a")}
                   </p>
                 </DropdownMenuItem>
               );

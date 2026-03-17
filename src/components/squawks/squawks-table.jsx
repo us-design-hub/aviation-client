@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { MoreHorizontal, AlertTriangle, CheckCircle, Clock, Plane, User, Calendar, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -196,7 +197,7 @@ export function SquawksTable({
                       {squawk.created_at ? (
                         <div>
                           <div className="font-medium">
-                            {format(new Date(squawk.created_at), 'MMM d, yyyy')}
+                            {formatET(squawk.created_at, 'MMM d, yyyy')}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {formatDistanceToNow(new Date(squawk.created_at), { addSuffix: true })}

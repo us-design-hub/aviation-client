@@ -17,6 +17,7 @@ import {
   FileText
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { useAuth } from "@/contexts/auth-context";
 
 export function AvailabilityDetails({ 
@@ -199,7 +200,7 @@ export function AvailabilityDetails({
             <div>
               <div className="font-medium text-muted-foreground">Created</div>
               <div className="mt-1">
-                {format(parseISO(availability.created_at), 'PPp')}
+                {formatET(availability.created_at, 'PPp')}
               </div>
             </div>
 
@@ -207,7 +208,7 @@ export function AvailabilityDetails({
               <div>
                 <div className="font-medium text-muted-foreground">Last Updated</div>
                 <div className="mt-1">
-                  {format(parseISO(availability.updated_at), 'PPp')}
+                  {formatET(availability.updated_at, 'PPp')}
                 </div>
               </div>
             )}

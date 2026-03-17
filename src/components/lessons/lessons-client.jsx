@@ -302,7 +302,7 @@ export function LessonsClient() {
     setEditingLesson(null); // Clear editing mode
     setIsFormOpen(true);
     
-    toast.info(`Creating lesson for ${new Date(date).toLocaleDateString()} at ${startTime}`);
+    toast.info(`Creating lesson for ${new Date(date).toLocaleDateString('en-US', { timeZone: 'America/New_York' })} at ${startTime}`);
   };
 
   const resetFilters = () => {

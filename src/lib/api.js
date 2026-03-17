@@ -130,15 +130,20 @@ export const lessonsAPI = {
 
 // Syllabus API
 export const syllabusAPI = {
+  list: () => api.get('/syllabus'),
+  get: (id) => api.get(`/syllabus/${id}`),
   getActive: () => api.get('/syllabus/active'),
-  create: (syllabusData) => api.post('/syllabus', syllabusData),
-  addStage: (syllabusId, stageData) => api.post(`/syllabus/${syllabusId}/stages`, stageData),
-  updateStage: (stageId, stageData) => api.patch(`/syllabus/stages/${stageId}`, stageData),
-  addLesson: (stageId, lessonData) => api.post(`/syllabus/stages/${stageId}/lessons`, lessonData),
-  updateLesson: (lessonId, lessonData) => api.patch(`/syllabus/lessons/${lessonId}`, lessonData),
+  create: (data) => api.post('/syllabus', data),
+  update: (id, data) => api.patch(`/syllabus/${id}`, data),
+  remove: (id) => api.delete(`/syllabus/${id}`),
+  activate: (id) => api.post(`/syllabus/${id}/activate`),
+  addStage: (syllabusId, data) => api.post(`/syllabus/${syllabusId}/stages`, data),
+  updateStage: (stageId, data) => api.patch(`/syllabus/stages/${stageId}`, data),
+  deleteStage: (stageId) => api.delete(`/syllabus/stages/${stageId}`),
+  addLesson: (stageId, data) => api.post(`/syllabus/stages/${stageId}/lessons`, data),
+  updateLesson: (lessonId, data) => api.patch(`/syllabus/lessons/${lessonId}`, data),
   deleteLesson: (lessonId) => api.delete(`/syllabus/lessons/${lessonId}`),
-  // Progress tracking
-  getProgress: (studentId) => api.get(`/syllabus/progress/${studentId}`),
+  getProgress: (studentId, syllabusId) => api.get(`/syllabus/progress/${studentId}${syllabusId ? `?syllabusId=${syllabusId}` : ''}`),
   getStageChecks: (studentId) => api.get(`/syllabus/stage-checks/${studentId}`),
   createStageCheck: (data) => api.post('/syllabus/stage-check', data),
 };

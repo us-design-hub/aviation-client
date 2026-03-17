@@ -17,6 +17,7 @@ import {
   Trash2
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatET } from "@/lib/format-tz";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +111,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
   };
 
   const formatDateTime = (dateTime) => {
-    return format(new Date(dateTime), "MMM dd, yyyy 'at' h:mm a");
+    return formatET(dateTime, "MMM dd, yyyy 'at' h:mm a");
   };
 
   return (

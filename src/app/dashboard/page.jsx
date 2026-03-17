@@ -327,8 +327,8 @@ export default function DashboardPage() {
                           <div>
                             <p className="font-medium">{lesson.lesson || 'Flight Lesson'}</p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(lesson.start_at).toLocaleDateString()} at{' '}
-                              {new Date(lesson.start_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} • {lesson.instructor_name}
+                              {new Date(lesson.start_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })} at{' '}
+                              {new Date(lesson.start_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} • {lesson.instructor_name}
                             </p>
                           </div>
                         </div>
@@ -415,7 +415,7 @@ export default function DashboardPage() {
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-medium">{note.lesson_title}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(note.created_at).toLocaleDateString()}
+                              {new Date(note.created_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
                             </p>
                           </div>
                           <p className="text-sm text-muted-foreground">{note.content}</p>
