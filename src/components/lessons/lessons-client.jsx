@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/auth-context";
 export function LessonsClient() {
   // State
   const [lessons, setLessons] = useState([]);
+  const [syllabi, setSyllabi] = useState([]);
   const [syllabus, setSyllabus] = useState(null);
   const [users, setUsers] = useState([]);
   const [aircraft, setAircraft] = useState([]);
@@ -71,7 +72,7 @@ export function LessonsClient() {
       
       // All roles can access lessons and syllabus
       apiCalls.push(lessonsAPI.getAll());
-      apiCalls.push(syllabusAPI.getActive());
+      apiCalls.push(syllabusAPI.list());
       
       // ADMIN and INSTRUCTOR can fetch students and instructors (needed for scheduling)
       if (user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') {
@@ -116,7 +117,23 @@ export function LessonsClient() {
       }
       
       if (syllabusRes.status === 'fulfilled') {
-        setSyllabus(syllabusRes.value.data);
+        const list = syllabusRes.value.data || [];
+        if (list.length) {
+          try {
+            const details = await Promise.all(list.map((s) => syllabusAPI.get(s.id)));
+            const detailedSyllabi = details.map((r) => r.data).filter(Boolean);
+            setSyllabi(detailedSyllabi);
+            const active = detailedSyllabi.find((s) => s.active === 1) || detailedSyllabi[0] || null;
+            setSyllabus(active);
+          } catch (e) {
+            console.error("Error fetching syllabus details:", e);
+            setSyllabi([]);
+            setSyllabus(null);
+          }
+        } else {
+          setSyllabi([]);
+          setSyllabus(null);
+        }
       }
       
       if (usersRes.status === 'fulfilled') {
@@ -394,6 +411,7 @@ export function LessonsClient() {
               <LessonForm
                 lesson={editingLesson}
                 initialValues={formInitialValues}
+                syllabi={syllabi}
                 syllabus={syllabus}
                 students={students}
                 instructors={instructors}

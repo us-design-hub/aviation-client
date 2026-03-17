@@ -44,6 +44,7 @@ const lessonSchema = z.object({
 export function LessonForm({ 
   lesson, 
   initialValues, 
+  syllabi = [],
   syllabus, 
   students, 
   instructors, 
@@ -140,9 +141,27 @@ export function LessonForm({
   };
 
   // Get syllabus options based on selected program/stage
+  const syllabusPrograms = syllabi.length
+    ? syllabi
+    : (syllabus ? [syllabus] : []);
+
+  const getProgramOptions = () => {
+    return syllabusPrograms.map((p) => ({
+      value: p.name,
+      label: p.name,
+      id: p.id,
+    }));
+  };
+
+  const getSelectedProgram = () => {
+    if (!watchedValues.program) return null;
+    return syllabusPrograms.find((p) => p.name === watchedValues.program) || null;
+  };
+
   const getStageOptions = () => {
-    if (!syllabus?.stages) return [];
-    return syllabus.stages.map(stage => ({
+    const selectedProgram = getSelectedProgram();
+    if (!selectedProgram?.stages) return [];
+    return selectedProgram.stages.map(stage => ({
       value: stage.title,
       label: stage.title,
       id: stage.id
@@ -150,12 +169,13 @@ export function LessonForm({
   };
 
   const getLessonOptions = () => {
-    if (!syllabus?.lessons || !watchedValues.stage) return [];
-    
-    const selectedStage = syllabus.stages?.find(s => s.title === watchedValues.stage);
+    const selectedProgram = getSelectedProgram();
+    if (!selectedProgram?.lessons || !watchedValues.stage) return [];
+
+    const selectedStage = selectedProgram.stages?.find(s => s.title === watchedValues.stage);
     if (!selectedStage) return [];
     
-    return syllabus.lessons
+    return selectedProgram.lessons
       .filter(l => l.stage_id === selectedStage.id)
       .map(lesson => ({
         value: lesson.title,
@@ -171,6 +191,22 @@ export function LessonForm({
       form.setValue("kind", selectedLesson.kind);
     }
   }, [watchedValues.lesson]);
+
+  // Keep dependent fields consistent when program/stage changes
+  useEffect(() => {
+    const validStage = getStageOptions().some((s) => s.value === watchedValues.stage);
+    if (!validStage && watchedValues.stage) {
+      form.setValue("stage", "");
+      form.setValue("lesson", "");
+    }
+  }, [watchedValues.program]);
+
+  useEffect(() => {
+    const validLesson = getLessonOptions().some((l) => l.value === watchedValues.lesson);
+    if (!validLesson && watchedValues.lesson) {
+      form.setValue("lesson", "");
+    }
+  }, [watchedValues.stage]);
 
   const getConflictDescription = (conflict) => {
     switch (conflict.type) {
@@ -524,7 +560,7 @@ export function LessonForm({
         )}
 
         {/* Syllabus Information */}
-        {syllabus && (
+        {syllabusPrograms.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Syllabus Information</CardTitle>
@@ -539,12 +575,24 @@ export function LessonForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Program</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., Private Pilot License"
-                        {...field} 
-                      />
-                    </FormControl>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select program (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No program</SelectItem>
+                        {getProgramOptions().map((program) => (
+                          <SelectItem key={program.id} value={program.value}>
+                            {program.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -557,13 +605,18 @@ export function LessonForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Stage</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                      value={field.value || "none"}
+                      disabled={!watchedValues.program}
+                    >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select stage" />
+                          <SelectValue placeholder={watchedValues.program ? "Select stage" : "Select program first"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                        <SelectItem value="none">No stage</SelectItem>
                           {getStageOptions().map((stage) => (
                             <SelectItem key={stage.id} value={stage.value}>
                               {stage.label}
@@ -582,13 +635,18 @@ export function LessonForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Lesson</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                      value={field.value || "none"}
+                      disabled={!watchedValues.stage}
+                    >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select lesson" />
+                          <SelectValue placeholder={watchedValues.stage ? "Select lesson" : "Select stage first"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                        <SelectItem value="none">No lesson</SelectItem>
                           {getLessonOptions().map((lesson) => (
                             <SelectItem key={lesson.value} value={lesson.value}>
                               <div className="flex items-center gap-2">
