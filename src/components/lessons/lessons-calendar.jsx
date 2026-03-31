@@ -14,6 +14,16 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { WeekScheduleView } from "@/components/ui/schedule-view";
 
+/** Scheduled flight with aircraft checked out (pre-flight meters recorded on lesson) */
+function isFlightCheckedOut(lesson) {
+  return (
+    lesson?.kind === "FLIGHT" &&
+    lesson?.aircraft_id &&
+    lesson?.status === "SCHEDULED" &&
+    (lesson.hobbs_start != null || lesson.tach_start != null)
+  );
+}
+
 export function LessonsCalendar({ 
   lessons, 
   users, 
@@ -135,8 +145,12 @@ export function LessonsCalendar({
         className={cn(
           "h-full p-2 rounded border text-xs overflow-hidden",
           "hover:shadow-md transition-shadow cursor-pointer group",
-          lesson.kind === "FLIGHT" && "bg-purple-100 border-purple-300 text-purple-900",
+          lesson.kind === "FLIGHT" &&
+            !isFlightCheckedOut(lesson) &&
+            "bg-purple-100 border-purple-300 text-purple-900",
           lesson.kind === "GROUND" && "bg-orange-100 border-orange-300 text-orange-900",
+          isFlightCheckedOut(lesson) &&
+            "bg-amber-100 border-amber-500 text-amber-950 ring-1 ring-amber-400/60",
           lesson.status === "COMPLETED" && "opacity-70 bg-gray-100 border-gray-300 text-gray-600",
           lesson.status === "CANCELED" && "opacity-50"
         )}
@@ -169,8 +183,21 @@ export function LessonsCalendar({
                     Edit
                   </DropdownMenuItem>
                   {lesson.status === "SCHEDULED" && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCompleteLesson(lesson); }}>
-                      Mark Complete
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (lesson.kind === "FLIGHT" && lesson.aircraft_id) {
+                          onLessonClick(lesson);
+                        } else {
+                          onCompleteLesson(lesson);
+                        }
+                      }}
+                    >
+                      {lesson.kind === "FLIGHT" && lesson.aircraft_id
+                        ? isFlightCheckedOut(lesson)
+                          ? "Check in"
+                          : "Check out"
+                        : "Mark complete"}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem 
@@ -202,8 +229,14 @@ export function LessonsCalendar({
           </div>
         )}
         
-        <Badge variant="outline" className="text-[9px] h-4 mt-1">
-          {lesson.status}
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[9px] h-4 mt-1",
+            isFlightCheckedOut(lesson) && "border-amber-600 bg-amber-200/80 text-amber-950"
+          )}
+        >
+          {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
         </Badge>
       </div>
     );
@@ -435,9 +468,13 @@ function LessonItem({
       className={cn(
         "text-xs p-2 rounded border cursor-pointer hover:shadow-sm transition-shadow",
         lesson.status === "COMPLETED" && "bg-green-50 border-green-200",
-        lesson.status === "SCHEDULED" && "bg-blue-50 border-blue-200",
+        lesson.status === "SCHEDULED" &&
+          !isFlightCheckedOut(lesson) &&
+          "bg-blue-50 border-blue-200",
+        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-50 border-amber-400",
         lesson.status === "CANCELED" && "bg-gray-50 border-gray-200",
-        lesson.kind === "FLIGHT" && "border-l-4 border-l-purple-500",
+        lesson.kind === "FLIGHT" && !isFlightCheckedOut(lesson) && "border-l-4 border-l-purple-500",
+        lesson.kind === "FLIGHT" && isFlightCheckedOut(lesson) && "border-l-4 border-l-amber-500",
         lesson.kind === "GROUND" && "border-l-4 border-l-orange-500"
       )}
       onClick={handleClick}
@@ -472,8 +509,21 @@ function LessonItem({
                   Edit
                 </DropdownMenuItem>
                 {lesson.status === "SCHEDULED" && (
-                  <DropdownMenuItem onClick={(e) => handleAction(e, onCompleteLesson)}>
-                    Mark Complete
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (lesson.kind === "FLIGHT" && lesson.aircraft_id) {
+                        onLessonClick(lesson);
+                      } else {
+                        onCompleteLesson(lesson);
+                      }
+                    }}
+                  >
+                    {lesson.kind === "FLIGHT" && lesson.aircraft_id
+                      ? isFlightCheckedOut(lesson)
+                        ? "Check in"
+                        : "Check out"
+                      : "Mark complete"}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem 
@@ -507,11 +557,14 @@ function LessonItem({
           </div>
         )}
         
-        <Badge 
-          variant={lesson.status === "COMPLETED" ? "secondary" : "outline"} 
-          className="text-xs"
+        <Badge
+          variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}
+          className={cn(
+            "text-xs",
+            isFlightCheckedOut(lesson) && "border-amber-500 bg-amber-100 text-amber-950"
+          )}
         >
-          {lesson.status}
+          {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
         </Badge>
       </div>
     </div>
@@ -606,7 +659,10 @@ function LessonCard({
       className={cn(
         "p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow",
         lesson.status === "COMPLETED" && "bg-green-50 border-green-200",
-        lesson.status === "SCHEDULED" && "bg-blue-50 border-blue-200",
+        lesson.status === "SCHEDULED" &&
+          !isFlightCheckedOut(lesson) &&
+          "bg-blue-50 border-blue-200",
+        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-50 border-amber-300",
         lesson.status === "CANCELED" && "bg-gray-50 border-gray-200"
       )}
       onClick={() => onLessonClick(lesson)}
@@ -622,8 +678,11 @@ function LessonCard({
             <span className="font-medium">
               {lesson.kind} - {startTime} to {endTime}
             </span>
-            <Badge variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}>
-              {lesson.status}
+            <Badge
+              variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}
+              className={cn(isFlightCheckedOut(lesson) && "border-amber-500 bg-amber-100 text-amber-950")}
+            >
+              {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
             </Badge>
           </div>
           
@@ -656,8 +715,21 @@ function LessonCard({
                   Edit
                 </DropdownMenuItem>
                 {lesson.status === "SCHEDULED" && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCompleteLesson(lesson); }}>
-                    Mark Complete
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (lesson.kind === "FLIGHT" && lesson.aircraft_id) {
+                        onLessonClick(lesson);
+                      } else {
+                        onCompleteLesson(lesson);
+                      }
+                    }}
+                  >
+                    {lesson.kind === "FLIGHT" && lesson.aircraft_id
+                      ? isFlightCheckedOut(lesson)
+                        ? "Check in"
+                        : "Check out"
+                      : "Mark complete"}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem 

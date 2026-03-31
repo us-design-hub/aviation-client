@@ -33,9 +33,11 @@ import {
   RefreshCw,
   GraduationCap,
   BookOpen,
+  UserCircle,
 } from "lucide-react";
 
 const allNavigation = [
+  { name: "Profile", href: "/profile", icon: UserCircle, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Lessons", href: "/lessons", icon: Calendar, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
   { name: "Syllabus", href: "/syllabus", icon: BookOpen, roles: ["INSTRUCTOR", "ADMIN"] },
@@ -217,20 +219,35 @@ export function Sidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  <Settings className="mr-2 icon-lg icon-black dark:icon-black-dark" />
-                  Settings
+                  <UserCircle className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                  Account
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
+                    <UserCircle className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                {user?.role === 'ADMIN' && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Settings className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                      App settings
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {user?.role === 'ADMIN' && (
                   <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleClearCache}>
                       <RefreshCw className="mr-2 icon-lg icon-black dark:icon-black-dark" />
                       Clear All Caches
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 icon-lg icon-black dark:icon-black-dark" />
                   Sign out

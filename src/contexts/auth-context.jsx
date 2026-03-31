@@ -42,6 +42,7 @@ export function AuthProvider({ children }) {
         id: payload.id,
         name: payload.name,
         role: payload.role,
+        email: payload.email || '',
         isLeadInstructor: payload.isLeadInstructor
       };
       
@@ -66,11 +67,27 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  /** Replace JWT and user state after profile update (new token includes updated name/email). */
+  const setSessionFromToken = (accessToken) => {
+    localStorage.setItem('token', accessToken);
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const userData = {
+      id: payload.id,
+      name: payload.name,
+      role: payload.role,
+      email: payload.email || '',
+      isLeadInstructor: payload.isLeadInstructor,
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
+    setSessionFromToken,
     isAuthenticated: !!user,
   };
 

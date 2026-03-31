@@ -68,6 +68,9 @@ export const authAPI = {
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   validateResetToken: (token) => api.post('/auth/validate-reset-token', { token }),
   getMe: () => api.get('/auth/me'),
+  updateMe: (data) => api.patch('/auth/me', data),
+  changePassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // Users API
@@ -121,6 +124,8 @@ export const lessonsAPI = {
   create: (lessonData) => api.post('/lessons', lessonData),
   update: (id, lessonData) => api.patch(`/lessons/${id}`, lessonData),
   delete: (id) => api.delete(`/lessons/${id}`),
+  checkout: (id, data) => api.post(`/lessons/${id}/checkout`, data),
+  checkin: (id, data) => api.post(`/lessons/${id}/checkin`, data),
   complete: (id, data = {}) => api.post(`/lessons/${id}/complete`, data),
   checkConflicts: (params) => api.get('/lessons/conflicts', { params }),
   // Notes

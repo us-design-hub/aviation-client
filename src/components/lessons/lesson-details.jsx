@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { useState, useEffect, useRef } from "react";
 import { formatET } from "@/lib/format-tz";
 import { 
   Plane, 
@@ -9,23 +8,21 @@ import {
   User, 
   Clock, 
   Calendar, 
-  MapPin, 
-  FileText, 
   Edit, 
   Trash2, 
   Check, 
-  Plus,
-  MessageSquare,
-  Gauge
+  Gauge,
+  LogIn,
+  LogOut
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { lessonsAPI } from "@/lib/api";
+import { aircraftAPI, lessonsAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -38,46 +35,52 @@ export function LessonDetails({
   onDelete, 
   onComplete 
 }) {
-  const [notes, setNotes] = useState([]);
-  const [newNote, setNewNote] = useState("");
-  const [loadingNotes, setLoadingNotes] = useState(true);
-  const [addingNote, setAddingNote] = useState(false);
+  const [latestMeterLog, setLatestMeterLog] = useState(null);
+  /** Last post-flight / ground readings (CHECKIN or maintenance) — used to pre-fill checkout */
+  const [checkoutPrefill, setCheckoutPrefill] = useState({ hobbs: "", tach: "" });
+  /** From GET /aircraft/:id — list payload often omits hobbs/tach */
+  const [aircraftMetersSnapshot, setAircraftMetersSnapshot] = useState(null);
+  const [meterForm, setMeterForm] = useState({ hobbs: "", tach: "" });
+  const [savingMeters, setSavingMeters] = useState(false);
+  const meterSectionRef = useRef(null);
   
   const { user } = useAuth();
 
   useEffect(() => {
-    if (lesson?.id) {
-      fetchNotes();
+    if (lesson?.aircraft_id) {
+      fetchMeterContext();
     }
-  }, [lesson?.id]);
+  }, [lesson?.aircraft_id, lesson?.id]);
 
-  const fetchNotes = async () => {
+  const fetchMeterContext = async () => {
     try {
-      setLoadingNotes(true);
-      const response = await lessonsAPI.getNotes(lesson.id);
-      setNotes(response.data || []);
-    } catch (error) {
-      console.error("Error fetching notes:", error);
-      toast.error("Failed to fetch lesson notes");
-    } finally {
-      setLoadingNotes(false);
-    }
-  };
+      const [logsRes, acRes] = await Promise.all([
+        aircraftAPI.getLogs(lesson.aircraft_id),
+        aircraftAPI.getById(lesson.aircraft_id),
+      ]);
+      const logs = logsRes.data || [];
+      const ac = acRes.data;
+      setLatestMeterLog(logs[0] || null);
 
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+      const lastGround = logs.find(
+        (l) => l.action === "CHECKIN" || l.action === "MAINTENANCE_UPDATE"
+      );
+      const hobbs =
+        lastGround?.hobbs ?? (ac?.hobbs_time != null ? ac.hobbs_time : null);
+      const tach =
+        lastGround?.tach ?? (ac?.tach_time != null ? ac.tach_time : null);
 
-    try {
-      setAddingNote(true);
-      await lessonsAPI.addNote(lesson.id, { content: newNote.trim() });
-      setNewNote("");
-      toast.success("Note added successfully");
-      fetchNotes(); // Refresh notes
+      setCheckoutPrefill({
+        hobbs: hobbs != null && Number.isFinite(Number(hobbs)) ? String(hobbs) : "",
+        tach: tach != null && Number.isFinite(Number(tach)) ? String(tach) : "",
+      });
+      setAircraftMetersSnapshot(
+        ac
+          ? { hobbs_time: ac.hobbs_time ?? null, tach_time: ac.tach_time ?? null }
+          : null
+      );
     } catch (error) {
-      console.error("Error adding note:", error);
-      toast.error("Failed to add note");
-    } finally {
-      setAddingNote(false);
+      console.error("Error fetching aircraft meters:", error);
     }
   };
 
@@ -127,6 +130,73 @@ export function LessonDetails({
   };
 
   const aircraftDetails = getAircraftDetails(lesson.aircraft_id);
+  const hobbsDisplay =
+    aircraftDetails?.hobbs_time ?? aircraftMetersSnapshot?.hobbs_time;
+  const tachDisplay =
+    aircraftDetails?.tach_time ?? aircraftMetersSnapshot?.tach_time;
+  const canOperateAircraft = lesson.kind === "FLIGHT" && lesson.aircraft_id &&
+    (user?.role === "ADMIN" || (user?.role === "INSTRUCTOR" && user?.id === lesson.instructor_id));
+  const isCheckedOut = latestMeterLog?.action === "CHECKOUT";
+
+  const canEditLesson =
+    user?.role === "ADMIN" || (user?.role === "INSTRUCTOR" && user?.id === lesson.instructor_id);
+
+  useEffect(() => {
+    if (!canOperateAircraft || lesson.status !== "SCHEDULED") return;
+    if (!isCheckedOut) {
+      setMeterForm({
+        hobbs: checkoutPrefill.hobbs,
+        tach: checkoutPrefill.tach,
+      });
+    } else {
+      setMeterForm({ hobbs: "", tach: "" });
+    }
+  }, [
+    lesson.id,
+    lesson.status,
+    canOperateAircraft,
+    isCheckedOut,
+    checkoutPrefill.hobbs,
+    checkoutPrefill.tach,
+  ]);
+
+  const scrollToMeters = () => {
+    meterSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCheckout = async () => {
+    try {
+      setSavingMeters(true);
+      await lessonsAPI.checkout(lesson.id, {
+        hobbs: Number(meterForm.hobbs),
+        tach: Number(meterForm.tach),
+      });
+      toast.success("Aircraft checked out for this lesson");
+      await fetchMeterContext();
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Checkout failed");
+    } finally {
+      setSavingMeters(false);
+    }
+  };
+
+  const handleCheckin = async () => {
+    try {
+      setSavingMeters(true);
+      await lessonsAPI.checkin(lesson.id, {
+        hobbs: Number(meterForm.hobbs),
+        tach: Number(meterForm.tach),
+      });
+      toast.success("Aircraft checked in and lesson completed");
+      await fetchMeterContext();
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Checkin failed");
+    } finally {
+      setSavingMeters(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-6">
@@ -145,33 +215,140 @@ export function LessonDetails({
       </SheetHeader>
 
       {/* Status and Actions */}
-      <div className="flex items-center justify-between">
-        <Badge className={cn("px-3 py-1", getStatusColor(lesson.status))}>
-          {lesson.status}
-        </Badge>
-        
-        {/* RBAC: Only ADMIN or lesson's INSTRUCTOR can edit/delete/complete lessons */}
-        {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && user?.id === lesson.instructor_id)) && (
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className={cn("px-3 py-1", getStatusColor(lesson.status))}>
+            {lesson.status}
+          </Badge>
+          {lesson.kind === "FLIGHT" &&
+            lesson.aircraft_id &&
+            lesson.status === "SCHEDULED" &&
+            isCheckedOut && (
+              <Badge className="border-amber-400 bg-amber-100 text-amber-950 px-3 py-1">
+                Checked out
+              </Badge>
+            )}
+        </div>
+
+        {canEditLesson && (
+          <div className="flex flex-wrap items-center gap-2 justify-end">
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            
+
             {lesson.status === "SCHEDULED" && (
-              <Button variant="outline" size="sm" onClick={onComplete}>
-                <Check className="h-4 w-4 mr-2" />
-                Complete
-              </Button>
+              <>
+                {canOperateAircraft &&
+                  (!isCheckedOut ? (
+                    <Button size="sm" className="bg-amber-600 text-white hover:bg-amber-700" onClick={scrollToMeters}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Check out
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="bg-amber-600 text-white hover:bg-amber-700" onClick={scrollToMeters}>
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Check in
+                    </Button>
+                  ))}
+                {(!lesson.aircraft_id || lesson.kind !== "FLIGHT") && (
+                  <Button variant="outline" size="sm" onClick={onComplete}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Mark complete
+                  </Button>
+                )}
+              </>
             )}
-            
-            <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive hover:text-destructive">
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              className="text-destructive hover:text-destructive"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
           </div>
         )}
       </div>
+
+      {/* Flight checkout / check-in — meters confirmed on this page */}
+      {canOperateAircraft && lesson.status === "SCHEDULED" && (
+        <div ref={meterSectionRef} id="flight-meter-ops" className="scroll-mt-6">
+          <Card
+            className={cn(
+              "border-2",
+              isCheckedOut ? "border-amber-400 bg-amber-50/40" : "border-primary/25"
+            )}
+          >
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gauge className="h-4 w-4" />
+                {isCheckedOut ? "Check in (post-flight)" : "Check out (pre-flight)"}
+              </CardTitle>
+              <CardDescription>
+                {isCheckedOut
+                  ? "Enter post-flight Hobbs and tach to complete this lesson and update maintenance tracking."
+                  : "Confirm pre-flight Hobbs and tach. Values below are from the last check-in — verify before departure."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!isCheckedOut && (
+                <div className="rounded-md bg-muted/50 p-3 text-sm">
+                  <span className="font-medium text-foreground">Last check-in (pre-filled): </span>
+                  Hobbs <span className="font-mono font-semibold">{checkoutPrefill.hobbs || "—"}</span>
+                  {" / "}
+                  Tach <span className="font-mono font-semibold">{checkoutPrefill.tach || "—"}</span>
+                </div>
+              )}
+              {isCheckedOut && (lesson.hobbs_start != null || lesson.tach_start != null) && (
+                <div className="rounded-md bg-muted/50 p-3 text-sm">
+                  <span className="font-medium">Departure (checkout): </span>
+                  Hobbs <span className="font-mono font-semibold">{lesson.hobbs_start ?? "—"}</span>
+                  {" / "}
+                  Tach <span className="font-mono font-semibold">{lesson.tach_start ?? "—"}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="meter-hobbs">{isCheckedOut ? "Hobbs (landing)" : "Hobbs (verify)"}</Label>
+                  <Input
+                    id="meter-hobbs"
+                    type="number"
+                    step="0.1"
+                    value={meterForm.hobbs}
+                    onChange={(e) => setMeterForm((p) => ({ ...p, hobbs: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="meter-tach">{isCheckedOut ? "Tach (landing)" : "Tach (verify)"}</Label>
+                  <Input
+                    id="meter-tach"
+                    type="number"
+                    step="0.1"
+                    value={meterForm.tach}
+                    onChange={(e) => setMeterForm((p) => ({ ...p, tach: e.target.value }))}
+                  />
+                </div>
+              </div>
+              {!isCheckedOut ? (
+                <Button
+                  className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
+                  onClick={handleCheckout}
+                  disabled={savingMeters}
+                >
+                  {savingMeters ? "Saving..." : "Confirm check out"}
+                </Button>
+              ) : (
+                <Button className="w-full sm:w-auto" onClick={handleCheckin} disabled={savingMeters}>
+                  {savingMeters ? "Saving..." : "Confirm check in"}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Basic Information */}
       <Card>
@@ -253,12 +430,16 @@ export function LessonDetails({
                 </div>
               )}
               
-              {aircraftDetails.hobbs_time && (
+              {hobbsDisplay != null && hobbsDisplay !== "" && (
                 <div>
                   <p className="text-sm font-medium">Hobbs Time</p>
-                  <p className="text-sm text-muted-foreground">
-                    {aircraftDetails.hobbs_time} hours
-                  </p>
+                  <p className="text-sm text-muted-foreground">{hobbsDisplay} hours</p>
+                </div>
+              )}
+              {tachDisplay != null && tachDisplay !== "" && (
+                <div>
+                  <p className="text-sm font-medium">Tach Time</p>
+                  <p className="text-sm text-muted-foreground">{tachDisplay} hours</p>
                 </div>
               )}
             </div>
@@ -353,70 +534,6 @@ export function LessonDetails({
           </CardContent>
         </Card>
       )}
-
-      {/* Instructor Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Instructor Notes
-          </CardTitle>
-          <CardDescription>
-            Notes and feedback for this lesson
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* RBAC: Only ADMIN and INSTRUCTOR can add notes */}
-          {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
-            <div className="space-y-3">
-              <Textarea
-                placeholder="Add a note about this lesson..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                className="min-h-[80px]"
-              />
-              <Button 
-                onClick={handleAddNote}
-                disabled={!newNote.trim() || addingNote}
-                size="sm"
-                className="bg-golden-gradient hover:bg-golden-gradient/90"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {addingNote ? "Adding..." : "Add Note"}
-              </Button>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Notes List */}
-          {loadingNotes ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-              <p className="text-sm text-muted-foreground mt-2">Loading notes...</p>
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No notes yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {notes.map((note) => (
-                <div key={note.id} className="p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="text-sm font-medium">{note.author_name || 'Unknown'}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatET(note.created_at, "MMM d, yyyy 'at' h:mm a")}
-                    </p>
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Metadata */}
       <Card>

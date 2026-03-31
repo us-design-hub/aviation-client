@@ -41,7 +41,7 @@ export function SyllabusClient() {
 
   const [expandedStages, setExpandedStages] = useState({});
 
-  const canManage = user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR';
+  const canManage = user?.role === 'ADMIN';
 
   const loadPrograms = useCallback(async () => {
     try {
@@ -228,7 +228,11 @@ export function SyllabusClient() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Syllabus Management</h1>
-          <p className="text-muted-foreground">Manage training programs, phases, and lessons</p>
+          <p className="text-muted-foreground">
+            {canManage
+              ? "Manage training programs, phases, and lessons"
+              : "Training programs and lesson lists (view only — only administrators can edit)"}
+          </p>
         </div>
         {canManage && (
           <Button onClick={() => setProgramDialog({ open: true, editing: null })}>
@@ -242,7 +246,11 @@ export function SyllabusClient() {
         <EmptyState
           icon={BookOpen}
           title="No programs yet"
-          description="Create your first training program to get started."
+          description={
+            canManage
+              ? "Create your first training program to get started."
+              : "No syllabus programs are defined yet. Ask an administrator to add training programs."
+          }
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

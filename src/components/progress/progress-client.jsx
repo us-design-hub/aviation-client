@@ -47,8 +47,14 @@ export function ProgressClient() {
       if (user?.role === 'STUDENT') {
         // Students see their own progress
         setSelectedStudentId(user.id);
-      } else if (user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN') {
-        // Instructors and admins can select students
+      } else if (user?.role === 'INSTRUCTOR') {
+        const studentsRes = await usersAPI.getMyStudents();
+        const studentList = studentsRes.data || [];
+        setStudents(studentList);
+        if (studentList.length > 0) {
+          setSelectedStudentId(studentList[0].id);
+        }
+      } else if (user?.role === 'ADMIN') {
         const studentsRes = await usersAPI.getStudents();
         const studentList = studentsRes.data || [];
         setStudents(studentList);

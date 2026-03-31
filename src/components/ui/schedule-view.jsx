@@ -530,6 +530,10 @@ export function WeekScheduleView({
               <span className="font-medium">Ground Lesson</span>
             </div>
             <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-amber-100 border-l-4 border-amber-500 rounded-sm dark:bg-amber-950" />
+              <span className="font-medium">Checked Out (pre-flight)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 bg-blue-100 border-l-4 border-blue-400 rounded-sm dark:bg-blue-950" />
               <span className="font-medium">User Availability</span>
             </div>
