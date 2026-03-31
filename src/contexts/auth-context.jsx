@@ -52,9 +52,14 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Login failed' 
+      const data = error.response?.data;
+      const msg =
+        (typeof data?.message === 'string' && data.message) ||
+        (typeof data?.error === 'string' && data.error) ||
+        'Login failed';
+      return {
+        success: false,
+        error: msg,
       };
     }
   };
