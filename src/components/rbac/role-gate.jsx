@@ -136,7 +136,7 @@ export function usePermission(permission) {
     viewMaintenance: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"],
     
     // Squawks
-    reportSquawk: ["INSTRUCTOR", "ADMIN"],
+    reportSquawk: ["STUDENT", "INSTRUCTOR", "ADMIN"],
     resolveSquawk: ["MAINT", "ADMIN"],
     viewSquawks: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"],
   };

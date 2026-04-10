@@ -9,7 +9,7 @@ export default function SquawksPage() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <RoleGate allowedRoles={["INSTRUCTOR", "ADMIN", "MAINT"]}>
+        <RoleGate allowedRoles={["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"]}>
           <SquawksClient />
         </RoleGate>
       </MainLayout>

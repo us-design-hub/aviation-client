@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   GraduationCap, CheckCircle2, Circle, Award, 
-  Clock, TrendingUp, BookOpen, User
+  Clock, TrendingUp, BookOpen, User, RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatET } from '@/lib/format-tz';
@@ -29,6 +29,7 @@ export function ProgressClient() {
   const [progressData, setProgressData] = useState(null);
   const [isStageCheckModalOpen, setIsStageCheckModalOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState(null);
+  const [processingLessonId, setProcessingLessonId] = useState(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -106,12 +107,49 @@ export function ProgressClient() {
     }
   };
 
+  const handleMarkLessonComplete = async (lesson) => {
+    if (!selectedStudentId) return;
+
+    try {
+      setProcessingLessonId(lesson.id);
+      await syllabusAPI.markLessonComplete(
+        selectedStudentId,
+        lesson.id,
+        'Prior experience credit'
+      );
+      toast.success('Lesson marked complete');
+      await fetchProgress(selectedStudentId);
+    } catch (error) {
+      console.error('Error marking lesson complete:', error);
+      toast.error('Failed to mark lesson complete');
+    } finally {
+      setProcessingLessonId(null);
+    }
+  };
+
+  const handleRemoveLessonCredit = async (lesson) => {
+    if (!selectedStudentId) return;
+
+    try {
+      setProcessingLessonId(lesson.id);
+      await syllabusAPI.unmarkLessonComplete(selectedStudentId, lesson.id);
+      toast.success('Prior experience credit removed');
+      await fetchProgress(selectedStudentId);
+    } catch (error) {
+      console.error('Error removing lesson credit:', error);
+      toast.error('Failed to remove lesson credit');
+    } finally {
+      setProcessingLessonId(null);
+    }
+  };
+
   const getSelectedStudent = () => {
     if (user?.role === 'STUDENT') return user;
     return students.find(s => s.id === selectedStudentId);
   };
 
   const selectedStudent = getSelectedStudent();
+  const canCreditLessons = user?.role === 'ADMIN' || user?.isLeadInstructor;
 
   if (loading && !progressData) {
     return (
@@ -269,27 +307,62 @@ export function ProgressClient() {
                 {stage.lessons.map(lesson => (
                   <div 
                     key={lesson.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {lesson.completed ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
                       ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
+                        <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-medium">{lesson.title}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
                           <BookOpen className="h-3 w-3" />
                           {lesson.kind}
-                          {lesson.completed && lesson.completedCount > 0 && (
+                          {lesson.scheduledCompletedCount > 0 && (
                             <span className="text-green-600">
                               • Completed {lesson.completedCount}x
+                            </span>
+                          )}
+                          {lesson.completionSource === 'CREDIT' && (
+                            <span className="text-green-600">
+                              Prior experience credit
+                            </span>
+                          )}
+                          {lesson.completionSource === 'MIXED' && (
+                            <span className="text-green-600">
+                              Includes prior experience credit
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
+                    {canCreditLessons && (
+                      <div className="flex shrink-0 items-center gap-2">
+                        {!lesson.completed && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkLessonComplete(lesson)}
+                            disabled={processingLessonId === lesson.id}
+                          >
+                            Mark complete
+                          </Button>
+                        )}
+                        {lesson.completionSource === 'CREDIT' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveLessonCredit(lesson)}
+                            disabled={processingLessonId === lesson.id}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Remove credit
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -353,4 +426,3 @@ export function ProgressClient() {
     </div>
   );
 }
-

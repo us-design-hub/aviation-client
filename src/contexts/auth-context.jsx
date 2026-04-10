@@ -10,22 +10,46 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        // Parse stored user data
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-      } catch (error) {
-        // If stored user data is corrupted, clear everything
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    let canceled = false;
+
+    const clearSession = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      if (!canceled) setUser(null);
+    };
+
+    const bootstrapSession = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        if (!canceled) setLoading(false);
+        return;
       }
-    }
+
+      try {
+        const response = await authAPI.getMe();
+        const userData = {
+          id: response.data.id,
+          name: response.data.name,
+          role: response.data.role,
+          email: response.data.email || '',
+          phone: response.data.phone || null,
+          isLeadInstructor: response.data.isLeadInstructor,
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
+        if (!canceled) setUser(userData);
+      } catch {
+        clearSession();
+      } finally {
+        if (!canceled) setLoading(false);
+      }
+    };
     
-    setLoading(false);
+    bootstrapSession();
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   const login = async (credentials) => {
