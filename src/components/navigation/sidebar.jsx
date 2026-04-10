@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,23 +52,9 @@ const allNavigation = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [pathname, setPathname] = useState(() =>
-    typeof window !== "undefined" ? window.location.pathname : ""
-  );
+  const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-
-  // Listen for route changes
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (typeof window !== 'undefined') {
-        setPathname(window.location.pathname);
-      }
-    };
-
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
-  }, []);
 
   // Filter navigation based on user role
   const navigation = allNavigation.filter(item => 
