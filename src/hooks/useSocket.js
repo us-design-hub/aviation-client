@@ -1,46 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 
-/**
- * Custom hook for Socket.IO connection
- * - Automatically connects when user is logged in
- * - Handles authentication
- * - Manages connection state
- * - Provides methods to subscribe to events
- */
 export function useSocket() {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
 
   useEffect(() => {
-    // Get user info from localStorage
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      return; // Don't connect if not logged in
-    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-    const user = JSON.parse(userStr);
+    const socketUrl =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:4000'
+        : process.env.NEXT_PUBLIC_API_URL;
 
-    // Determine Socket.IO URL dynamically (client-side)
-    const SOCKET_URL = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:4000'
-      : process.env.NEXT_PUBLIC_API_URL;
-
-    if (!SOCKET_URL) {
-      console.error('❌ CRITICAL: NEXT_PUBLIC_API_URL is not set for Socket.IO connection!');
+    if (!socketUrl) {
+      console.error('Socket URL is not configured');
       return;
     }
 
-    console.log('🔗 Socket.IO URL:', SOCKET_URL);
-    console.log('🌐 Hostname:', window.location.hostname);
-
-    // Initialize Socket.IO connection
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+    const socket = io(socketUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
@@ -50,98 +34,63 @@ export function useSocket() {
 
     socketRef.current = socket;
 
-    // Connection event handlers
     socket.on('connect', () => {
-      console.log('✅ Socket.IO connected:', socket.id);
       setIsConnected(true);
       setConnectionError(null);
-
-      // Authenticate with user ID
-      socket.emit('authenticate', { userId: user.id });
+      socket.emit('authenticate', { token });
     });
 
     socket.on('authenticated', (data) => {
-      if (data.success) {
-        console.log('✅ Socket.IO authenticated for user:', data.userId);
-      } else {
-        console.error('❌ Socket.IO authentication failed:', data.message);
+      if (!data.success) {
+        setConnectionError(data.message || 'Socket authentication failed');
       }
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('🔌 Socket.IO disconnected:', reason);
+    socket.on('disconnect', () => {
       setIsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Socket.IO connection error:', error.message);
       setConnectionError(error.message);
       setIsConnected(false);
     });
 
-    socket.on('reconnect', (attemptNumber) => {
-      console.log('🔄 Socket.IO reconnected after', attemptNumber, 'attempts');
+    socket.on('reconnect', () => {
       setIsConnected(true);
       setConnectionError(null);
-    });
-
-    socket.on('reconnect_error', (error) => {
-      console.error('❌ Socket.IO reconnection error:', error.message);
+      socket.emit('authenticate', { token });
     });
 
     socket.on('reconnect_failed', () => {
-      console.error('❌ Socket.IO reconnection failed after maximum attempts');
       setConnectionError('Failed to reconnect after multiple attempts');
     });
 
-    // Cleanup on unmount
     return () => {
-      if (socket) {
-        console.log('🔌 Disconnecting Socket.IO');
-        socket.disconnect();
-      }
+      socket.disconnect();
+      socketRef.current = null;
+      setIsConnected(false);
     };
   }, []);
 
-  /**
-   * Subscribe to a specific event
-   * @param {string} event - Event name
-   * @param {Function} callback - Callback function
-   * @returns {Function} - Unsubscribe function
-   */
-  const on = (event, callback) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, callback);
-      
-      // Return unsubscribe function
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.off(event, callback);
-        }
-      };
-    }
-    return () => {};
-  };
+  const on = useCallback((event, callback) => {
+    const socket = socketRef.current;
+    if (!socket) return () => {};
 
-  /**
-   * Emit an event to the server
-   * @param {string} event - Event name
-   * @param {any} data - Data to send
-   */
-  const emit = (event, data) => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit(event, data);
-    } else {
-      console.warn('⚠️ Socket not connected, cannot emit event:', event);
+    socket.on(event, callback);
+    return () => socket.off(event, callback);
+  }, []);
+
+  const emit = useCallback((event, data) => {
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      socket.emit(event, data);
     }
-  };
+  }, []);
 
   return {
-    socket: socketRef.current,
     isConnected,
     connectionError,
     on,
     emit,
   };
 }
-

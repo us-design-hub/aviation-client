@@ -176,7 +176,7 @@ export function SquawksClient() {
   };
 
   // Check permissions
-  const canReportSquawk = user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN';
+  const canReportSquawk = user?.role === 'STUDENT' || user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN';
   const canResolveSquawk = user?.role === 'MAINT' || user?.role === 'ADMIN';
 
   if (loading) {

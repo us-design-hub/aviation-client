@@ -52,16 +52,11 @@ const allNavigation = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [pathname, setPathname] = useState("");
+  const [pathname, setPathname] = useState(() =>
+    typeof window !== "undefined" ? window.location.pathname : ""
+  );
   const router = useRouter();
   const { user, logout } = useAuth();
-
-  // Get current pathname on client side
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPathname(window.location.pathname);
-    }
-  }, []);
 
   // Listen for route changes
   useEffect(() => {

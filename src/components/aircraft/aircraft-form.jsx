@@ -238,10 +238,13 @@ export function AircraftForm({ aircraft, onSuccess, onCancel }) {
                     <FormControl>
                       <textarea
                         className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                        placeholder="Explain why tach or hobbs was adjusted (required for meter corrections)"
+                        placeholder="Explain the meter correction, replacement, or calibration"
                         {...field}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Lower readings are allowed for admin or maintenance corrections when hardware is replaced.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

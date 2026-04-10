@@ -9,6 +9,9 @@ const getAPIBaseURL = () => {
   
   // Production: REQUIRE NEXT_PUBLIC_API_URL to be set
   if (!process.env.NEXT_PUBLIC_API_URL) {
+    if (typeof window === 'undefined') {
+      return 'http://localhost:4000';
+    }
     console.error('❌ CRITICAL: NEXT_PUBLIC_API_URL is not set in production!');
     console.error('Please set this environment variable to your backend API URL.');
     throw new Error('NEXT_PUBLIC_API_URL is required in production');
@@ -36,7 +39,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -62,9 +65,11 @@ api.interceptors.response.use(
         url.includes('/auth/reset-password') ||
         url.includes('/auth/validate-reset-token');
       if (!isPublicAuthFailure) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
@@ -160,6 +165,8 @@ export const syllabusAPI = {
   updateLesson: (lessonId, data) => api.patch(`/syllabus/lessons/${lessonId}`, data),
   deleteLesson: (lessonId) => api.delete(`/syllabus/lessons/${lessonId}`),
   getProgress: (studentId, syllabusId) => api.get(`/syllabus/progress/${studentId}${syllabusId ? `?syllabusId=${syllabusId}` : ''}`),
+  markLessonComplete: (studentId, lessonId, note) => api.post(`/syllabus/progress/${studentId}/lessons/${lessonId}/credit`, { note }),
+  unmarkLessonComplete: (studentId, lessonId) => api.delete(`/syllabus/progress/${studentId}/lessons/${lessonId}/credit`),
   getStageChecks: (studentId) => api.get(`/syllabus/stage-checks/${studentId}`),
   createStageCheck: (data) => api.post('/syllabus/stage-check', data),
 };
