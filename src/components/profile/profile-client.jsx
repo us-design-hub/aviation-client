@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { User, Lock, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +20,7 @@ export function ProfileClient() {
     name: '',
     email: '',
     phone: '',
+    smsConsent: false,
   });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -36,6 +38,7 @@ export function ProfileClient() {
             name: res.data.name || '',
             email: res.data.email || '',
             phone: res.data.phone || '',
+            smsConsent: !!res.data.smsConsent,
           });
         }
       } catch {
@@ -55,6 +58,7 @@ export function ProfileClient() {
         name: profile.name.trim(),
         email: profile.email.trim(),
         phone: profile.phone.trim() || null,
+        smsConsent: !!profile.smsConsent,
       });
       if (res.data?.access) {
         setSessionFromToken(res.data.access);
@@ -143,8 +147,23 @@ export function ProfileClient() {
                 value={profile.phone}
                 onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
                 autoComplete="tel"
+                disabled={!profile.smsConsent}
+                className={cn(!profile.smsConsent && 'cursor-not-allowed opacity-60')}
               />
             </div>
+            <label className="flex items-start gap-3 rounded-md border p-3 text-sm leading-6">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0"
+                checked={profile.smsConsent}
+                onChange={(e) =>
+                  setProfile((p) => ({ ...p, smsConsent: e.target.checked }))
+                }
+              />
+              <span>
+                I agree to receive transactional SMS messages from Wings of Angel Aviation regarding my flight lessons (including scheduling confirmations, reminders, and updates). Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help.
+              </span>
+            </label>
             <Button type="submit" disabled={saving}>
               {saving ? (
                 <>

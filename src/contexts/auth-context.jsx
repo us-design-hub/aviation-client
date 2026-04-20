@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
           role: response.data.role,
           email: response.data.email || '',
           phone: response.data.phone || null,
+          smsConsent: !!response.data.smsConsent,
           isLeadInstructor: response.data.isLeadInstructor,
         };
         localStorage.setItem('user', JSON.stringify(userData));
@@ -67,6 +68,8 @@ export function AuthProvider({ children }) {
         name: payload.name,
         role: payload.role,
         email: payload.email || '',
+        phone: payload.phone || null,
+        smsConsent: !!payload.smsConsent,
         isLeadInstructor: payload.isLeadInstructor
       };
       
@@ -105,6 +108,8 @@ export function AuthProvider({ children }) {
       name: payload.name,
       role: payload.role,
       email: payload.email || '',
+      phone: payload.phone || null,
+      smsConsent: !!payload.smsConsent,
       isLeadInstructor: payload.isLeadInstructor,
     };
     localStorage.setItem('user', JSON.stringify(userData));

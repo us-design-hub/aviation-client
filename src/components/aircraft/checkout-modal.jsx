@@ -34,6 +34,10 @@ export function CheckoutModal({ isOpen, onClose, onSubmit, aircraft, action, las
   };
 
   const isCheckout = action === 'checkout';
+  const hobbsDelta = !isCheckout && lastLog ? (Number.parseFloat(hobbs || '0') - Number(lastLog.hobbs || 0)) : null;
+  const tachDelta = !isCheckout && lastLog ? (Number.parseFloat(tach || '0') - Number(lastLog.tach || 0)) : null;
+  const hasHobbsDelta = Number.isFinite(hobbsDelta);
+  const hasTachDelta = Number.isFinite(tachDelta);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -69,6 +73,11 @@ export function CheckoutModal({ isOpen, onClose, onSubmit, aircraft, action, las
           )}
 
           <div>
+            {!isCheckout && hasHobbsDelta && (
+              <div className="mb-1 text-sm font-medium text-muted-foreground">
+                Hobbs used: {hobbsDelta.toFixed(1)}
+              </div>
+            )}
             <Label htmlFor="hobbs">Hobbs Time *</Label>
             <Input
               id="hobbs"
@@ -86,6 +95,11 @@ export function CheckoutModal({ isOpen, onClose, onSubmit, aircraft, action, las
           </div>
 
           <div>
+            {!isCheckout && hasTachDelta && (
+              <div className="mb-1 text-sm font-medium text-muted-foreground">
+                Tach used: {tachDelta.toFixed(1)}
+              </div>
+            )}
             <Label htmlFor="tach">Tach Time *</Label>
             <Input
               id="tach"
@@ -121,4 +135,3 @@ export function CheckoutModal({ isOpen, onClose, onSubmit, aircraft, action, las
     </Dialog>
   );
 }
-
