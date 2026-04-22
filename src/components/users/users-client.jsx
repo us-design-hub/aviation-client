@@ -83,6 +83,7 @@ export function UsersClient() {
     instructors: users.filter(u => u.role === "INSTRUCTOR").length,
     admins: users.filter(u => u.role === "ADMIN").length,
     maintenance: users.filter(u => u.role === "MAINT").length,
+    renters: users.filter(u => u.role === "RENTER").length,
     active: users.filter(u => u.is_active).length,
     inactive: users.filter(u => !u.is_active).length,
   };
@@ -212,7 +213,7 @@ export function UsersClient() {
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
           <p className="text-muted-foreground mt-1">
-            Manage students, instructors, and staff
+            Manage students, renters, instructors, and staff
           </p>
         </div>
         
@@ -356,6 +357,7 @@ export function UsersClient() {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="STUDENT">Students</SelectItem>
+                <SelectItem value="RENTER">Renters</SelectItem>
                 <SelectItem value="INSTRUCTOR">Instructors</SelectItem>
                 <SelectItem value="ADMIN">Admins</SelectItem>
                 <SelectItem value="MAINT">Maintenance</SelectItem>

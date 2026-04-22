@@ -105,7 +105,7 @@ export function usePermission(permission) {
     // Aircraft Operations
     createAircraft: ["ADMIN", "MAINT"],
     updateAircraft: ["ADMIN", "MAINT"],
-    viewAircraft: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"],
+    viewAircraft: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"],
     updateWB: ["ADMIN", "MAINT"],
     logAircraft: ["INSTRUCTOR", "ADMIN", "MAINT"],
     
@@ -133,12 +133,12 @@ export function usePermission(permission) {
     // Maintenance
     postMaintenance: ["MAINT", "ADMIN"],
     resolveMaint: ["MAINT", "ADMIN"],
-    viewMaintenance: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"],
+    viewMaintenance: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"],
     
     // Squawks
-    reportSquawk: ["STUDENT", "INSTRUCTOR", "ADMIN"],
+    reportSquawk: ["STUDENT", "INSTRUCTOR", "ADMIN", "RENTER"],
     resolveSquawk: ["MAINT", "ADMIN"],
-    viewSquawks: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"],
+    viewSquawks: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"],
   };
   
   const allowedRoles = permissions[permission];

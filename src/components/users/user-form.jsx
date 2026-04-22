@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const userSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   name: z.string().min(1, "Name is required").max(100, "Name too long"),
-  role: z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"], {
+  role: z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"], {
     required_error: "Role is required",
   }),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -83,6 +83,8 @@ export function UserForm({ user, onSubmit, onCancel }) {
         return "Full system access including user management and settings";
       case "MAINT":
         return "Can manage aircraft maintenance and resolve squawks";
+      case "RENTER":
+        return "Can manage rental bookings, hours, and compliance documents";
       default:
         return "";
     }
@@ -98,6 +100,8 @@ export function UserForm({ user, onSubmit, onCancel }) {
         return <Shield className="h-4 w-4" />;
       case "MAINT":
         return <Key className="h-4 w-4" />;
+      case "RENTER":
+        return <GraduationCap className="h-4 w-4" />;
       default:
         return <User className="h-4 w-4" />;
     }
@@ -261,6 +265,12 @@ export function UserForm({ user, onSubmit, onCancel }) {
                         <div className="flex items-center gap-2">
                           <Key className="h-4 w-4" />
                           Maintenance
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="RENTER">
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" />
+                          Renter
                         </div>
                       </SelectItem>
                     </SelectContent>

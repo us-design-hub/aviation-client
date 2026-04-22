@@ -19,6 +19,7 @@ export function UsersTable({
   const getRoleBadge = (role, isLeadInstructor) => {
     const variants = {
       STUDENT: "bg-blue-50 text-blue-700 border-blue-200",
+      RENTER: "bg-amber-50 text-amber-700 border-amber-200",
       INSTRUCTOR: "bg-purple-50 text-purple-700 border-purple-200",
       ADMIN: "bg-green-50 text-green-700 border-green-200",
       MAINT: "bg-orange-50 text-orange-700 border-orange-200"
@@ -27,7 +28,7 @@ export function UsersTable({
     return (
       <div className="flex items-center gap-2">
         <Badge className={variants[role]}>
-          {role === "MAINT" ? "Maintenance" : role}
+          {role === "MAINT" ? "Maintenance" : role === "RENTER" ? "Renter" : role}
         </Badge>
         {isLeadInstructor && (
           <Badge variant="outline" className="text-xs">
@@ -58,6 +59,8 @@ export function UsersTable({
         return <User className="h-4 w-4 text-blue-600" />;
       case "INSTRUCTOR":
         return <UserCheck className="h-4 w-4 text-purple-600" />;
+      case "RENTER":
+        return <User className="h-4 w-4 text-amber-600" />;
       case "ADMIN":
         return <Shield className="h-4 w-4 text-green-600" />;
       case "MAINT":

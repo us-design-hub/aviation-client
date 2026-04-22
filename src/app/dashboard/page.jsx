@@ -18,7 +18,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { aircraftAPI, lessonsAPI, maintenanceAPI, squawksAPI, usersAPI } from '@/lib/api';
+import { aircraftAPI, lessonsAPI, maintenanceAPI, squawksAPI, usersAPI, rentalsAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 
 export default function DashboardPage() {
@@ -33,6 +33,7 @@ export default function DashboardPage() {
     activeMaintenance: 0,
   });
   const [studentData, setStudentData] = useState(null); // For student dashboard
+  const [renterData, setRenterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   
@@ -51,6 +52,14 @@ export default function DashboardPage() {
             setStudentData(dashboardRes.data);
           } catch (error) {
             console.error('Error fetching student dashboard:', error);
+          }
+        }
+        if (user?.role === 'RENTER') {
+          try {
+            const dashboardRes = await rentalsAPI.getDashboard();
+            setRenterData(dashboardRes.data);
+          } catch (error) {
+            console.error('Error fetching renter dashboard:', error);
           }
         }
         
@@ -168,7 +177,7 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [user?.role]); // Re-run when user role changes
+  }, [user?.id, user?.role]); // Re-run when user changes
 
   const statCards = [
     {
@@ -449,6 +458,129 @@ export default function DashboardPage() {
                     <Button variant="outline" className="w-full justify-start">
                       <TrendingUp className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
                       View Progress
+                    </Button>
+                  </Link>
+                  <Link href="/squawks">
+                    <Button variant="outline" className="w-full justify-start">
+                      <AlertTriangle className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      Report Squawk
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : user?.role === 'RENTER' ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Welcome, {user.name}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Your rental account dashboard
+                </p>
+              </div>
+              <GoldenBadge variant="default" className="text-sm">
+                <TrendingUp className="w-4 h-4 mr-1 icon-black dark:icon-black-dark" />
+                Active Renter
+              </GoldenBadge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Purchased</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{renterData?.hours?.totalPurchased?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Flown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{renterData?.hours?.hoursFlown?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Remaining</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{renterData?.hours?.hoursRemaining?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    Upcoming Rentals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renterData?.upcomingBookings?.length ? (
+                    <div className="space-y-3">
+                      {renterData.upcomingBookings.map((booking) => (
+                        <div key={booking.id} className="rounded-lg border p-3">
+                          <div className="font-medium">{booking.tail_number}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(booking.start_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' })}
+                          </div>
+                          {booking.purpose && <div className="text-sm mt-1">{booking.purpose}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No upcoming rentals scheduled.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    Compliance Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm">
+                    <span className="font-medium">Missing:</span>{' '}
+                    {renterData?.compliance?.missingTypes?.length ? renterData.compliance.missingTypes.join(', ') : 'None'}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Expired:</span>{' '}
+                    {renterData?.compliance?.expired?.length ? renterData.compliance.expired.map((doc) => doc.document_type).join(', ') : 'None'}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Expiring Soon:</span>{' '}
+                    {renterData?.compliance?.expiringSoon?.length ? renterData.compliance.expiringSoon.map((doc) => doc.document_type).join(', ') : 'None'}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Link href="/rentals">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Calendar className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      View Rentals
+                    </Button>
+                  </Link>
+                  <Link href="/documents">
+                    <Button variant="outline" className="w-full justify-start">
+                      <CheckCircle className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      Manage Documents
                     </Button>
                   </Link>
                   <Link href="/squawks">

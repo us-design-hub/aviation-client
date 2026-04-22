@@ -51,6 +51,15 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         params.studentId = user.id;
       } else if (user.role === "INSTRUCTOR") {
         params.instructorId = user.id;
+      } else if (user.role === "RENTER") {
+        setUserStats({
+          totalLessons: 0,
+          completedLessons: 0,
+          scheduledLessons: 0,
+          recentLessons: [],
+        });
+        setLoading(false);
+        return;
       }
       
       const response = await lessonsAPI.getAll(params);
@@ -77,6 +86,8 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         return <User className="h-5 w-5 text-blue-600" />;
       case "INSTRUCTOR":
         return <UserCheck className="h-5 w-5 text-purple-600" />;
+      case "RENTER":
+        return <User className="h-5 w-5 text-amber-600" />;
       case "ADMIN":
         return <Shield className="h-5 w-5 text-green-600" />;
       case "MAINT":
@@ -92,6 +103,8 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         return "Student";
       case "INSTRUCTOR":
         return "Instructor";
+      case "RENTER":
+        return "Renter";
       case "ADMIN":
         return "Administrator";
       case "MAINT":
@@ -185,6 +198,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
                     <Badge className={cn(
                       "text-xs",
                       user.role === "STUDENT" && "bg-blue-50 text-blue-700 border-blue-200",
+                      user.role === "RENTER" && "bg-amber-50 text-amber-700 border-amber-200",
                       user.role === "INSTRUCTOR" && "bg-purple-50 text-purple-700 border-purple-200",
                       user.role === "ADMIN" && "bg-green-50 text-green-700 border-green-200",
                       user.role === "MAINT" && "bg-orange-50 text-orange-700 border-orange-200"

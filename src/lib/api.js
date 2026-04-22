@@ -94,6 +94,7 @@ export const usersAPI = {
   getAll: () => api.get('/users'),
   getStudents: () => api.get('/users/students'),
   getInstructors: () => api.get('/users/instructors'),
+  getRenters: () => api.get('/users/renters'),
   create: (userData) => api.post('/users', userData),
   update: (id, userData) => api.patch(`/users/${id}`, userData),
   delete: (id) => api.delete(`/users/${id}`),
@@ -180,6 +181,23 @@ export const maintenanceAPI = {
   update: (id, maintenanceData) => api.patch(`/maintenance/${id}`, maintenanceData),
   delete: (id) => api.delete(`/maintenance/${id}`),
   complete: (id) => api.post(`/maintenance/${id}/complete`),
+};
+
+// Rentals API
+export const rentalsAPI = {
+  getAll: () => api.get('/rentals'),
+  getDashboard: (userId) => api.get(userId ? `/rentals/dashboard/${userId}` : '/rentals/dashboard'),
+  getHours: (userId) => api.get(userId ? `/rentals/hours/${userId}` : '/rentals/hours'),
+  allocateHours: (userId, data) => api.post(`/rentals/hours/${userId}/allocate`, data),
+  getDocuments: (userId) => api.get(userId ? `/rentals/documents/${userId}` : '/rentals/documents'),
+  createDocument: (userId, data) => api.post(userId ? `/rentals/documents/${userId}` : '/rentals/documents', data),
+  updateDocument: (documentId, data) => api.patch(`/rentals/documents/record/${documentId}`, data),
+  deleteDocument: (documentId) => api.delete(`/rentals/documents/record/${documentId}`),
+  create: (data) => api.post('/rentals', data),
+  update: (id, data) => api.patch(`/rentals/${id}`, data),
+  remove: (id) => api.delete(`/rentals/${id}`),
+  checkout: (id, data) => api.post(`/rentals/${id}/checkout`, data),
+  checkin: (id, data) => api.post(`/rentals/${id}/checkin`, data),
 };
 
 
