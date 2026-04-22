@@ -19,6 +19,15 @@ function toIso(value) {
   return value ? new Date(value).toISOString() : null;
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function asNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function formatDateTime(value) {
   return value
     ? new Date(value).toLocaleString("en-US", {
@@ -65,11 +74,6 @@ export function RentalsClient() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (!user?.role) return;
-    loadData();
-  }, [loadData, user?.role, selectedRenterId]);
-
   const filteredBookings = useMemo(() => {
     if (!isAdmin || !selectedRenterId) return bookings;
     return bookings.filter((booking) => booking.renter_id === selectedRenterId);
@@ -83,10 +87,10 @@ export function RentalsClient() {
         requests.push(usersAPI.getRenters());
       }
       const [bookingsRes, aircraftRes, rentersRes] = await Promise.all(requests);
-      setBookings(bookingsRes.data || []);
-      setAircraft((aircraftRes.data || []).filter((item) => item.status === "OK"));
+      setBookings(asArray(bookingsRes.data));
+      setAircraft(asArray(aircraftRes.data).filter((item) => item?.status === "OK"));
       if (isAdmin) {
-        const renterRows = rentersRes?.data || [];
+        const renterRows = asArray(rentersRes?.data);
         setRenters(renterRows);
         if (!selectedRenterId && renterRows[0]?.id) {
           setSelectedRenterId(renterRows[0].id);
@@ -103,7 +107,7 @@ export function RentalsClient() {
       }
 
       const dashboardRes = await rentalsAPI.getDashboard(isAdmin ? selectedRenterId : undefined);
-      setDashboard(dashboardRes.data);
+      setDashboard(dashboardRes?.data && typeof dashboardRes.data === "object" ? dashboardRes.data : null);
     } catch (error) {
       console.error("Failed to load rentals data:", error);
       toast.error("Failed to load rental data");
@@ -111,6 +115,11 @@ export function RentalsClient() {
       setLoading(false);
     }
   }, [isAdmin, selectedRenterId]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    loadData();
+  }, [loadData, user?.role, selectedRenterId]);
 
   async function handleBookingSubmit(event) {
     event.preventDefault();
@@ -215,8 +224,20 @@ export function RentalsClient() {
     );
   }
 
-  const summary = dashboard?.hours || { totalPurchased: 0, hoursFlown: 0, hoursRemaining: 0, transactions: [] };
-  const compliance = dashboard?.compliance || { missingTypes: [], expired: [], expiringSoon: [] };
+  const summary = {
+    totalPurchased: asNumber(dashboard?.hours?.totalPurchased),
+    hoursFlown: asNumber(dashboard?.hours?.hoursFlown),
+    hoursRemaining: asNumber(dashboard?.hours?.hoursRemaining),
+    transactions: asArray(dashboard?.hours?.transactions),
+  };
+  const compliance = {
+    missingTypes: asArray(dashboard?.compliance?.missingTypes),
+    expired: asArray(dashboard?.compliance?.expired),
+    expiringSoon: asArray(dashboard?.compliance?.expiringSoon),
+  };
+  const safeRenters = asArray(renters);
+  const safeBookings = asArray(filteredBookings);
+  const safeAircraft = asArray(aircraft);
 
   return (
     <div className="space-y-6">
@@ -234,7 +255,7 @@ export function RentalsClient() {
                 <SelectValue placeholder="Select renter" />
               </SelectTrigger>
               <SelectContent>
-                {renters.map((renter) => (
+                {safeRenters.map((renter) => (
                   <SelectItem key={renter.id} value={renter.id}>
                     {renter.name || renter.email}
                   </SelectItem>
@@ -288,10 +309,10 @@ export function RentalsClient() {
             <CardDescription>Aircraft bookings for the selected renter workflow.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {filteredBookings.length === 0 ? (
+            {safeBookings.length === 0 ? (
               <p className="text-sm text-muted-foreground">No rental bookings yet.</p>
             ) : (
-              filteredBookings.map((booking) => (
+              safeBookings.map((booking) => (
                 <div key={booking.id} className="rounded-lg border p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-2">
@@ -433,7 +454,7 @@ export function RentalsClient() {
                     <SelectValue placeholder="Select renter" />
                   </SelectTrigger>
                   <SelectContent>
-                    {renters.map((renter) => (
+                    {safeRenters.map((renter) => (
                       <SelectItem key={renter.id} value={renter.id}>
                         {renter.name || renter.email}
                       </SelectItem>
@@ -449,7 +470,7 @@ export function RentalsClient() {
                   <SelectValue placeholder="Select aircraft" />
                 </SelectTrigger>
                 <SelectContent>
-                  {aircraft.map((item) => (
+                  {safeAircraft.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.tail_number}
                     </SelectItem>

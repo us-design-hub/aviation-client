@@ -29,6 +29,10 @@ const emptyForm = {
   fileData: "",
 };
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function formatDate(value) {
   return value
     ? new Date(value).toLocaleDateString("en-US", { timeZone: "America/New_York" })
@@ -53,17 +57,12 @@ export function DocumentsClient() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (!user?.role) return;
-    loadData();
-  }, [loadData, user?.role, selectedRenterId]);
-
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       if (isAdmin) {
         const rentersRes = await usersAPI.getRenters();
-        setRenters(rentersRes.data || []);
+        setRenters(asArray(rentersRes.data));
         if (!selectedRenterId && rentersRes.data?.[0]?.id) {
           setSelectedRenterId(rentersRes.data[0].id);
           return;
@@ -74,7 +73,7 @@ export function DocumentsClient() {
         }
       }
       const documentsRes = await rentalsAPI.getDocuments(isAdmin ? selectedRenterId : undefined);
-      setCompliance(documentsRes.data);
+      setCompliance(documentsRes?.data && typeof documentsRes.data === "object" ? documentsRes.data : null);
     } catch (error) {
       console.error("Failed to load documents:", error);
       toast.error("Failed to load compliance documents");
@@ -82,6 +81,11 @@ export function DocumentsClient() {
       setLoading(false);
     }
   }, [isAdmin, selectedRenterId]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    loadData();
+  }, [loadData, user?.role, selectedRenterId]);
 
   async function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -165,6 +169,14 @@ export function DocumentsClient() {
     );
   }
 
+  const safeRenters = asArray(renters);
+  const safeCompliance = {
+    documents: asArray(compliance?.documents),
+    missingTypes: asArray(compliance?.missingTypes),
+    expired: asArray(compliance?.expired),
+    expiringSoon: asArray(compliance?.expiringSoon),
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -181,7 +193,7 @@ export function DocumentsClient() {
                 <SelectValue placeholder="Select renter" />
               </SelectTrigger>
               <SelectContent>
-                {renters.map((renter) => (
+                {safeRenters.map((renter) => (
                   <SelectItem key={renter.id} value={renter.id}>
                     {renter.name || renter.email}
                   </SelectItem>
@@ -203,7 +215,7 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {compliance?.missingTypes?.length ? compliance.missingTypes.join(", ") : "None"}
+              {safeCompliance.missingTypes.length ? safeCompliance.missingTypes.join(", ") : "None"}
             </div>
           </CardContent>
         </Card>
@@ -213,7 +225,7 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {compliance?.expired?.length ? compliance.expired.map((doc) => doc.document_type).join(", ") : "None"}
+              {safeCompliance.expired.length ? safeCompliance.expired.map((doc) => doc.document_type).join(", ") : "None"}
             </div>
           </CardContent>
         </Card>
@@ -223,7 +235,7 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {compliance?.expiringSoon?.length ? compliance.expiringSoon.map((doc) => doc.document_type).join(", ") : "None"}
+              {safeCompliance.expiringSoon.length ? safeCompliance.expiringSoon.map((doc) => doc.document_type).join(", ") : "None"}
             </div>
           </CardContent>
         </Card>
@@ -238,8 +250,8 @@ export function DocumentsClient() {
           <CardDescription>Current document set for the selected renter.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {compliance?.documents?.length ? (
-            compliance.documents.map((document) => (
+          {safeCompliance.documents.length ? (
+            safeCompliance.documents.map((document) => (
               <div key={document.id} className="rounded-lg border p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
