@@ -21,6 +21,16 @@ import Link from 'next/link';
 import { aircraftAPI, lessonsAPI, maintenanceAPI, squawksAPI, usersAPI, rentalsAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 
+const renterDocumentLabels = {
+  PILOT_LICENSE: 'Pilot License',
+  MEDICAL_CERTIFICATE: 'Medical Certificate',
+  RENTERS_INSURANCE: 'Renters Insurance',
+};
+
+function formatRenterDocumentLabel(type) {
+  return renterDocumentLabels[type] || type;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     aircraft: 0,
@@ -551,15 +561,21 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                   <div className="text-sm">
                     <span className="font-medium">Missing:</span>{' '}
-                    {renterData?.compliance?.missingTypes?.length ? renterData.compliance.missingTypes.join(', ') : 'None'}
+                    {renterData?.compliance?.missingTypes?.length
+                      ? renterData.compliance.missingTypes.map(formatRenterDocumentLabel).join(', ')
+                      : 'None'}
                   </div>
                   <div className="text-sm">
                     <span className="font-medium">Expired:</span>{' '}
-                    {renterData?.compliance?.expired?.length ? renterData.compliance.expired.map((doc) => doc.document_type).join(', ') : 'None'}
+                    {renterData?.compliance?.expired?.length
+                      ? renterData.compliance.expired.map((doc) => formatRenterDocumentLabel(doc.document_type)).join(', ')
+                      : 'None'}
                   </div>
                   <div className="text-sm">
                     <span className="font-medium">Expiring Soon:</span>{' '}
-                    {renterData?.compliance?.expiringSoon?.length ? renterData.compliance.expiringSoon.map((doc) => doc.document_type).join(', ') : 'None'}
+                    {renterData?.compliance?.expiringSoon?.length
+                      ? renterData.compliance.expiringSoon.map((doc) => formatRenterDocumentLabel(doc.document_type)).join(', ')
+                      : 'None'}
                   </div>
                 </CardContent>
               </Card>

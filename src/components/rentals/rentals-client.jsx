@@ -15,6 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckoutModal } from "@/components/aircraft/checkout-modal";
 
+const documentLabels = {
+  PILOT_LICENSE: "Pilot License",
+  MEDICAL_CERTIFICATE: "Medical Certificate",
+  RENTERS_INSURANCE: "Renters Insurance",
+};
+
 function toIso(value) {
   return value ? new Date(value).toISOString() : null;
 }
@@ -26,6 +32,10 @@ function asArray(value) {
 function asNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getDocumentLabel(type) {
+  return documentLabels[type] || type;
 }
 
 function formatDateTime(value) {
@@ -424,15 +434,21 @@ export function RentalsClient() {
             <CardContent className="space-y-3 text-sm">
               <div>
                 <span className="font-medium">Missing:</span>{" "}
-                {compliance.missingTypes?.length ? compliance.missingTypes.join(", ") : "None"}
+                {compliance.missingTypes?.length
+                  ? compliance.missingTypes.map(getDocumentLabel).join(", ")
+                  : "None"}
               </div>
               <div>
                 <span className="font-medium">Expired:</span>{" "}
-                {compliance.expired?.length ? compliance.expired.map((doc) => doc.document_type).join(", ") : "None"}
+                {compliance.expired?.length
+                  ? compliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                  : "None"}
               </div>
               <div>
                 <span className="font-medium">Expiring Soon:</span>{" "}
-                {compliance.expiringSoon?.length ? compliance.expiringSoon.map((doc) => doc.document_type).join(", ") : "None"}
+                {compliance.expiringSoon?.length
+                  ? compliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                  : "None"}
               </div>
             </CardContent>
           </Card>

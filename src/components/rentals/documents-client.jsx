@@ -20,6 +20,10 @@ const documentTypes = [
   { value: "RENTERS_INSURANCE", label: "Renters Insurance" },
 ];
 
+function getDocumentLabel(type) {
+  return documentTypes.find((item) => item.value === type)?.label || type;
+}
+
 const emptyForm = {
   documentType: "PILOT_LICENSE",
   expiresAt: "",
@@ -215,7 +219,9 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {safeCompliance.missingTypes.length ? safeCompliance.missingTypes.join(", ") : "None"}
+              {safeCompliance.missingTypes.length
+                ? safeCompliance.missingTypes.map(getDocumentLabel).join(", ")
+                : "None"}
             </div>
           </CardContent>
         </Card>
@@ -225,7 +231,9 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {safeCompliance.expired.length ? safeCompliance.expired.map((doc) => doc.document_type).join(", ") : "None"}
+              {safeCompliance.expired.length
+                ? safeCompliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                : "None"}
             </div>
           </CardContent>
         </Card>
@@ -235,7 +243,9 @@ export function DocumentsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {safeCompliance.expiringSoon.length ? safeCompliance.expiringSoon.map((doc) => doc.document_type).join(", ") : "None"}
+              {safeCompliance.expiringSoon.length
+                ? safeCompliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                : "None"}
             </div>
           </CardContent>
         </Card>
@@ -257,7 +267,7 @@ export function DocumentsClient() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">
-                        {documentTypes.find((type) => type.value === document.document_type)?.label || document.document_type}
+                        {getDocumentLabel(document.document_type)}
                       </span>
                       <Badge variant="outline">{document.status}</Badge>
                     </div>
