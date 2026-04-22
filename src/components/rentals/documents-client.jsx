@@ -47,7 +47,7 @@ export function DocumentsClient() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [renters, setRenters] = useState([]);
-  const [selectedRenterId, setSelectedRenterId] = useState(user?.id || "");
+  const [selectedRenterId, setSelectedRenterId] = useState("");
   const [compliance, setCompliance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,10 +56,10 @@ export function DocumentsClient() {
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !isAdmin) {
       setSelectedRenterId((current) => current || user.id);
     }
-  }, [user?.id]);
+  }, [isAdmin, user?.id]);
 
   const loadData = useCallback(async () => {
     try {
