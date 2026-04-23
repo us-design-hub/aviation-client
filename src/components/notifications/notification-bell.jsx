@@ -19,9 +19,11 @@ import { formatET } from "@/lib/format-tz";
 import { notificationsAPI } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -142,6 +144,33 @@ export function NotificationBell() {
     }
   };
 
+  const getNotificationRoute = useCallback((notification) => {
+    switch (notification.type) {
+      case 'lesson_scheduled':
+      case 'lesson_reminder':
+        return '/lessons';
+      case 'maintenance_alert':
+      case 'maintenance_complete':
+        return user?.role === 'ADMIN' || user?.role === 'MAINT' ? '/maintenance' : '/aircraft';
+      case 'squawk_reported':
+      case 'squawk_resolved':
+        return '/squawks';
+      case 'rental_scheduled':
+      case 'rental_completed':
+      case 'rental_reminder':
+        return '/rentals';
+      case 'hours_updated':
+        return user?.role === 'STUDENT' ? '/dashboard' : '/rentals';
+      default:
+        return '/dashboard';
+    }
+  }, [user?.role]);
+
+  const handleNotificationClick = async (notification) => {
+    await handleMarkAsRead(notification.id);
+    router.push(getNotificationRoute(notification));
+  };
+
   // Mark all notifications as read
   const handleMarkAllAsRead = async () => {
     try {
@@ -172,6 +201,11 @@ export function NotificationBell() {
           title: 'Maintenance Alert',
           message: payload.message || 'Aircraft maintenance required',
         };
+      case 'maintenance_complete':
+        return {
+          title: 'Maintenance Complete',
+          message: payload.message || 'Aircraft maintenance has been completed',
+        };
       case 'squawk_reported':
         return {
           title: 'Squawk Reported',
@@ -186,6 +220,26 @@ export function NotificationBell() {
         return {
           title: 'Availability Updated',
           message: payload.message || 'Availability has been updated',
+        };
+      case 'rental_scheduled':
+        return {
+          title: 'Rental Scheduled',
+          message: payload.message || 'A rental has been scheduled',
+        };
+      case 'rental_completed':
+        return {
+          title: 'Rental Completed',
+          message: payload.message || 'A rental has been completed',
+        };
+      case 'rental_reminder':
+        return {
+          title: 'Rental Reminder',
+          message: payload.message || 'You have an upcoming rental',
+        };
+      case 'hours_updated':
+        return {
+          title: 'Hours Updated',
+          message: payload.message || 'Your flight hours have been updated',
         };
       default:
         return {
@@ -256,7 +310,7 @@ export function NotificationBell() {
                     "flex flex-col items-start gap-1 p-4 cursor-pointer",
                     !notification.isRead && "bg-blue-50 dark:bg-blue-950/20"
                   )}
-                  onClick={() => handleMarkAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start justify-between w-full">
                     <p className="font-medium text-sm">{title}</p>
@@ -277,4 +331,3 @@ export function NotificationBell() {
     </DropdownMenu>
   );
 }
-
