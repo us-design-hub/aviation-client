@@ -13,17 +13,19 @@ import {
   Calendar,
   BookOpen,
   Activity,
-  Clock,
-  Trash2
+  Trash2,
+  Wallet
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatET } from "@/lib/format-tz";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { lessonsAPI } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { lessonsAPI, rentalsAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onManageAssignments }) {
@@ -33,6 +35,13 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
     scheduledLessons: 0,
     recentLessons: [],
   });
+  const [hourSummary, setHourSummary] = useState(null);
+  const [hourForm, setHourForm] = useState({
+    hours: "",
+    transactionType: "ALLOCATION",
+    note: "",
+  });
+  const [savingHours, setSavingHours] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +53,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
   const fetchUserStats = async () => {
     try {
       setLoading(true);
+      setHourSummary(null);
       
       // Fetch lessons based on user role
       const params = {};
@@ -52,6 +62,8 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       } else if (user.role === "INSTRUCTOR") {
         params.instructorId = user.id;
       } else if (user.role === "RENTER") {
+        const hoursResponse = await rentalsAPI.getHours(user.id);
+        setHourSummary(hoursResponse.data);
         setUserStats({
           totalLessons: 0,
           completedLessons: 0,
@@ -62,7 +74,17 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         return;
       }
       
-      const response = await lessonsAPI.getAll(params);
+      const requests = [lessonsAPI.getAll(params)];
+      if (user.role === "STUDENT") {
+        requests.push(rentalsAPI.getHours(user.id));
+      }
+
+      const [lessonsResponse, hoursResponse] = await Promise.all(requests);
+      if (hoursResponse?.data) {
+        setHourSummary(hoursResponse.data);
+      }
+
+      const response = lessonsResponse;
       const lessons = response.data || [];
       
       setUserStats({
@@ -77,6 +99,27 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       console.error("Error fetching user stats:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleHoursSubmit = async (event) => {
+    event.preventDefault();
+    const value = Number(hourForm.hours);
+    if (!Number.isFinite(value) || value === 0) return;
+
+    try {
+      setSavingHours(true);
+      const response = await rentalsAPI.allocateHours(user.id, {
+        hours: value,
+        transactionType: hourForm.transactionType,
+        note: hourForm.note,
+      });
+      setHourSummary(response.data?.summary || null);
+      setHourForm({ hours: "", transactionType: "ALLOCATION", note: "" });
+    } catch (error) {
+      console.error("Error saving flight hours:", error);
+    } finally {
+      setSavingHours(false);
     }
   };
 
@@ -270,6 +313,81 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Flight Hours */}
+      {(user.role === "STUDENT" || user.role === "RENTER") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Flight Hours
+            </CardTitle>
+            <CardDescription>
+              Purchased, flown, and remaining account hours
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-primary">{hourSummary?.totalPurchased?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Hours Purchased</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{hourSummary?.hoursFlown?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Hours Flown</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{hourSummary?.hoursRemaining?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Hours Remaining</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleHoursSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="hours-entry">Hours</label>
+                  <Input
+                    id="hours-entry"
+                    type="number"
+                    step="0.1"
+                    value={hourForm.hours}
+                    onChange={(event) => setHourForm((prev) => ({ ...prev, hours: event.target.value }))}
+                    placeholder="e.g. 10 or -1.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="hours-type">Entry Type</label>
+                  <Select
+                    value={hourForm.transactionType}
+                    onValueChange={(value) => setHourForm((prev) => ({ ...prev, transactionType: value }))}
+                  >
+                    <SelectTrigger id="hours-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALLOCATION">Purchased Hours</SelectItem>
+                      <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="hours-note">Note</label>
+                <Textarea
+                  id="hours-note"
+                  value={hourForm.note}
+                  onChange={(event) => setHourForm((prev) => ({ ...prev, note: event.target.value }))}
+                  placeholder="Optional note for this hour entry"
+                  rows={3}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={savingHours || !hourForm.hours}>
+                {savingHours ? "Saving..." : "Save Hours Entry"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       )}

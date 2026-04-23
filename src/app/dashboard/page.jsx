@@ -322,6 +322,33 @@ export default function DashboardPage() {
               </Card>
             )}
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Purchased</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{studentData?.hours?.totalPurchased?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Flown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{studentData?.hours?.hoursFlown?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Hours Remaining</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{studentData?.hours?.hoursRemaining?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Upcoming Lessons */}
             <Card>
               <CardHeader>
