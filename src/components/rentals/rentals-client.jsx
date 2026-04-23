@@ -491,6 +491,9 @@ export function RentalsClient() {
                       value={hoursForm.hours}
                       onChange={(event) => setHoursForm((current) => ({ ...current, hours: event.target.value }))}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Enter decimal hours. Example: 1.5 = 1 hour 30 minutes, 0.5 = 30 minutes.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transactionType">Entry type</Label>

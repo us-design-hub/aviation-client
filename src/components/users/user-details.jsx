@@ -357,6 +357,9 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
                     onChange={(event) => setHourForm((prev) => ({ ...prev, hours: event.target.value }))}
                     placeholder="e.g. 10 or -1.5"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Enter decimal hours. Example: 1.5 = 1 hour 30 minutes, 0.5 = 30 minutes.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="hours-type">Entry Type</label>
