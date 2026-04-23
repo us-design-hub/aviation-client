@@ -307,30 +307,36 @@ export function RentalsClient() {
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAdmin && (
             <>
-              <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select workflow" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ADMIN_WORKFLOW_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
-                <SelectTrigger className="w-[280px]">
-                  <SelectValue placeholder={`Select ${selectedPersonLabel}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedPeople.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.name || person.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label htmlFor="schedule-role-filter">Role</Label>
+                <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
+                  <SelectTrigger id="schedule-role-filter" className="w-[180px]">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ADMIN_WORKFLOW_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="schedule-user-filter">Users</Label>
+                <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
+                  <SelectTrigger id="schedule-user-filter" className="w-[280px]">
+                    <SelectValue placeholder={`Select ${selectedPersonLabel}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedPeople.map((person) => (
+                      <SelectItem key={person.id} value={person.id}>
+                        {person.name || person.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </>
           )}
             {!isStudentWorkflow && (
