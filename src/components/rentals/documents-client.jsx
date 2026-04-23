@@ -43,6 +43,19 @@ function formatDate(value) {
     : "No expiry set";
 }
 
+function getDocumentStatusBadgeClass(status) {
+  if (status === "EXPIRED") {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+  if (status === "VALID") {
+    return "border-green-200 bg-green-50 text-green-700";
+  }
+  if (status === "EXPIRING_SOON") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "";
+}
+
 export function DocumentsClient() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
@@ -269,7 +282,9 @@ export function DocumentsClient() {
                       <span className="font-semibold">
                         {getDocumentLabel(document.document_type)}
                       </span>
-                      <Badge variant="outline">{document.status}</Badge>
+                      <Badge variant="outline" className={getDocumentStatusBadgeClass(document.status)}>
+                        {document.status}
+                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       <div>Expires: {formatDate(document.expires_at)}</div>
