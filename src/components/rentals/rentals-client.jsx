@@ -63,10 +63,17 @@ const emptyHoursForm = {
   transactionType: "ALLOCATION",
 };
 
+const ADMIN_WORKFLOW_OPTIONS = [
+  { value: "RENTER", label: "Renters" },
+  { value: "STUDENT", label: "Students" },
+];
+
 export function RentalsClient() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const [selectedWorkflow, setSelectedWorkflow] = useState("RENTER");
   const [renters, setRenters] = useState([]);
+  const [students, setStudents] = useState([]);
   const [selectedRenterId, setSelectedRenterId] = useState(user?.id || "");
   const [aircraft, setAircraft] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -84,6 +91,14 @@ export function RentalsClient() {
     }
   }, [user?.id]);
 
+  const isStudentWorkflow = isAdmin && selectedWorkflow === "STUDENT";
+  const selectedPeople = isStudentWorkflow ? students : renters;
+  const selectedPersonLabel = isStudentWorkflow ? "student" : "renter";
+  const scheduleHeading = isStudentWorkflow ? "Student Flight Hours" : "Rental Operations";
+  const scheduleDescription = isStudentWorkflow
+    ? "Track student flight hours and manage hour balances."
+    : "Track renter hours, schedule aircraft, and close out flights.";
+
   const filteredBookings = useMemo(() => {
     if (!isAdmin || !selectedRenterId) return bookings;
     return bookings.filter((booking) => booking.renter_id === selectedRenterId);
@@ -95,18 +110,22 @@ export function RentalsClient() {
       const requests = [rentalsAPI.getAll(), aircraftAPI.getAll()];
       if (isAdmin) {
         requests.push(usersAPI.getRenters());
+        requests.push(usersAPI.getStudents());
       }
-      const [bookingsRes, aircraftRes, rentersRes] = await Promise.all(requests);
+      const [bookingsRes, aircraftRes, rentersRes, studentsRes] = await Promise.all(requests);
       setBookings(asArray(bookingsRes.data));
       setAircraft(asArray(aircraftRes.data).filter((item) => item?.status === "OK"));
       if (isAdmin) {
         const renterRows = asArray(rentersRes?.data);
+        const studentRows = asArray(studentsRes?.data);
         setRenters(renterRows);
-        if (!selectedRenterId && renterRows[0]?.id) {
-          setSelectedRenterId(renterRows[0].id);
+        setStudents(studentRows);
+        const activeRows = selectedWorkflow === "STUDENT" ? studentRows : renterRows;
+        if (!selectedRenterId && activeRows[0]?.id) {
+          setSelectedRenterId(activeRows[0].id);
           return;
         }
-        if (!selectedRenterId && !renterRows[0]?.id) {
+        if (!selectedRenterId && !activeRows[0]?.id) {
           setDashboard({
             hours: { totalPurchased: 0, hoursFlown: 0, hoursRemaining: 0, transactions: [] },
             compliance: { missingTypes: [], expired: [], expiringSoon: [] },
@@ -114,22 +133,51 @@ export function RentalsClient() {
           });
           return;
         }
+        if (selectedRenterId && !activeRows.some((person) => person.id === selectedRenterId)) {
+          setSelectedRenterId(activeRows[0]?.id || "");
+          return;
+        }
+      } else {
+        setStudents([]);
       }
 
-      const dashboardRes = await rentalsAPI.getDashboard(isAdmin ? selectedRenterId : undefined);
-      setDashboard(dashboardRes?.data && typeof dashboardRes.data === "object" ? dashboardRes.data : null);
+      if (isStudentWorkflow) {
+        const hoursRes = await rentalsAPI.getHours(selectedRenterId);
+        setDashboard({
+          hours: hoursRes?.data && typeof hoursRes.data === "object"
+            ? hoursRes.data
+            : { totalPurchased: 0, hoursFlown: 0, hoursRemaining: 0, transactions: [] },
+          compliance: { missingTypes: [], expired: [], expiringSoon: [] },
+          upcomingBookings: [],
+        });
+      } else {
+        const dashboardRes = await rentalsAPI.getDashboard(isAdmin ? selectedRenterId : undefined);
+        setDashboard(dashboardRes?.data && typeof dashboardRes.data === "object" ? dashboardRes.data : null);
+      }
     } catch (error) {
       console.error("Failed to load rentals data:", error);
       toast.error("Failed to load rental data");
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, selectedRenterId]);
+  }, [isAdmin, isStudentWorkflow, selectedRenterId, selectedWorkflow]);
 
   useEffect(() => {
     if (!user?.role) return;
     loadData();
   }, [loadData, user?.role, selectedRenterId]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const activeRows = selectedWorkflow === "STUDENT" ? students : renters;
+    if (!activeRows.length) {
+      setSelectedRenterId("");
+      return;
+    }
+    if (!selectedRenterId || !activeRows.some((person) => person.id === selectedRenterId)) {
+      setSelectedRenterId(activeRows[0].id);
+    }
+  }, [isAdmin, renters, selectedRenterId, selectedWorkflow, students]);
 
   async function handleBookingSubmit(event) {
     event.preventDefault();
@@ -253,35 +301,49 @@ export function RentalsClient() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Rental Operations</h1>
-          <p className="text-muted-foreground">
-            Track renter hours, schedule aircraft, and close out flights.
-          </p>
+          <h1 className="text-3xl font-bold">{scheduleHeading}</h1>
+          <p className="text-muted-foreground">{scheduleDescription}</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAdmin && (
-            <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select renter" />
-              </SelectTrigger>
-              <SelectContent>
-                {safeRenters.map((renter) => (
-                  <SelectItem key={renter.id} value={renter.id}>
-                    {renter.name || renter.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select workflow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ADMIN_WORKFLOW_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder={`Select ${selectedPersonLabel}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedPeople.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name || person.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
           )}
-            <Button
+            {!isStudentWorkflow && (
+              <Button
               onClick={() => {
                 setBookingForm({ ...emptyBookingForm, renterId: selectedRenterId || "" });
                 setBookingDialogOpen(true);
               }}
-            >
-            <Plus className="mr-2 h-4 w-4" />
-            Schedule Rental
-          </Button>
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Schedule Rental
+              </Button>
+            )}
         </div>
       </div>
 
@@ -315,11 +377,40 @@ export function RentalsClient() {
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Scheduled Rentals</CardTitle>
-            <CardDescription>Aircraft bookings for the selected renter workflow.</CardDescription>
+            <CardTitle>{isStudentWorkflow ? "Student Hours Activity" : "Scheduled Rentals"}</CardTitle>
+            <CardDescription>
+              {isStudentWorkflow
+                ? "Hours are tracked automatically when flight lessons are completed."
+                : "Aircraft bookings for the selected renter workflow."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {safeBookings.length === 0 ? (
+            {isStudentWorkflow ? (
+              summary.transactions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No student hour entries yet.</p>
+              ) : (
+                summary.transactions.map((transaction) => (
+                  <div key={transaction.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="font-semibold">
+                          {transaction.transaction_type === "ALLOCATION" && "Purchased Hours"}
+                          {transaction.transaction_type === "ADJUSTMENT" && "Hours Adjustment"}
+                          {transaction.transaction_type === "LESSON_DEBIT" && "Lesson Flight Time"}
+                          {transaction.transaction_type === "RENTAL_DEBIT" && "Rental Flight Time"}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{formatDateTime(transaction.created_at)}</div>
+                        {transaction.note && <div className="text-sm">{transaction.note}</div>}
+                      </div>
+                      <Badge variant="outline">
+                        {asNumber(transaction.delta_hours) > 0 ? "+" : ""}
+                        {asNumber(transaction.delta_hours).toFixed(1)} hrs
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : safeBookings.length === 0 ? (
               <p className="text-sm text-muted-foreground">No rental bookings yet.</p>
             ) : (
               safeBookings.map((booking) => (
@@ -381,7 +472,7 @@ export function RentalsClient() {
                   <Wallet className="h-5 w-5" />
                   Hours Ledger
                 </CardTitle>
-                <CardDescription>Add or adjust hour balances for the selected renter.</CardDescription>
+                <CardDescription>Add or adjust hour balances for the selected {selectedPersonLabel}.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form className="space-y-4" onSubmit={handleAllocateHours}>
@@ -426,36 +517,38 @@ export function RentalsClient() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Compliance Snapshot</CardTitle>
-              <CardDescription>Document issues that can block rentals.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <span className="font-medium">Missing:</span>{" "}
-                {compliance.missingTypes?.length
-                  ? compliance.missingTypes.map(getDocumentLabel).join(", ")
-                  : "None"}
-              </div>
-              <div>
-                <span className="font-medium">Expired:</span>{" "}
-                {compliance.expired?.length
-                  ? compliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                  : "None"}
-              </div>
-              <div>
-                <span className="font-medium">Expiring Soon:</span>{" "}
-                {compliance.expiringSoon?.length
-                  ? compliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                  : "None"}
-              </div>
-            </CardContent>
-          </Card>
+          {!isStudentWorkflow && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Compliance Snapshot</CardTitle>
+                <CardDescription>Document issues that can block rentals.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium">Missing:</span>{" "}
+                  {compliance.missingTypes?.length
+                    ? compliance.missingTypes.map(getDocumentLabel).join(", ")
+                    : "None"}
+                </div>
+                <div>
+                  <span className="font-medium">Expired:</span>{" "}
+                  {compliance.expired?.length
+                    ? compliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                    : "None"}
+                </div>
+                <div>
+                  <span className="font-medium">Expiring Soon:</span>{" "}
+                  {compliance.expiringSoon?.length
+                    ? compliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+                    : "None"}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
-      <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+      <Dialog open={bookingDialogOpen && !isStudentWorkflow} onOpenChange={setBookingDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Schedule Rental</DialogTitle>
