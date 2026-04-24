@@ -161,6 +161,10 @@ export function NotificationBell() {
         return '/rentals';
       case 'hours_updated':
         return user?.role === 'STUDENT' ? '/dashboard' : '/rentals';
+      case 'instruction_invoice':
+      case 'instruction_billing_warning':
+      case 'instruction_billing_blocked':
+        return '/dashboard';
       default:
         return '/dashboard';
     }
@@ -240,6 +244,21 @@ export function NotificationBell() {
         return {
           title: 'Hours Updated',
           message: payload.message || 'Your flight hours have been updated',
+        };
+      case 'instruction_invoice':
+        return {
+          title: 'Instructor Invoice',
+          message: payload.message || 'A new instructor time invoice has been created',
+        };
+      case 'instruction_billing_warning':
+        return {
+          title: 'Instructor Billing Warning',
+          message: payload.message || 'Outstanding instructor time needs attention',
+        };
+      case 'instruction_billing_blocked':
+        return {
+          title: 'Scheduling Hold',
+          message: payload.message || 'Flight scheduling is blocked until instructor time is paid down',
         };
       default:
         return {

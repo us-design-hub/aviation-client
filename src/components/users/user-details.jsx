@@ -25,7 +25,7 @@ import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { lessonsAPI, rentalsAPI } from "@/lib/api";
+import { lessonsAPI, rentalsAPI, usersAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onManageAssignments }) {
@@ -41,7 +41,14 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
     transactionType: "ALLOCATION",
     note: "",
   });
+  const [instructionBilling, setInstructionBilling] = useState(null);
+  const [instructionBillingForm, setInstructionBillingForm] = useState({
+    hours: "",
+    entryType: "PAYMENT",
+    note: "",
+  });
   const [savingHours, setSavingHours] = useState(false);
+  const [savingInstructionBilling, setSavingInstructionBilling] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,6 +90,12 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       if (hoursResponse?.data) {
         setHourSummary(hoursResponse.data);
       }
+      if (user.role === "STUDENT") {
+        const instructionBillingResponse = await usersAPI.getInstructionBilling(user.id);
+        setInstructionBilling(instructionBillingResponse.data);
+      } else {
+        setInstructionBilling(null);
+      }
 
       const response = lessonsResponse;
       const lessons = response.data || [];
@@ -120,6 +133,24 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       console.error("Error saving flight hours:", error);
     } finally {
       setSavingHours(false);
+    }
+  };
+
+  const handleInstructionBillingSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      setSavingInstructionBilling(true);
+      const response = await usersAPI.saveInstructionBilling(user.id, {
+        hours: Number(instructionBillingForm.hours),
+        entryType: instructionBillingForm.entryType,
+        note: instructionBillingForm.note,
+      });
+      setInstructionBilling(response.data);
+      setInstructionBillingForm({ hours: "", entryType: "PAYMENT", note: "" });
+    } catch (error) {
+      console.error("Error saving instructor billing:", error);
+    } finally {
+      setSavingInstructionBilling(false);
     }
   };
 
@@ -391,6 +422,106 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
                 {savingHours ? "Saving..." : "Save Hours Entry"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {user.role === "STUDENT" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Instructor Billing
+            </CardTitle>
+            <CardDescription>
+              Instructor time invoices, payments, and scheduling thresholds
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-primary">{instructionBilling?.totalInvoiced?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Hours Invoiced</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{instructionBilling?.totalPaid?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Hours Paid Down</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{instructionBilling?.outstandingHours?.toFixed?.(1) ?? "0.0"}</p>
+                <p className="text-sm text-muted-foreground">Outstanding Hours</p>
+              </div>
+            </div>
+
+            {instructionBilling?.status === "WARNING" && (
+              <Badge className="bg-amber-50 text-amber-700 border-amber-200">Warning threshold reached</Badge>
+            )}
+            {instructionBilling?.status === "BLOCKED" && (
+              <Badge className="bg-red-50 text-red-700 border-red-200">Scheduling blocked</Badge>
+            )}
+
+            <form onSubmit={handleInstructionBillingSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="instruction-hours-entry">Hours</label>
+                  <Input
+                    id="instruction-hours-entry"
+                    type="number"
+                    step="0.1"
+                    value={instructionBillingForm.hours}
+                    onChange={(event) => setInstructionBillingForm((prev) => ({ ...prev, hours: event.target.value }))}
+                    placeholder="e.g. 2.0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Payments reduce the balance. Adjustments can add or remove hours.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="instruction-entry-type">Entry Type</label>
+                  <Select
+                    value={instructionBillingForm.entryType}
+                    onValueChange={(value) => setInstructionBillingForm((prev) => ({ ...prev, entryType: value }))}
+                  >
+                    <SelectTrigger id="instruction-entry-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PAYMENT">Payment</SelectItem>
+                      <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="instruction-note">Note</label>
+                <Textarea
+                  id="instruction-note"
+                  value={instructionBillingForm.note}
+                  onChange={(event) => setInstructionBillingForm((prev) => ({ ...prev, note: event.target.value }))}
+                  placeholder="Optional note for this payment or adjustment"
+                  rows={3}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={savingInstructionBilling || !instructionBillingForm.hours}>
+                {savingInstructionBilling ? "Saving..." : "Save Billing Entry"}
+              </Button>
+            </form>
+
+            <div className="space-y-3">
+              {(instructionBilling?.entries || []).slice(0, 8).map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{entry.entry_type}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateTime(entry.created_at)}</p>
+                    {entry.note && <p className="mt-1 text-sm text-muted-foreground">{entry.note}</p>}
+                  </div>
+                  <Badge variant="outline">
+                    {Number(entry.delta_hours) > 0 ? "+" : ""}
+                    {Number(entry.delta_hours).toFixed(1)} hrs
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

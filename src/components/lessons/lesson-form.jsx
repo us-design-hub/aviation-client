@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription} from "@/components/ui/alert";
-import { lessonsAPI } from "@/lib/api";
+import { lessonsAPI, usersAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const lessonSchema = z.object({
@@ -51,6 +51,7 @@ export function LessonForm({
   const [loading, setLoading] = useState(false);
   const [conflicts, setConflicts] = useState([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
+  const [instructionBilling, setInstructionBilling] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(lessonSchema),
@@ -81,6 +82,33 @@ export function LessonForm({
     }
   }, [watchedValues.studentId, watchedValues.instructorId, watchedValues.aircraftId, 
       watchedValues.startDate, watchedValues.startTime, watchedValues.endTime]);
+
+  useEffect(() => {
+    const studentId = watchedValues.studentId;
+    if (!studentId) {
+      setInstructionBilling(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadInstructionBilling = async () => {
+      try {
+        const response = await usersAPI.getInstructionBilling(studentId);
+        if (!cancelled) {
+          setInstructionBilling(response.data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setInstructionBilling(null);
+        }
+      }
+    };
+
+    loadInstructionBilling();
+    return () => {
+      cancelled = true;
+    };
+  }, [watchedValues.studentId]);
 
   const checkConflicts = async () => {
     try {
@@ -232,6 +260,20 @@ export function LessonForm({
                   </li>
                 ))}
               </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+        {instructionBilling?.status === "WARNING" && (
+          <Alert>
+            <AlertDescription>
+              This student has {instructionBilling.outstandingHours.toFixed(1)} unpaid instructor hours. The warning threshold has been reached.
+            </AlertDescription>
+          </Alert>
+        )}
+        {instructionBilling?.status === "BLOCKED" && (
+          <Alert className="border-destructive">
+            <AlertDescription>
+              This student has {instructionBilling.outstandingHours.toFixed(1)} unpaid instructor hours. No further flight lessons can be scheduled until that debt is paid down.
             </AlertDescription>
           </Alert>
         )}
@@ -589,7 +631,7 @@ export function LessonForm({
           </Button>
           <Button 
             type="submit" 
-            disabled={loading || conflicts.length > 0}
+            disabled={loading || conflicts.length > 0 || (watchedValues.kind === "FLIGHT" && instructionBilling?.status === "BLOCKED")}
             className="bg-golden-gradient hover:bg-golden-gradient/90"
           >
             {loading ? "Scheduling..." : lesson ? "Update Lesson" : "Schedule Lesson"}

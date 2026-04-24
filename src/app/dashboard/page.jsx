@@ -349,6 +349,39 @@ export default function DashboardPage() {
               </Card>
             </div>
 
+            <Card>
+              <CardHeader>
+                <CardTitle>Instructor Billing</CardTitle>
+                <CardDescription>Outstanding instructor time tied to completed lessons</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Hours Invoiced</p>
+                    <p className="text-2xl font-bold">{studentData?.instructionBilling?.totalInvoiced?.toFixed?.(1) ?? '0.0'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Hours Paid Down</p>
+                    <p className="text-2xl font-bold">{studentData?.instructionBilling?.totalPaid?.toFixed?.(1) ?? '0.0'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Outstanding Hours</p>
+                    <p className="text-2xl font-bold">{studentData?.instructionBilling?.outstandingHours?.toFixed?.(1) ?? '0.0'}</p>
+                  </div>
+                </div>
+                {studentData?.instructionBilling?.status === 'WARNING' && (
+                  <div className="mt-4">
+                    <GoldenBadge variant="warning">Warning: unpaid instructor time needs attention</GoldenBadge>
+                  </div>
+                )}
+                {studentData?.instructionBilling?.status === 'BLOCKED' && (
+                  <div className="mt-4">
+                    <GoldenBadge variant="error">Scheduling hold: no more flight lessons can be scheduled until this is paid down</GoldenBadge>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Upcoming Lessons */}
             <Card>
               <CardHeader>

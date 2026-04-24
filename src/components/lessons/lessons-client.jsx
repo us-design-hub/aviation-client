@@ -217,7 +217,9 @@ export function LessonsClient() {
       return response.data;
     } catch (error) {
       console.error("Error creating lesson:", error);
-      if (error.response?.status === 409) {
+      if (error.response?.data?.error === "INSTRUCTION_BILLING_BLOCKED") {
+        toast.error("Student has too much unpaid instructor time to schedule another flight lesson");
+      } else if (error.response?.status === 409) {
         toast.error("Scheduling conflict detected");
       } else {
         toast.error("Failed to schedule lesson");

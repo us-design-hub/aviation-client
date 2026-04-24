@@ -105,6 +105,8 @@ export const usersAPI = {
   unassignStudent: (instructorId, studentId) => api.delete(`/users/instructors/${instructorId}/students/${studentId}`),
   getMyStudents: () => api.get('/users/my-students'), // For instructors to get their assigned students
   getStudentDashboard: (studentId) => api.get(`/users/students/${studentId}/dashboard`), // Student dashboard data
+  getInstructionBilling: (userId) => api.get(`/users/${userId}/instructor-billing`),
+  saveInstructionBilling: (userId, data) => api.post(`/users/${userId}/instructor-billing`, data),
   // People lookup
   getPeople: (ids) => api.get('/users/people', { params: { ids: ids.join(',') } }),
 };
