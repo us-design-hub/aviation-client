@@ -168,7 +168,11 @@ export function AvailabilityClient() {
       fetchAllData();
     } catch (error) {
       console.error("Error creating availability:", error);
-      toast.error("Failed to create availability");
+      if (error.response?.data?.error === "conflicts") {
+        toast.error("Aircraft block overlaps an existing lesson, rental, or hold");
+      } else {
+        toast.error("Failed to create availability");
+      }
       throw error;
     }
   };
@@ -182,7 +186,11 @@ export function AvailabilityClient() {
       fetchAllData();
     } catch (error) {
       console.error("Error updating availability:", error);
-      toast.error("Failed to update availability");
+      if (error.response?.data?.error === "conflicts") {
+        toast.error("Aircraft block overlaps an existing lesson, rental, or hold");
+      } else {
+        toast.error("Failed to update availability");
+      }
       throw error;
     }
   };
@@ -298,7 +306,7 @@ export function AvailabilityClient() {
         <div>
           <h1 className="text-3xl font-bold">Availability Management</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your personal availability and aircraft holds
+            Manage personal availability and aircraft blocks for scheduling control
           </p>
         </div>
         
@@ -333,7 +341,7 @@ export function AvailabilityClient() {
               <SheetDescription>
                 {editingAvailability 
                   ? "Update the availability details below."
-                  : "Set your personal availability or create aircraft holds."
+                  : "Set personal availability or create aircraft blocks that prevent lessons and rentals from being booked."
                 }
               </SheetDescription>
             </SheetHeader>

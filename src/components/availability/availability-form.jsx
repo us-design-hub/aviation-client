@@ -299,7 +299,7 @@ export function AvailabilityForm({
                   <SelectItem value="aircraft">
                     <div className="flex items-center gap-2">
                       <Plane className="h-4 w-4" />
-                      Aircraft Maintenance
+                      Aircraft Block / Hold
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -341,6 +341,11 @@ export function AvailabilityForm({
                   </SelectContent>
                 </Select>
                 <FormMessage />
+                {watchType === "aircraft" && (
+                  <FormDescription>
+                    Use an aircraft block to reserve time for maintenance, owner use, weather, ferry, or no-rental periods.
+                  </FormDescription>
+                )}
               </FormItem>
             )}
           />

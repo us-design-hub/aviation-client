@@ -208,6 +208,8 @@ export function LessonForm({
         return "Instructor is not available";
       case "aircraft-hold":
         return "Aircraft is on hold";
+      case "rental-booking":
+        return "Aircraft already has a renter booking scheduled";
       case "aircraft-status":
         return "Aircraft is in maintenance";
       default:

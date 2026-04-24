@@ -13,7 +13,8 @@ import {
   Check, 
   Gauge,
   LogIn,
-  LogOut
+  LogOut,
+  CheckSquare
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { aircraftAPI, lessonsAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
@@ -41,6 +43,13 @@ export function LessonDetails({
   /** From GET /aircraft/:id — list payload often omits hobbs/tach */
   const [aircraftMetersSnapshot, setAircraftMetersSnapshot] = useState(null);
   const [meterForm, setMeterForm] = useState({ hobbs: "", tach: "" });
+  const [instructionForm, setInstructionForm] = useState({
+    instructionGiven: true,
+    dualGivenTime: "",
+    groundInstructionTime: "0",
+  });
+  const [instructorNote, setInstructorNote] = useState("");
+  const [lessonNotes, setLessonNotes] = useState([]);
   const [savingMeters, setSavingMeters] = useState(false);
   const meterSectionRef = useRef(null);
   
@@ -51,6 +60,12 @@ export function LessonDetails({
       fetchMeterContext();
     }
   }, [lesson?.aircraft_id, lesson?.id]);
+
+  useEffect(() => {
+    if (lesson?.id) {
+      fetchLessonNotes();
+    }
+  }, [lesson?.id]);
 
   const fetchMeterContext = async () => {
     try {
@@ -81,6 +96,16 @@ export function LessonDetails({
       );
     } catch (error) {
       console.error("Error fetching aircraft meters:", error);
+    }
+  };
+
+  const fetchLessonNotes = async () => {
+    try {
+      const response = await lessonsAPI.getNotes(lesson.id);
+      setLessonNotes(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching lesson notes:", error);
+      setLessonNotes([]);
     }
   };
 
@@ -140,6 +165,19 @@ export function LessonDetails({
 
   const canEditLesson =
     user?.role === "ADMIN" || (user?.role === "INSTRUCTOR" && user?.id === lesson.instructor_id);
+  const currentHobbsTotal =
+    lesson.hobbs_start != null && meterForm.hobbs !== "" && Number.isFinite(Number(meterForm.hobbs))
+      ? Math.max(Number(meterForm.hobbs) - Number(lesson.hobbs_start), 0)
+      : null;
+  const currentTachTotal =
+    lesson.tach_start != null && meterForm.tach !== "" && Number.isFinite(Number(meterForm.tach))
+      ? Math.max(Number(meterForm.tach) - Number(lesson.tach_start), 0)
+      : null;
+  const maxDualTime = currentHobbsTotal != null
+    ? Number(currentHobbsTotal.toFixed(1))
+    : currentTachTotal != null
+      ? Number(currentTachTotal.toFixed(1))
+      : 0;
 
   useEffect(() => {
     if (!canOperateAircraft || lesson.status !== "SCHEDULED") return;
@@ -150,6 +188,12 @@ export function LessonDetails({
       });
     } else {
       setMeterForm({ hobbs: "", tach: "" });
+      setInstructionForm({
+        instructionGiven: lesson.instruction_given !== 0,
+        dualGivenTime: lesson.dual_given_time != null ? String(lesson.dual_given_time) : "",
+        groundInstructionTime: lesson.ground_instruction_time != null ? String(lesson.ground_instruction_time) : "0",
+      });
+      setInstructorNote("");
     }
   }, [
     lesson.id,
@@ -158,7 +202,23 @@ export function LessonDetails({
     isCheckedOut,
     checkoutPrefill.hobbs,
     checkoutPrefill.tach,
+    lesson.instruction_given,
+    lesson.dual_given_time,
+    lesson.ground_instruction_time,
   ]);
+
+  useEffect(() => {
+    if (!isCheckedOut) return;
+    setInstructionForm((current) => {
+      const currentDual = Number(current.dualGivenTime);
+      const hasValue = Number.isFinite(currentDual) && currentDual > 0;
+      const desired = current.instructionGiven
+        ? String(Number(Math.min(hasValue ? currentDual : maxDualTime, maxDualTime).toFixed(1)))
+        : "0";
+      if (current.dualGivenTime === desired) return current;
+      return { ...current, dualGivenTime: desired };
+    });
+  }, [isCheckedOut, maxDualTime]);
 
   const scrollToMeters = () => {
     meterSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -187,9 +247,14 @@ export function LessonDetails({
       await lessonsAPI.checkin(lesson.id, {
         hobbs: Number(meterForm.hobbs),
         tach: Number(meterForm.tach),
+        instructionGiven: instructionForm.instructionGiven,
+        dualGivenTime: instructionForm.instructionGiven ? Number(instructionForm.dualGivenTime || 0) : 0,
+        groundInstructionTime: Number(instructionForm.groundInstructionTime || 0),
+        instructorNote,
       });
       toast.success("Aircraft checked in and lesson completed");
       await fetchMeterContext();
+      await fetchLessonNotes();
       if (typeof window !== "undefined") window.location.reload();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Checkin failed");
@@ -332,6 +397,90 @@ export function LessonDetails({
                   />
                 </div>
               </div>
+              {isCheckedOut && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="text-xs font-medium uppercase text-muted-foreground">Total Tach Flown</p>
+                      <p className="text-lg font-semibold">{currentTachTotal != null ? currentTachTotal.toFixed(1) : "0.0"}</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="text-xs font-medium uppercase text-muted-foreground">Total Hobbs Flown</p>
+                      <p className="text-lg font-semibold">{currentHobbsTotal != null ? currentHobbsTotal.toFixed(1) : "0.0"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="instruction-given"
+                      type="checkbox"
+                      className="h-4 w-4 rounded border border-input"
+                      checked={instructionForm.instructionGiven}
+                      onChange={(e) =>
+                        setInstructionForm((current) => ({
+                          ...current,
+                          instructionGiven: e.target.checked,
+                          dualGivenTime: e.target.checked ? String(maxDualTime.toFixed(1)) : "0",
+                        }))
+                      }
+                    />
+                    <Label htmlFor="instruction-given">Instruction Given</Label>
+                  </div>
+
+                  {instructionForm.instructionGiven && (
+                    <div className="space-y-2">
+                      <Label htmlFor="dual-given-time">Flight Instruction Time (hours)</Label>
+                      <Input
+                        id="dual-given-time"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max={maxDualTime}
+                        value={instructionForm.dualGivenTime}
+                        onChange={(e) => {
+                          const nextValue = e.target.value;
+                          const parsed = Number(nextValue);
+                          if (nextValue === "") {
+                            setInstructionForm((current) => ({ ...current, dualGivenTime: "" }));
+                            return;
+                          }
+                          if (Number.isFinite(parsed)) {
+                            setInstructionForm((current) => ({
+                              ...current,
+                              dualGivenTime: String(Math.min(Math.max(parsed, 0), maxDualTime)),
+                            }));
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Maximum allowed: {maxDualTime.toFixed(1)} (based on total flight time)
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ground-instruction-time">Ground Instruction Time (hours)</Label>
+                    <Input
+                      id="ground-instruction-time"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={instructionForm.groundInstructionTime}
+                      onChange={(e) => setInstructionForm((current) => ({ ...current, groundInstructionTime: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="instructor-note">Instructor Notes</Label>
+                    <Textarea
+                      id="instructor-note"
+                      value={instructorNote}
+                      onChange={(e) => setInstructorNote(e.target.value)}
+                      placeholder="Add instructor feedback, solo notes, or anything that should be recorded for later review"
+                    />
+                  </div>
+                </div>
+              )}
               {!isCheckedOut ? (
                 <Button
                   className="w-full sm:w-auto bg-amber-600 text-white hover:bg-amber-700"
@@ -500,6 +649,53 @@ export function LessonDetails({
           </CardContent>
         </Card>
       )}
+
+      {lesson.kind === "FLIGHT" && lesson.status === "COMPLETED" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckSquare className="h-4 w-4" />
+              Instruction Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-sm font-medium">Instruction Given</p>
+              <p className="text-sm text-muted-foreground">{lesson.instruction_given === 0 ? "No" : "Yes"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Flight Instruction</p>
+              <p className="text-sm text-muted-foreground">{Number(lesson.dual_given_time || 0).toFixed(1)} hours</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Ground Instruction</p>
+              <p className="text-sm text-muted-foreground">{Number(lesson.ground_instruction_time || 0).toFixed(1)} hours</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Lesson Notes</CardTitle>
+          <CardDescription>Instructor feedback and recorded notes for later review.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {lessonNotes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No lesson notes recorded yet.</p>
+          ) : (
+            lessonNotes.map((note) => (
+              <div key={note.id} className="rounded-lg border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{note.author_name || "Unknown User"}</p>
+                  <p className="text-xs text-muted-foreground">{formatET(note.created_at, "PPp")}</p>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{note.content}</p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       {/* Syllabus Information */}
       {(lesson.program || lesson.stage || lesson.lesson) && (

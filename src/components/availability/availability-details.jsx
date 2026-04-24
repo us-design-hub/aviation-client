@@ -71,7 +71,7 @@ export function AvailabilityDetails({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Badge variant={isUserAvailability ? 'destructive' : 'secondary'} className="text-sm">
-                {isUserAvailability ? 'User Unavailable' : 'Aircraft Maintenance'}
+                {isUserAvailability ? 'User Unavailable' : 'Aircraft Block'}
               </Badge>
             </div>
             
@@ -101,7 +101,7 @@ export function AvailabilityDetails({
             <div>
               <div className="text-sm font-medium text-muted-foreground">Type</div>
               <div className="mt-1">
-                {isUserAvailability ? 'Personal Unavailability' : 'Aircraft Maintenance'}
+                {isUserAvailability ? 'Personal Unavailability' : 'Aircraft Block / Hold'}
               </div>
             </div>
           </div>
