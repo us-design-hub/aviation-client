@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { aircraftAPI, lessonsAPI, maintenanceAPI, squawksAPI, usersAPI, rentalsAPI } from '@/lib/api';
+import { dateKeyET } from '@/lib/format-tz';
 import { useAuth } from '@/contexts/auth-context';
 
 const renterDocumentLabels = {
@@ -130,7 +131,7 @@ export default function DashboardPage() {
           usersRes = results[resultIndex++];
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = dateKeyET(new Date());
         
         // Handle aircraft data
         const aircraftRaw = aircraftRes.status === 'fulfilled' ? aircraftRes.value : null;

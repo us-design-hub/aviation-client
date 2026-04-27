@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Clock, User, Plane, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { etToISO } from "@/lib/format-tz";
 import { availabilityAPI, usersAPI, aircraftAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
@@ -232,14 +233,14 @@ export function AvailabilityForm({
 
   const handleSubmit = async (data) => {
     try {
-      // Create proper datetime strings for the server
+      // Store availability in the same Eastern-time basis used by lessons and rentals.
       const startDateTime = data.allDay 
-        ? `${format(data.startDate, "yyyy-MM-dd")}T00:00:00Z`
-        : `${format(data.startDate, "yyyy-MM-dd")}T${data.startTime}:00Z`;
+        ? etToISO(data.startDate, "00:00")
+        : etToISO(data.startDate, data.startTime);
       
       const endDateTime = data.allDay 
-        ? `${format(data.endDate, "yyyy-MM-dd")}T23:59:59Z`
-        : `${format(data.endDate, "yyyy-MM-dd")}T${data.endTime}:00Z`;
+        ? etToISO(data.endDate, "23:59")
+        : etToISO(data.endDate, data.endTime);
 
       const availabilityData = {
         type: data.type,

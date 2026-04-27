@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, startOfDay, addHours, isToday, isPast, isFuture } from "date-fns";
-import { formatET, toET } from "@/lib/format-tz";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { dateKeyET, nowET, toET } from "@/lib/format-tz";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Maximize2, Minimize2, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,8 +62,8 @@ export function WeekScheduleView({
   
   // Auto-scroll to current time on mount
   useEffect(() => {
-    if (scheduleRef.current && isToday(currentDate)) {
-      const now = new Date();
+    const now = nowET();
+    if (scheduleRef.current && isSameDay(currentDate, now)) {
       const currentHour = now.getHours();
       if (currentHour >= startHour && currentHour <= endHour) {
         const hourIndex = currentHour - startHour;
@@ -76,7 +76,7 @@ export function WeekScheduleView({
   // Update current time indicator position every minute
   useEffect(() => {
     const updateCurrentTime = () => {
-      const now = new Date();
+      const now = nowET();
       const minutes = now.getHours() * 60 + now.getMinutes();
       const startMinutes = startHour * 60;
       const totalMinutes = (endHour - startHour) * 60;
@@ -154,7 +154,7 @@ export function WeekScheduleView({
   };
 
   const handleToday = () => {
-    onDateChange(new Date());
+    onDateChange(nowET());
   };
 
   // Parse an event's start/end into local Date objects.
@@ -169,15 +169,15 @@ export function WeekScheduleView({
       };
     }
     if (event.start_time) {
-      const dateStr = (event.start_date || '').split('T')[0];
+      const dateStr = dateKeyET(event.start_date);
       return {
         start: new Date(`${dateStr}T${event.start_time}:00`),
         end: new Date(`${dateStr}T${event.end_time || '23:59'}:00`),
       };
     }
     return {
-      start: new Date(event.start_date),
-      end: new Date(event.end_date),
+      start: toET(event.start_date),
+      end: toET(event.end_date),
     };
   };
 
@@ -194,9 +194,9 @@ export function WeekScheduleView({
     return filteredEvents.filter(event => {
       // All-day events: no start_at AND no start_time
       if (!event.start_at && !event.start_time && !event.end_time) {
-        const eventStartDate = new Date(event.start_date);
+        const eventStartDate = toET(event.start_date);
         eventStartDate.setHours(0, 0, 0, 0);
-        const eventEndDate = new Date(event.end_date);
+        const eventEndDate = toET(event.end_date);
         eventEndDate.setHours(23, 59, 59, 999);
         
         const isInDateRange = slotDateOnly >= eventStartDate && slotDateOnly <= eventEndDate;
@@ -382,9 +382,9 @@ export function WeekScheduleView({
         <CardContent className="p-0">
           <div className="overflow-x-auto relative" ref={scheduleRef}>
             {/* Current Time Indicator */}
-            {isToday(currentDate) && (
+            {isSameDay(currentDate, nowET()) && (
               (() => {
-                const now = new Date();
+                const now = nowET();
                 const currentHour = now.getHours();
                 const currentMinute = now.getMinutes();
                 
@@ -473,7 +473,7 @@ export function WeekScheduleView({
                   )
                 ) : (
                   displayDates.map(date => {
-                    const isTodayDate = isSameDay(date, new Date());
+                    const isTodayDate = isSameDay(date, nowET());
                     return (
                       <tr key={date.toString()} className="border-b last:border-b-0" style={{ height: '120px' }}>
                         <td className={cn(
@@ -621,10 +621,10 @@ function DefaultEventBlock({ event }) {
   const parseTime = (evt) => {
     if (evt.start_at) return { s: toET(evt.start_at), e: toET(evt.end_at || evt.end_date) };
     if (evt.start_time) {
-      const d = (evt.start_date || '').split('T')[0];
+      const d = dateKeyET(evt.start_date);
       return { s: new Date(`${d}T${evt.start_time}:00`), e: new Date(`${d}T${evt.end_time || '23:59'}:00`) };
     }
-    return { s: new Date(evt.start_date), e: new Date(evt.end_date) };
+    return { s: toET(evt.start_date), e: toET(evt.end_date) };
   };
   const { s: evtStart, e: evtEnd } = parseTime(event);
   const startTime = format(evtStart, "h:mm a");
@@ -693,4 +693,3 @@ function DefaultEventBlock({ event }) {
     </Tooltip>
   );
 }
-

@@ -37,6 +37,52 @@ export function formatTimeET(date, options = {}) {
   return d.toLocaleTimeString("en-US", { ...options, timeZone: TZ });
 }
 
+export function nowET() {
+  return toET(new Date());
+}
+
+export function dateKeyET(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  const y = d.toLocaleString("en-US", { year: "numeric", timeZone: TZ });
+  const m = d.toLocaleString("en-US", { month: "2-digit", timeZone: TZ });
+  const day = d.toLocaleString("en-US", { day: "2-digit", timeZone: TZ });
+  return `${y}-${m}-${day}`;
+}
+
+export function getETDateParts(date) {
+  const d = toET(date);
+  return {
+    year: d.getFullYear(),
+    month: d.getMonth(),
+    date: d.getDate(),
+    day: d.getDay(),
+  };
+}
+
+export function isSameDateET(a, b) {
+  return dateKeyET(a) === dateKeyET(b);
+}
+
+export function isSameMonthET(a, b) {
+  const aParts = getETDateParts(a);
+  const bParts = getETDateParts(b);
+  return aParts.year === bParts.year && aParts.month === bParts.month;
+}
+
+export function startOfWeekET(date) {
+  const parts = getETDateParts(date);
+  return new Date(parts.year, parts.month, parts.date - parts.day);
+}
+
+export function isDateInCurrentWeekET(date, reference = new Date()) {
+  const dateParts = getETDateParts(date);
+  const weekStart = startOfWeekET(reference);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const dateOnly = new Date(dateParts.year, dateParts.month, dateParts.date);
+  return dateOnly >= weekStart && dateOnly <= weekEnd;
+}
+
 /**
  * Convert a calendar‑date + "HH:mm" time (intended as Eastern Time)
  * into a proper UTC ISO string for storage / API calls.
@@ -55,7 +101,7 @@ export function etToISO(dateObj, timeStr) {
     timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(refUTC);
 
   const refH = Number(etParts.find((p) => p.type === "hour").value);

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { WeekScheduleView } from "@/components/ui/schedule-view";
 import { useAuth } from "@/contexts/auth-context";
+import { nowET, toET } from "@/lib/format-tz";
 
 function CalendarDay({ 
   day, 
@@ -205,7 +206,7 @@ export function AvailabilityCalendar({
   onDeleteAvailability,
   onTimeSlotClick 
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(nowET());
   const [selectedDate, setSelectedDate] = useState(null);
   const [view, setView] = useState('schedule'); // 'day', 'week', 'month', or 'schedule'
   const { user } = useAuth();
@@ -214,8 +215,8 @@ export function AvailabilityCalendar({
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const goToToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
+    setCurrentDate(nowET());
+    setSelectedDate(nowET());
   };
 
   // Calendar helpers
@@ -241,8 +242,8 @@ export function AvailabilityCalendar({
         // Skip items with null dates
         if (!item.start_date || !item.end_date) return false;
         
-        const startDate = new Date(item.start_date);
-        const endDate = new Date(item.end_date);
+        const startDate = toET(item.start_date);
+        const endDate = toET(item.end_date);
         
         // Skip invalid dates
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return false;
@@ -261,7 +262,7 @@ export function AvailabilityCalendar({
           formattedDate={formattedDate}
           isCurrentMonth={isSameMonth(day, monthStart)}
           isSelected={selectedDate && isSameDay(day, selectedDate)}
-          isToday={isSameDay(day, new Date())}
+          isToday={isSameDay(day, nowET())}
           availability={dayAvailability}
           users={users}
           aircraft={aircraft}
@@ -317,9 +318,8 @@ export function AvailabilityCalendar({
       return ac ? ac.tail_number : "Unknown Aircraft";
     };
 
-    // Use start_time/end_time if available; fallback strips Z so the "local-as-UTC" dates parse correctly
-    const startTime = item.start_time || format(new Date(String(item.start_date).replace('Z', '')), "h:mm a");
-    const endTime = item.end_time || format(new Date(String(item.end_date).replace('Z', '')), "h:mm a");
+    const startTime = item.start_time || format(toET(item.start_date), "h:mm a");
+    const endTime = item.end_time || format(toET(item.end_date), "h:mm a");
 
     return (
       <div

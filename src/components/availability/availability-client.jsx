@@ -16,6 +16,21 @@ import { AvailabilityForm } from "./availability-form";
 import { AvailabilityDetails } from "./availability-details";
 import { useConfirmDialog, confirmPresets } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { formatET, isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET } from "@/lib/format-tz";
+
+function normalizeAvailabilityTimes(item) {
+  if (!item?.start_date || !item?.end_date) return item;
+
+  const startTime = formatET(item.start_date, "HH:mm");
+  const endTime = formatET(item.end_date, "HH:mm");
+  const isAllDay = startTime === "00:00" && endTime === "23:59";
+
+  return {
+    ...item,
+    start_time: isAllDay ? null : startTime,
+    end_time: isAllDay ? null : endTime,
+  };
+}
 
 export function AvailabilityClient() {
   // State
@@ -87,7 +102,7 @@ export function AvailabilityClient() {
       // Set data from successful responses
       if (availabilityRes.status === 'fulfilled') {
         const availabilityData = availabilityRes.value.data || availabilityRes.value || [];
-        setAvailability(availabilityData);
+        setAvailability(availabilityData.map(normalizeAvailabilityTimes));
       }
 
       if (usersRes.status === 'fulfilled') {
@@ -121,23 +136,17 @@ export function AvailabilityClient() {
     // Date range filtering
     let matchesDateRange = true;
     if (filters.dateRange !== "all") {
-      const itemDate = new Date(item.start_date);
-      const now = new Date();
+      const now = nowET();
       
       switch (filters.dateRange) {
         case "today":
-          matchesDateRange = itemDate.toDateString() === now.toDateString();
+          matchesDateRange = isSameDateET(item.start_date, now);
           break;
         case "week":
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
-          matchesDateRange = itemDate >= weekStart && itemDate <= weekEnd;
+          matchesDateRange = isDateInCurrentWeekET(item.start_date, now);
           break;
         case "month":
-          matchesDateRange = itemDate.getMonth() === now.getMonth() && 
-                            itemDate.getFullYear() === now.getFullYear();
+          matchesDateRange = isSameMonthET(item.start_date, now);
           break;
       }
     }

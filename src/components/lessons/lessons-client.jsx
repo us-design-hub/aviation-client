@@ -16,6 +16,7 @@ import { LessonForm } from "./lesson-form";
 import { LessonDetails } from "./lesson-details";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET } from "@/lib/format-tz";
 
 export function LessonsClient() {
   // State
@@ -171,22 +172,17 @@ export function LessonsClient() {
     // Date range filtering
     let matchesDateRange = true;
     if (filters.dateRange !== "all") {
-      const lessonDate = new Date(lesson.start_at);
-      const now = new Date();
+      const now = nowET();
       
       switch (filters.dateRange) {
         case "today":
-          matchesDateRange = lessonDate.toDateString() === now.toDateString();
+          matchesDateRange = isSameDateET(lesson.start_at, now);
           break;
         case "week":
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - now.getDay());
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
-          matchesDateRange = lessonDate >= weekStart && lessonDate <= weekEnd;
+          matchesDateRange = isDateInCurrentWeekET(lesson.start_at, now);
           break;
         case "month":
-          matchesDateRange = lessonDate.getMonth() === now.getMonth() && lessonDate.getFullYear() === now.getFullYear();
+          matchesDateRange = isSameMonthET(lesson.start_at, now);
           break;
       }
     }

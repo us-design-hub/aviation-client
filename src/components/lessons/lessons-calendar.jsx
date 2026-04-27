@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
-import { formatET } from "@/lib/format-tz";
+import { formatET, nowET, toET } from "@/lib/format-tz";
 import { ChevronLeft, ChevronRight, Plane, BookOpen, Clock, User, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,7 @@ export function LessonsCalendar({
   onCompleteLesson,
   onTimeSlotClick 
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(nowET());
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(null);
   const [view, setView] = useState('schedule'); // 'day', 'week', 'month', or 'schedule'
@@ -43,8 +43,8 @@ export function LessonsCalendar({
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const goToToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
+    setCurrentDate(nowET());
+    setSelectedDate(nowET());
   };
 
   // Calendar helpers
@@ -65,7 +65,7 @@ export function LessonsCalendar({
       formattedDate = format(day, dateFormat);
       const cloneDay = day;
       const dayLessons = lessons.filter(lesson => 
-        isSameDay(new Date(lesson.start_at), day)
+        isSameDay(toET(lesson.start_at), day)
       );
 
       days.push(
@@ -75,7 +75,7 @@ export function LessonsCalendar({
           formattedDate={formattedDate}
           isCurrentMonth={isSameMonth(day, monthStart)}
           isSelected={selectedDate && isSameDay(day, selectedDate)}
-          isToday={isSameDay(day, new Date())}
+          isToday={isSameDay(day, nowET())}
           lessons={dayLessons}
           users={users}
           aircraft={aircraft}
@@ -348,7 +348,7 @@ export function LessonsCalendar({
         <SelectedDateDetails
           date={selectedDate}
           lessons={lessons.filter(lesson => 
-            isSameDay(new Date(lesson.start_at), selectedDate)
+            isSameDay(toET(lesson.start_at), selectedDate)
           )}
           users={users}
           aircraft={aircraft}

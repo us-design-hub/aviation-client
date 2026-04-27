@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckoutModal } from "@/components/aircraft/checkout-modal";
+import { etToISO } from "@/lib/format-tz";
 
 const documentLabels = {
   PILOT_LICENSE: "Pilot License",
@@ -21,8 +22,12 @@ const documentLabels = {
   RENTERS_INSURANCE: "Renters Insurance",
 };
 
-function toIso(value) {
-  return value ? new Date(value).toISOString() : null;
+function datetimeLocalToETISO(value) {
+  if (!value) return null;
+  const [datePart, timePart] = value.split("T");
+  if (!datePart || !timePart) return null;
+
+  return etToISO(new Date(`${datePart}T12:00:00Z`), timePart.slice(0, 5));
 }
 
 function asArray(value) {
@@ -181,13 +186,33 @@ export function RentalsClient() {
 
   async function handleBookingSubmit(event) {
     event.preventDefault();
+    const renterId = isAdmin ? bookingForm.renterId : user.id;
+    if (!renterId) {
+      toast.error("Please select a renter");
+      return;
+    }
+    if (!bookingForm.aircraftId) {
+      toast.error("Please select a plane");
+      return;
+    }
+    if (!bookingForm.startAt || !bookingForm.endAt) {
+      toast.error("Please select start and end times");
+      return;
+    }
+    const startAt = datetimeLocalToETISO(bookingForm.startAt);
+    const endAt = datetimeLocalToETISO(bookingForm.endAt);
+    if (!startAt || !endAt || new Date(endAt) <= new Date(startAt)) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
     try {
       setSaving(true);
       await rentalsAPI.create({
-        renterId: isAdmin ? bookingForm.renterId : user.id,
+        renterId,
         aircraftId: bookingForm.aircraftId,
-        startAt: toIso(bookingForm.startAt),
-        endAt: toIso(bookingForm.endAt),
+        startAt,
+        endAt,
         purpose: bookingForm.purpose,
         notes: bookingForm.notes,
       });
@@ -202,7 +227,7 @@ export function RentalsClient() {
       } else if (payload?.error === "INSUFFICIENT_HOURS") {
         toast.error("Not enough hours remaining for this booking");
       } else if (payload?.error === "conflicts") {
-        toast.error("Scheduling conflict detected for that aircraft");
+        toast.error("That aircraft is already booked or blocked for that time");
       } else {
         toast.error(payload?.error || "Could not schedule rental");
       }
