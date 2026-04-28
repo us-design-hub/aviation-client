@@ -62,6 +62,15 @@ const emptyBookingForm = {
   notes: "",
 };
 
+const emptyAircraftFlightForm = {
+  pilotId: "",
+  aircraftId: "",
+  startAt: "",
+  endAt: "",
+  purpose: "",
+  notes: "",
+};
+
 const emptyHoursForm = {
   hours: "",
   note: "",
@@ -79,16 +88,21 @@ export function RentalsClient() {
   const [selectedWorkflow, setSelectedWorkflow] = useState("RENTER");
   const [renters, setRenters] = useState([]);
   const [students, setStudents] = useState([]);
+  const [pilots, setPilots] = useState([]);
   const [selectedRenterId, setSelectedRenterId] = useState(user?.id || "");
   const [aircraft, setAircraft] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [aircraftFlights, setAircraftFlights] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [aircraftFlightDialogOpen, setAircraftFlightDialogOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState(emptyBookingForm);
+  const [aircraftFlightForm, setAircraftFlightForm] = useState(emptyAircraftFlightForm);
   const [hoursForm, setHoursForm] = useState(emptyHoursForm);
   const [meterDialog, setMeterDialog] = useState({ open: false, action: "checkout", booking: null, lastLog: null });
+  const [aircraftFlightMeterDialog, setAircraftFlightMeterDialog] = useState({ open: false, action: "checkout", flight: null, lastLog: null });
 
   useEffect(() => {
     if (user?.id) {
@@ -114,15 +128,19 @@ export function RentalsClient() {
       setLoading(true);
       const requests = [rentalsAPI.getAll(), aircraftAPI.getAll()];
       if (isAdmin) {
+        requests.push(aircraftAPI.getFlights());
         requests.push(usersAPI.getRenters());
         requests.push(usersAPI.getStudents());
+        requests.push(usersAPI.getAll());
       }
-      const [bookingsRes, aircraftRes, rentersRes, studentsRes] = await Promise.all(requests);
+      const [bookingsRes, aircraftRes, flightsRes, rentersRes, studentsRes, usersRes] = await Promise.all(requests);
       setBookings(asArray(bookingsRes.data));
       setAircraft(asArray(aircraftRes.data).filter((item) => item?.status === "OK"));
       if (isAdmin) {
+        setAircraftFlights(asArray(flightsRes?.data));
         const renterRows = asArray(rentersRes?.data);
         const studentRows = asArray(studentsRes?.data);
+        setPilots(asArray(usersRes?.data).filter((person) => ["ADMIN", "INSTRUCTOR"].includes(person?.role)));
         setRenters(renterRows);
         setStudents(studentRows);
         const activeRows = selectedWorkflow === "STUDENT" ? studentRows : renterRows;
@@ -144,6 +162,8 @@ export function RentalsClient() {
         }
       } else {
         setStudents([]);
+        setPilots([]);
+        setAircraftFlights([]);
       }
 
       if (isStudentWorkflow) {
@@ -236,6 +256,53 @@ export function RentalsClient() {
     }
   }
 
+  async function handleAircraftFlightSubmit(event) {
+    event.preventDefault();
+    if (!isAdmin) return;
+    if (!aircraftFlightForm.pilotId) {
+      toast.error("Please select a pilot");
+      return;
+    }
+    if (!aircraftFlightForm.aircraftId) {
+      toast.error("Please select a plane");
+      return;
+    }
+    if (!aircraftFlightForm.startAt || !aircraftFlightForm.endAt) {
+      toast.error("Please select start and end times");
+      return;
+    }
+    const startAt = datetimeLocalToETISO(aircraftFlightForm.startAt);
+    const endAt = datetimeLocalToETISO(aircraftFlightForm.endAt);
+    if (!startAt || !endAt || new Date(endAt) <= new Date(startAt)) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await aircraftAPI.createFlight({
+        pilotId: aircraftFlightForm.pilotId,
+        aircraftId: aircraftFlightForm.aircraftId,
+        startAt,
+        endAt,
+        purpose: aircraftFlightForm.purpose,
+        notes: aircraftFlightForm.notes,
+      });
+      toast.success("Aircraft flight scheduled");
+      setAircraftFlightDialogOpen(false);
+      setAircraftFlightForm(emptyAircraftFlightForm);
+      await loadData();
+    } catch (error) {
+      if (error.response?.data?.error === "conflicts") {
+        toast.error("That aircraft is already booked or blocked for that time");
+      } else {
+        toast.error(error.response?.data?.error || "Could not schedule aircraft flight");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleAllocateHours(event) {
     event.preventDefault();
     if (!selectedRenterId) return;
@@ -270,6 +337,20 @@ export function RentalsClient() {
     }
   }
 
+  async function openAircraftFlightMeterDialog(action, flight) {
+    try {
+      const logsRes = await aircraftAPI.getLogs(flight.aircraft_id);
+      setAircraftFlightMeterDialog({
+        open: true,
+        action,
+        flight,
+        lastLog: asArray(logsRes.data)[0] || null,
+      });
+    } catch (error) {
+      toast.error("Could not load aircraft meter context");
+    }
+  }
+
   async function handleMeterSubmit(values) {
     const booking = meterDialog.booking;
     if (!booking) return;
@@ -289,6 +370,29 @@ export function RentalsClient() {
     }
   }
 
+  async function handleAircraftFlightMeterSubmit(values) {
+    const { flight, action } = aircraftFlightMeterDialog;
+    if (!flight) return;
+    try {
+      if (action === "checkout") {
+        await aircraftAPI.checkoutFlight(flight.id, values);
+        toast.success("Aircraft flight checked out");
+      } else {
+        await aircraftAPI.checkinFlight(flight.id, values);
+        toast.success("Aircraft flight checked in");
+      }
+      setAircraftFlightMeterDialog({ open: false, action: "checkout", flight: null, lastLog: null });
+      await loadData();
+    } catch (error) {
+      if (error.response?.data?.error === "conflicts") {
+        toast.error("That aircraft is already booked or blocked for that time");
+      } else {
+        toast.error(error.response?.data?.message || error.response?.data?.error || "Could not update aircraft flight");
+      }
+      throw error;
+    }
+  }
+
   async function handleCancelBooking(bookingId) {
     try {
       await rentalsAPI.remove(bookingId);
@@ -296,6 +400,16 @@ export function RentalsClient() {
       await loadData();
     } catch (error) {
       toast.error(error.response?.data?.error || "Could not remove rental");
+    }
+  }
+
+  async function handleCancelAircraftFlight(flightId) {
+    try {
+      await aircraftAPI.removeFlight(flightId);
+      toast.success("Aircraft flight removed");
+      await loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Could not remove aircraft flight");
     }
   }
 
@@ -321,6 +435,8 @@ export function RentalsClient() {
   const safeRenters = asArray(renters);
   const safeBookings = asArray(filteredBookings);
   const safeAircraft = asArray(aircraft);
+  const safePilots = asArray(pilots);
+  const safeAircraftFlights = asArray(aircraftFlights);
 
   return (
     <div className="space-y-6">
@@ -364,17 +480,29 @@ export function RentalsClient() {
               </div>
             </>
           )}
-            {!isStudentWorkflow && (
-              <Button
+          {!isStudentWorkflow && (
+            <Button
               onClick={() => {
                 setBookingForm({ ...emptyBookingForm, renterId: selectedRenterId || "" });
                 setBookingDialogOpen(true);
               }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Schedule Rental
-              </Button>
-            )}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Schedule Rental
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAircraftFlightForm({ ...emptyAircraftFlightForm, pilotId: user?.id || "" });
+                setAircraftFlightDialogOpen(true);
+              }}
+            >
+              <Plane className="mr-2 h-4 w-4" />
+              Schedule Solo Flight
+            </Button>
+          )}
         </div>
       </div>
 
@@ -491,6 +619,63 @@ export function RentalsClient() {
                   </div>
                 </div>
               ))
+            )}
+            {isAdmin && !isStudentWorkflow && (
+              <div className="space-y-4 border-t pt-4">
+                <div>
+                  <h3 className="font-semibold">Solo / Internal Flights</h3>
+                  <p className="text-sm text-muted-foreground">Aircraft usage logged without a student or renter booking.</p>
+                </div>
+                {safeAircraftFlights.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No solo flights scheduled.</p>
+                ) : (
+                  safeAircraftFlights.map((flight) => (
+                    <div key={flight.id} className="rounded-lg border p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Plane className="h-4 w-4" />
+                            <span className="font-semibold">{flight.tail_number}</span>
+                            <Badge variant="outline">{flight.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">Pilot: {flight.pilot_name || flight.pilot_email}</p>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {formatDateTime(flight.start_at)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock3 className="h-4 w-4" />
+                              {formatDateTime(flight.end_at)}
+                            </span>
+                          </div>
+                          {flight.purpose && <p className="text-sm">{flight.purpose}</p>}
+                          {flight.flight_hours != null && (
+                            <p className="text-sm text-muted-foreground">Flight hours: {Number(flight.flight_hours).toFixed(1)}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {flight.status === "SCHEDULED" && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => openAircraftFlightMeterDialog("checkout", flight)}>
+                                Check Out
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleCancelAircraftFlight(flight.id)}>
+                                Remove
+                              </Button>
+                            </>
+                          )}
+                          {flight.status === "CHECKED_OUT" && (
+                            <Button size="sm" onClick={() => openAircraftFlightMeterDialog("checkin", flight)}>
+                              Check In
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -665,6 +850,87 @@ export function RentalsClient() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={aircraftFlightDialogOpen} onOpenChange={setAircraftFlightDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Schedule Solo Flight</DialogTitle>
+            <DialogDescription>Log aircraft usage for proficiency, ferry, maintenance, or other non-student flights.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleAircraftFlightSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="pilotId">Pilot</Label>
+              <Select value={aircraftFlightForm.pilotId} onValueChange={(value) => setAircraftFlightForm((current) => ({ ...current, pilotId: value }))}>
+                <SelectTrigger id="pilotId">
+                  <SelectValue placeholder="Select pilot" />
+                </SelectTrigger>
+                <SelectContent>
+                  {safePilots.map((pilot) => (
+                    <SelectItem key={pilot.id} value={pilot.id}>
+                      {pilot.name || pilot.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="soloAircraftId">Aircraft</Label>
+              <Select value={aircraftFlightForm.aircraftId} onValueChange={(value) => setAircraftFlightForm((current) => ({ ...current, aircraftId: value }))}>
+                <SelectTrigger id="soloAircraftId">
+                  <SelectValue placeholder="Select aircraft" />
+                </SelectTrigger>
+                <SelectContent>
+                  {safeAircraft.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.tail_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="soloStartAt">Start</Label>
+                <Input
+                  id="soloStartAt"
+                  type="datetime-local"
+                  value={aircraftFlightForm.startAt}
+                  onChange={(event) => setAircraftFlightForm((current) => ({ ...current, startAt: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="soloEndAt">End</Label>
+                <Input
+                  id="soloEndAt"
+                  type="datetime-local"
+                  value={aircraftFlightForm.endAt}
+                  onChange={(event) => setAircraftFlightForm((current) => ({ ...current, endAt: event.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="soloPurpose">Purpose</Label>
+              <Input
+                id="soloPurpose"
+                value={aircraftFlightForm.purpose}
+                onChange={(event) => setAircraftFlightForm((current) => ({ ...current, purpose: event.target.value }))}
+                placeholder="Proficiency flight, ferry, maintenance test flight, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="soloNotes">Notes</Label>
+              <Textarea
+                id="soloNotes"
+                value={aircraftFlightForm.notes}
+                onChange={(event) => setAircraftFlightForm((current) => ({ ...current, notes: event.target.value }))}
+              />
+            </div>
+            <Button type="submit" disabled={saving}>
+              Save Solo Flight
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <CheckoutModal
         isOpen={meterDialog.open}
         onClose={() => setMeterDialog({ open: false, action: "checkout", booking: null, lastLog: null })}
@@ -672,6 +938,14 @@ export function RentalsClient() {
         aircraft={meterDialog.booking}
         action={meterDialog.action}
         lastLog={meterDialog.lastLog}
+      />
+      <CheckoutModal
+        isOpen={aircraftFlightMeterDialog.open}
+        onClose={() => setAircraftFlightMeterDialog({ open: false, action: "checkout", flight: null, lastLog: null })}
+        onSubmit={handleAircraftFlightMeterSubmit}
+        aircraft={aircraftFlightMeterDialog.flight}
+        action={aircraftFlightMeterDialog.action}
+        lastLog={aircraftFlightMeterDialog.lastLog}
       />
     </div>
   );

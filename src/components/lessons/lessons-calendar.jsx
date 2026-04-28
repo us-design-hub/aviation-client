@@ -28,6 +28,8 @@ export function LessonsCalendar({
   lessons, 
   users, 
   aircraft, 
+  aircraftFlights = [],
+  rentalBookings = [],
   onLessonClick, 
   onEditLesson, 
   onDeleteLesson, 
@@ -133,7 +135,13 @@ export function LessonsCalendar({
       return ac ? ac.tail_number : null;
     };
 
-    const studentName = lesson.student_name
+    const isAircraftFlight = lesson.event_type === "aircraft-flight";
+    const isRentalBooking = lesson.event_type === "rental-booking";
+    const studentName = isRentalBooking
+      ? (lesson.renter_name || lesson.renter_email || "Rental")
+      : isAircraftFlight
+      ? (lesson.pilot_name || lesson.pilot_email || "Solo Flight")
+      : lesson.student_name
       ? lesson.student_name.split(' ')[0]
       : getUserName(lesson.student_id);
 
@@ -145,8 +153,11 @@ export function LessonsCalendar({
         className={cn(
           "h-full p-2 rounded border text-xs overflow-hidden",
           "hover:shadow-md transition-shadow cursor-pointer group",
+          isRentalBooking && "bg-emerald-100 border-emerald-300 text-emerald-950",
+          isAircraftFlight && "bg-sky-100 border-sky-300 text-sky-950",
           lesson.kind === "FLIGHT" &&
             !isFlightCheckedOut(lesson) &&
+            !isAircraftFlight &&
             "bg-purple-100 border-purple-300 text-purple-900",
           lesson.kind === "GROUND" && "bg-orange-100 border-orange-300 text-orange-900",
           isFlightCheckedOut(lesson) &&
@@ -157,8 +168,8 @@ export function LessonsCalendar({
       >
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1">
-            {lesson.kind === "FLIGHT" ? (
-              <Plane className="h-3 w-3" />
+              {lesson.kind === "FLIGHT" ? (
+                <Plane className="h-3 w-3" />
             ) : (
               <BookOpen className="h-3 w-3" />
             )}
@@ -167,6 +178,7 @@ export function LessonsCalendar({
             </span>
           </div>
           
+          {!isAircraftFlight && !isRentalBooking && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100">
@@ -210,6 +222,7 @@ export function LessonsCalendar({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
         
         <div className="text-[10px] opacity-75 truncate">
@@ -236,7 +249,7 @@ export function LessonsCalendar({
             isFlightCheckedOut(lesson) && "border-amber-600 bg-amber-200/80 text-amber-950"
           )}
         >
-          {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
+          {isRentalBooking ? "Rental" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
         </Badge>
       </div>
     );
@@ -250,14 +263,35 @@ export function LessonsCalendar({
     ...students.map(s => ({ ...s, resourceType: 'student' })),
     ...aircraft.map(a => ({ ...a, name: a.tail_number, resourceType: 'aircraft' })),
   ];
+  const scheduleEvents = [
+    ...lessons,
+    ...aircraftFlights.map((flight) => ({
+      ...flight,
+      event_type: "aircraft-flight",
+      kind: "FLIGHT",
+      aircraft_id: flight.aircraft_id,
+      aircraft_tail: flight.tail_number,
+      title: flight.purpose || "Solo Flight",
+    })),
+    ...rentalBookings.map((booking) => ({
+      ...booking,
+      event_type: "rental-booking",
+      kind: "FLIGHT",
+      aircraft_id: booking.aircraft_id,
+      aircraft_tail: booking.tail_number,
+      title: booking.purpose || "Rental",
+    })),
+  ];
 
   // Render different views
   if (view === 'schedule') {
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={lessons}
-        onEventClick={onLessonClick}
+        events={scheduleEvents}
+        onEventClick={(event) => {
+          if (!event.event_type) onLessonClick(event);
+        }}
         onTimeSlotClick={handleTimeSlotClickInternal}
         onDateChange={setCurrentDate}
         view="day"
@@ -273,8 +307,10 @@ export function LessonsCalendar({
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={lessons}
-        onEventClick={onLessonClick}
+        events={scheduleEvents}
+        onEventClick={(event) => {
+          if (!event.event_type) onLessonClick(event);
+        }}
         onTimeSlotClick={handleTimeSlotClickInternal}
         onDateChange={setCurrentDate}
         view={view}

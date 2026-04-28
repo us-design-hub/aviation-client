@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { lessonsAPI, syllabusAPI, usersAPI, aircraftAPI } from "@/lib/api";
+import { lessonsAPI, syllabusAPI, usersAPI, aircraftAPI, rentalsAPI } from "@/lib/api";
 import { LessonsCalendar } from "./lessons-calendar";
 import { LessonsTable } from "./lessons-table";
 import { LessonForm } from "./lesson-form";
@@ -25,6 +25,8 @@ export function LessonsClient() {
   const [syllabus, setSyllabus] = useState(null);
   const [users, setUsers] = useState([]);
   const [aircraft, setAircraft] = useState([]);
+  const [aircraftFlights, setAircraftFlights] = useState([]);
+  const [rentalBookings, setRentalBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [assignedStudents, setAssignedStudents] = useState([]); // For instructors: list of assigned student IDs
@@ -103,6 +105,13 @@ export function LessonsClient() {
       
       // All roles can access aircraft
       apiCalls.push(aircraftAPI.getAll());
+      if (user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') {
+        apiCalls.push(aircraftAPI.getFlights());
+        apiCalls.push(rentalsAPI.getAll());
+      } else {
+        apiCalls.push(Promise.resolve({ data: [] }));
+        apiCalls.push(Promise.resolve({ data: [] }));
+      }
       
       const results = await Promise.allSettled(apiCalls);
 
@@ -111,6 +120,8 @@ export function LessonsClient() {
       const syllabusRes = results[1];
       const usersRes = results[2];
       const aircraftRes = results[3];
+      const aircraftFlightsRes = results[4];
+      const rentalsRes = results[5];
 
       // Set data from successful responses
       if (lessonsRes.status === 'fulfilled') {
@@ -145,6 +156,12 @@ export function LessonsClient() {
       
       if (aircraftRes.status === 'fulfilled') {
         setAircraft(aircraftRes.value.data || []);
+      }
+      if (aircraftFlightsRes.status === 'fulfilled') {
+        setAircraftFlights(aircraftFlightsRes.value.data || []);
+      }
+      if (rentalsRes.status === 'fulfilled') {
+        setRentalBookings(rentalsRes.value.data || []);
       }
 
     } catch (error) {
@@ -564,6 +581,8 @@ export function LessonsClient() {
             lessons={filteredLessons}
             users={users}
             aircraft={aircraft}
+            aircraftFlights={aircraftFlights}
+            rentalBookings={rentalBookings}
             onLessonClick={handleLessonClick}
             onEditLesson={handleEditLesson}
             onDeleteLesson={handleDeleteLesson}

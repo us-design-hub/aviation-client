@@ -125,6 +125,11 @@ export const aircraftAPI = {
   getLogs: (id) => api.get(`/aircraft/${id}/logs`),
   checkout: (id, hobbsTachData) => api.post(`/aircraft/${id}/checkout`, hobbsTachData),
   checkin: (id, hobbsTachData) => api.post(`/aircraft/${id}/checkin`, hobbsTachData),
+  getFlights: () => api.get('/aircraft/flights'),
+  createFlight: (data) => api.post('/aircraft/flights', data),
+  removeFlight: (id) => api.delete(`/aircraft/flights/${id}`),
+  checkoutFlight: (id, data) => api.post(`/aircraft/flights/${id}/checkout`, data),
+  checkinFlight: (id, data) => api.post(`/aircraft/flights/${id}/checkin`, data),
 };
 
 // Squawks API
