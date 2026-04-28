@@ -534,7 +534,6 @@ export function AvailabilityClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="user">Personal</SelectItem>
                 <SelectItem value="aircraft">Aircraft Holds</SelectItem>
                 <SelectItem value="lesson">Lessons</SelectItem>
                 <SelectItem value="rental">Rentals</SelectItem>
