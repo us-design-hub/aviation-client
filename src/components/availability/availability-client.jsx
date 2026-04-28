@@ -163,32 +163,67 @@ export function AvailabilityClient() {
     }
   };
 
+  const matchesDateRange = (dateValue) => {
+    if (filters.dateRange === "all") return true;
+
+    const now = nowET();
+
+    switch (filters.dateRange) {
+      case "today":
+        return isSameDateET(dateValue, now);
+      case "week":
+        return isDateInCurrentWeekET(dateValue, now);
+      case "month":
+        return isSameMonthET(dateValue, now);
+      default:
+        return true;
+    }
+  };
+
   // Filter availability
   const filteredAvailability = availability.filter(item => {
     const matchesSearch = !filters.search || 
-      item.reason?.toLowerCase().includes(filters.search.toLowerCase());
+      item.reason?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      item.user_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      item.aircraft_tail?.toLowerCase().includes(filters.search.toLowerCase());
     
     const matchesType = filters.type === "all" || item.type === filters.type;
     
-    // Date range filtering
-    let matchesDateRange = true;
-    if (filters.dateRange !== "all") {
-      const now = nowET();
-      
-      switch (filters.dateRange) {
-        case "today":
-          matchesDateRange = isSameDateET(item.start_date, now);
-          break;
-        case "week":
-          matchesDateRange = isDateInCurrentWeekET(item.start_date, now);
-          break;
-        case "month":
-          matchesDateRange = isSameMonthET(item.start_date, now);
-          break;
-      }
-    }
+    return matchesSearch && matchesType && matchesDateRange(item.start_date);
+  });
 
-    return matchesSearch && matchesType && matchesDateRange;
+  const filteredLessons = lessons.filter((lesson) => {
+    const query = filters.search.toLowerCase();
+    const matchesSearch = !filters.search ||
+      lesson.lesson?.toLowerCase().includes(query) ||
+      lesson.kind?.toLowerCase().includes(query) ||
+      lesson.student_name?.toLowerCase().includes(query) ||
+      lesson.instructor_name?.toLowerCase().includes(query) ||
+      lesson.aircraft_tail?.toLowerCase().includes(query);
+    const matchesType = filters.type === "all" || filters.type === "lesson";
+    return matchesSearch && matchesType && matchesDateRange(lesson.start_at);
+  });
+
+  const filteredAircraftFlights = aircraftFlights.filter((flight) => {
+    const query = filters.search.toLowerCase();
+    const matchesSearch = !filters.search ||
+      flight.purpose?.toLowerCase().includes(query) ||
+      flight.pilot_name?.toLowerCase().includes(query) ||
+      flight.pilot_email?.toLowerCase().includes(query) ||
+      flight.tail_number?.toLowerCase().includes(query);
+    const matchesType = filters.type === "all" || filters.type === "aircraft-flight";
+    return matchesSearch && matchesType && matchesDateRange(flight.start_at);
+  });
+
+  const filteredRentalBookings = rentalBookings.filter((booking) => {
+    const query = filters.search.toLowerCase();
+    const matchesSearch = !filters.search ||
+      booking.purpose?.toLowerCase().includes(query) ||
+      booking.renter_name?.toLowerCase().includes(query) ||
+      booking.renter_email?.toLowerCase().includes(query) ||
+      booking.tail_number?.toLowerCase().includes(query);
+    const matchesType = filters.type === "all" || filters.type === "rental";
+    return matchesSearch && matchesType && matchesDateRange(booking.start_at);
   });
 
   // Get availability counts
@@ -501,6 +536,9 @@ export function AvailabilityClient() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="user">Personal</SelectItem>
                 <SelectItem value="aircraft">Aircraft Holds</SelectItem>
+                <SelectItem value="lesson">Lessons</SelectItem>
+                <SelectItem value="rental">Rentals</SelectItem>
+                <SelectItem value="aircraft-flight">Solo Flights</SelectItem>
               </SelectContent>
             </Select>
             
@@ -542,9 +580,9 @@ export function AvailabilityClient() {
             availability={filteredAvailability}
             users={users}
             aircraft={aircraft}
-            lessons={lessons}
-            aircraftFlights={aircraftFlights}
-            rentalBookings={rentalBookings}
+            lessons={filteredLessons}
+            aircraftFlights={filteredAircraftFlights}
+            rentalBookings={filteredRentalBookings}
             onAvailabilityClick={handleAvailabilityClick}
             onEditAvailability={handleEditAvailability}
             onDeleteAvailability={handleDeleteAvailability}
