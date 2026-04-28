@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, User, Plane, Clock, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, User, Plane, Clock, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -201,6 +201,9 @@ export function AvailabilityCalendar({
   availability, 
   users, 
   aircraft, 
+  lessons = [],
+  aircraftFlights = [],
+  rentalBookings = [],
   onAvailabilityClick, 
   onEditAvailability, 
   onDeleteAvailability,
@@ -318,74 +321,109 @@ export function AvailabilityCalendar({
       return ac ? ac.tail_number : "Unknown Aircraft";
     };
 
-    const startTime = item.start_time || format(toET(item.start_date), "h:mm a");
-    const endTime = item.end_time || format(toET(item.end_date), "h:mm a");
+    const isLesson = item.event_type === "lesson";
+    const isAircraftFlight = item.event_type === "aircraft-flight";
+    const isRentalBooking = item.event_type === "rental-booking";
+    const isScheduleOverlay = isLesson || isAircraftFlight || isRentalBooking;
+    const isPersonal = item.type === "user";
+    const isAircraftHold = item.type === "aircraft";
+
+    const startSource = item.start_at || item.start_date;
+    const endSource = item.end_at || item.end_date;
+    const startTime = item.start_time || format(toET(startSource), "h:mm a");
+    const endTime = item.end_time || format(toET(endSource), "h:mm a");
+    const eventLabel = isRentalBooking
+      ? (item.renter_name || item.renter_email || "Rental")
+      : isAircraftFlight
+      ? (item.pilot_name || item.pilot_email || "Solo Flight")
+      : isLesson
+      ? (item.student_name || "Lesson")
+      : isPersonal
+      ? getUserName(item)
+      : getAircraftTail(item);
+    const note = isScheduleOverlay ? (item.title || item.lesson || item.purpose) : item.reason;
+    const badgeLabel = isRentalBooking
+      ? "Rental"
+      : isAircraftFlight
+      ? "Solo flight"
+      : isLesson
+      ? "Lesson"
+      : isPersonal
+      ? "Personal"
+      : "Aircraft";
 
     return (
       <div
         className={cn(
           "h-full p-2 rounded border text-xs overflow-hidden",
           "hover:shadow-md transition-shadow cursor-pointer group",
-          item.type === "user" && "bg-blue-100 border-blue-300 text-blue-900",
-          item.type === "aircraft" && "bg-purple-100 border-purple-300 text-purple-900"
+          isPersonal && "bg-blue-100 border-blue-300 text-blue-900",
+          isAircraftHold && "bg-purple-100 border-purple-300 text-purple-900",
+          isLesson && "bg-indigo-100 border-indigo-300 text-indigo-950",
+          isRentalBooking && "bg-emerald-100 border-emerald-300 text-emerald-950",
+          isAircraftFlight && "bg-sky-100 border-sky-300 text-sky-950"
         )}
       >
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1">
-            {item.type === "user" ? (
+            {isPersonal ? (
               <User className="h-3 w-3" />
+            ) : isLesson ? (
+              <BookOpen className="h-3 w-3" />
             ) : (
               <Plane className="h-3 w-3" />
             )}
             <span className="font-semibold truncate">
-              {item.type === "user" ? getUserName(item) : getAircraftTail(item)}
+              {eventLabel}
             </span>
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="sm" className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAvailabilityClick(item); }}>
-                <Eye className="h-3 w-3 mr-2" />
-                View Details
-              </DropdownMenuItem>
-              
-              {/* RBAC: Only ADMIN or owner can edit/delete */}
-              {(user?.role === 'ADMIN' || item.user_id === user?.id) && (
-                <>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditAvailability(item); }}>
-                    <Edit className="h-3 w-3 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={(e) => { e.stopPropagation(); onDeleteAvailability(item); }}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isScheduleOverlay && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="sm" className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100">
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAvailabilityClick(item); }}>
+                  <Eye className="h-3 w-3 mr-2" />
+                  View Details
+                </DropdownMenuItem>
+                
+                {/* RBAC: Only ADMIN or owner can edit/delete */}
+                {(user?.role === 'ADMIN' || item.user_id === user?.id) && (
+                  <>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditAvailability(item); }}>
+                      <Edit className="h-3 w-3 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => { e.stopPropagation(); onDeleteAvailability(item); }}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         
         <div className="text-[10px] opacity-75 truncate">
           {startTime} - {endTime}
         </div>
         
-        {item.reason && (
+        {note && (
           <div className="text-[10px] opacity-75 truncate mt-1">
-            {item.reason}
+            {note}
           </div>
         )}
         
         <Badge variant="outline" className="text-[9px] h-4 mt-1">
-          {item.type === "user" ? "Personal" : "Aircraft"}
+          {badgeLabel}
         </Badge>
       </div>
     );
@@ -406,6 +444,30 @@ export function AvailabilityCalendar({
       resourceType: 'aircraft'
     }))
   ];
+  const scheduleEvents = [
+    ...availability,
+    ...lessons
+      .filter((lesson) => lesson.aircraft_id || lesson.instructor_id || lesson.student_id)
+      .map((lesson) => ({
+        ...lesson,
+        event_type: "lesson",
+        title: lesson.lesson || lesson.kind || "Lesson",
+      })),
+    ...aircraftFlights.map((flight) => ({
+      ...flight,
+      event_type: "aircraft-flight",
+      aircraft_id: flight.aircraft_id,
+      aircraft_tail: flight.tail_number,
+      title: flight.purpose || "Solo Flight",
+    })),
+    ...rentalBookings.map((booking) => ({
+      ...booking,
+      event_type: "rental-booking",
+      aircraft_id: booking.aircraft_id,
+      aircraft_tail: booking.tail_number,
+      title: booking.purpose || "Rental",
+    })),
+  ];
 
   // Render different views
   if (view === 'schedule') {
@@ -413,8 +475,10 @@ export function AvailabilityCalendar({
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={availability}
-        onEventClick={onAvailabilityClick}
+        events={scheduleEvents}
+        onEventClick={(event) => {
+          if (!event.event_type) onAvailabilityClick(event);
+        }}
         onTimeSlotClick={handleTimeSlotClickInternal}
         onDateChange={setCurrentDate}
         view="day"
@@ -430,8 +494,10 @@ export function AvailabilityCalendar({
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={availability}
-        onEventClick={onAvailabilityClick}
+        events={scheduleEvents}
+        onEventClick={(event) => {
+          if (!event.event_type) onAvailabilityClick(event);
+        }}
         onTimeSlotClick={handleTimeSlotClickInternal}
         onDateChange={setCurrentDate}
         view={view}

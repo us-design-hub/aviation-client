@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { availabilityAPI, usersAPI, aircraftAPI } from "@/lib/api";
+import { availabilityAPI, usersAPI, aircraftAPI, lessonsAPI, rentalsAPI } from "@/lib/api";
 import { AvailabilityCalendar } from "./availability-calendar";
 import { AvailabilityTable } from "./availability-table";
 import { AvailabilityForm } from "./availability-form";
@@ -37,6 +37,9 @@ export function AvailabilityClient() {
   const [availability, setAvailability] = useState([]);
   const [users, setUsers] = useState([]);
   const [aircraft, setAircraft] = useState([]);
+  const [lessons, setLessons] = useState([]);
+  const [aircraftFlights, setAircraftFlights] = useState([]);
+  const [rentalBookings, setRentalBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -91,6 +94,19 @@ export function AvailabilityClient() {
       }
       
       apiCalls.push(aircraftAPI.getAll());
+      apiCalls.push(lessonsAPI.getAll());
+
+      if (user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') {
+        apiCalls.push(aircraftAPI.getFlights());
+      } else {
+        apiCalls.push(Promise.resolve({ data: [] }));
+      }
+
+      if (user?.role === 'ADMIN') {
+        apiCalls.push(rentalsAPI.getAll());
+      } else {
+        apiCalls.push(Promise.resolve({ data: [] }));
+      }
       
       const results = await Promise.allSettled(apiCalls);
 
@@ -98,6 +114,9 @@ export function AvailabilityClient() {
       const availabilityRes = results[0];
       const usersRes = results[1];
       const aircraftRes = results[2];
+      const lessonsRes = results[3];
+      const aircraftFlightsRes = results[4];
+      const rentalsRes = results[5];
 
       // Set data from successful responses
       if (availabilityRes.status === 'fulfilled') {
@@ -115,6 +134,24 @@ export function AvailabilityClient() {
       if (aircraftRes.status === 'fulfilled') {
         const aircraftData = aircraftRes.value.data || aircraftRes.value || [];
         setAircraft(aircraftData);
+      }
+
+      if (lessonsRes.status === 'fulfilled') {
+        setLessons(lessonsRes.value.data || lessonsRes.value || []);
+      } else {
+        setLessons([]);
+      }
+
+      if (aircraftFlightsRes.status === 'fulfilled') {
+        setAircraftFlights(aircraftFlightsRes.value.data || aircraftFlightsRes.value || []);
+      } else {
+        setAircraftFlights([]);
+      }
+
+      if (rentalsRes.status === 'fulfilled') {
+        setRentalBookings(rentalsRes.value.data || rentalsRes.value || []);
+      } else {
+        setRentalBookings([]);
       }
 
     } catch (error) {
@@ -155,13 +192,14 @@ export function AvailabilityClient() {
   });
 
   // Get availability counts
+  const now = new Date();
+  const currentOrUpcomingAvailability = availability.filter((a) => new Date(a.end_date) >= now);
   const availabilityCounts = {
-    total: availability.length,
-    personal: availability.filter(a => a.type === "user").length,
-    aircraftHolds: availability.filter(a => a.type === "aircraft").length,
-    upcoming: availability.filter(a => new Date(a.start_date) > new Date()).length,
+    total: currentOrUpcomingAvailability.length,
+    personal: currentOrUpcomingAvailability.filter(a => a.type === "user").length,
+    aircraftHolds: currentOrUpcomingAvailability.filter(a => a.type === "aircraft").length,
+    upcoming: currentOrUpcomingAvailability.filter(a => new Date(a.start_date) > now).length,
     active: availability.filter(a => {
-      const now = new Date();
       const start = new Date(a.start_date);
       const end = new Date(a.end_date);
       return start <= now && end >= now;
@@ -504,6 +542,9 @@ export function AvailabilityClient() {
             availability={filteredAvailability}
             users={users}
             aircraft={aircraft}
+            lessons={lessons}
+            aircraftFlights={aircraftFlights}
+            rentalBookings={rentalBookings}
             onAvailabilityClick={handleAvailabilityClick}
             onEditAvailability={handleEditAvailability}
             onDeleteAvailability={handleDeleteAvailability}
