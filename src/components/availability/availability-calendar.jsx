@@ -49,6 +49,52 @@ function CalendarDay({
     return ac ? ac.tail_number : "Unknown Aircraft";
   };
 
+  const getItemMeta = (item) => {
+    const isLesson = item.event_type === "lesson";
+    const isAircraftFlight = item.event_type === "aircraft-flight";
+    const isRentalBooking = item.event_type === "rental-booking";
+    const isScheduleOverlay = isLesson || isAircraftFlight || isRentalBooking;
+    const isPersonal = item.type === "user";
+    const startSource = item.start_at || item.start_date;
+    const endSource = item.end_at || item.end_date;
+
+    return {
+      isLesson,
+      isScheduleOverlay,
+      label: isRentalBooking
+        ? (item.renter_name || item.renter_email || "Rental")
+        : isAircraftFlight
+        ? (item.pilot_name || item.pilot_email || "Solo Flight")
+        : isLesson
+        ? (item.student_name || "Lesson")
+        : isPersonal
+        ? getUserName(item)
+        : getAircraftTail(item),
+      note: isScheduleOverlay ? (item.title || item.lesson || item.purpose) : item.reason,
+      badge: isRentalBooking
+        ? "Rental"
+        : isAircraftFlight
+        ? "Solo flight"
+        : isLesson
+        ? "Lesson"
+        : isPersonal
+        ? "Personal"
+        : "Aircraft",
+      time: startSource && endSource
+        ? `${format(toET(startSource), "h:mm a")} - ${format(toET(endSource), "h:mm a")}`
+        : item.start_time && item.end_time
+        ? `${item.start_time}-${item.end_time}`
+        : null,
+      className: cn(
+        isPersonal && "bg-blue-100 text-blue-800 border border-blue-200",
+        item.type === "aircraft" && "bg-purple-100 text-purple-800 border border-purple-200",
+        isLesson && "bg-indigo-100 text-indigo-950 border border-indigo-300",
+        isRentalBooking && "bg-emerald-100 text-emerald-950 border border-emerald-300",
+        isAircraftFlight && "bg-sky-100 text-sky-950 border border-sky-300"
+      ),
+    };
+  };
+
   return (
     <div
       className={cn(
@@ -74,43 +120,47 @@ function CalendarDay({
       </div>
       
       <div className="space-y-1">
-        {availability.slice(0, 3).map((item) => (
+        {availability.slice(0, 3).map((item) => {
+          const meta = getItemMeta(item);
+
+          return (
           <div
-            key={item.id}
+            key={`${item.event_type || item.type}-${item.id}`}
             className={cn(
               "text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity",
-              item.type === "user" 
-                ? "bg-blue-100 text-blue-800 border border-blue-200" 
-                : "bg-purple-100 text-purple-800 border border-purple-200"
+              meta.className
             )}
             onClick={(e) => {
               e.stopPropagation();
-              onAvailabilityClick(item);
+              if (!meta.isScheduleOverlay) onAvailabilityClick(item);
             }}
           >
             <div className="flex items-center gap-1 mb-1">
               {item.type === "user" ? (
                 <User className="h-3 w-3" />
+              ) : meta.isLesson ? (
+                <BookOpen className="h-3 w-3" />
               ) : (
                 <Plane className="h-3 w-3" />
               )}
               <span className="font-medium truncate">
-                {item.type === "user" ? getUserName(item) : getAircraftTail(item)}
+                {meta.label}
               </span>
             </div>
-            {item.reason && (
+            {meta.note && (
               <div className="truncate opacity-75">
-                {item.reason}
+                {meta.note}
               </div>
             )}
-            {item.start_time && item.end_time && (
+            {meta.time && (
               <div className="flex items-center gap-1 opacity-75">
                 <Clock className="h-2 w-2" />
-                <span>{item.start_time}-{item.end_time}</span>
+                <span>{meta.time}</span>
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
         
         {availability.length > 3 && (
           <Popover>
@@ -125,37 +175,43 @@ function CalendarDay({
                   All Availability - {format(day, "MMM d, yyyy")}
                 </h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {availability.map((item) => (
+                  {availability.map((item) => {
+                    const meta = getItemMeta(item);
+
+                    return (
                     <div
-                      key={item.id}
+                      key={`${item.event_type || item.type}-${item.id}`}
                       className="flex items-center justify-between p-2 rounded border hover:bg-muted/50"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           {item.type === "user" ? (
                             <User className="h-4 w-4 text-blue-600" />
+                          ) : meta.isLesson ? (
+                            <BookOpen className="h-4 w-4 text-indigo-600" />
                           ) : (
                             <Plane className="h-4 w-4 text-purple-600" />
                           )}
                           <span className="font-medium text-sm">
-                            {item.type === "user" ? getUserName(item) : getAircraftTail(item)}
+                            {meta.label}
                           </span>
                           <Badge variant={item.type === "user" ? "secondary" : "outline"} className="text-xs">
-                            {item.type === "user" ? "Personal" : "Aircraft"}
+                            {meta.badge}
                           </Badge>
                         </div>
-                        {item.reason && (
-                          <p className="text-xs text-muted-foreground">{item.reason}</p>
+                        {meta.note && (
+                          <p className="text-xs text-muted-foreground">{meta.note}</p>
                         )}
-                        {item.start_time && item.end_time && (
+                        {meta.time && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            <span>{item.start_time} - {item.end_time}</span>
+                            <span>{meta.time}</span>
                           </div>
                         )}
                       </div>
                       
-                      <DropdownMenu>
+                      {!meta.isScheduleOverlay && (
+                        <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                             <MoreHorizontal className="h-3 w-3" />
@@ -185,8 +241,10 @@ function CalendarDay({
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </PopoverContent>
@@ -227,6 +285,30 @@ export function AvailabilityCalendar({
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
   const endDate = endOfWeek(monthEnd);
+  const scheduleEvents = [
+    ...availability,
+    ...lessons
+      .filter((lesson) => lesson.aircraft_id || lesson.instructor_id || lesson.student_id)
+      .map((lesson) => ({
+        ...lesson,
+        event_type: "lesson",
+        title: lesson.lesson || lesson.kind || "Lesson",
+      })),
+    ...aircraftFlights.map((flight) => ({
+      ...flight,
+      event_type: "aircraft-flight",
+      aircraft_id: flight.aircraft_id,
+      aircraft_tail: flight.tail_number,
+      title: flight.purpose || "Solo Flight",
+    })),
+    ...rentalBookings.map((booking) => ({
+      ...booking,
+      event_type: "rental-booking",
+      aircraft_id: booking.aircraft_id,
+      aircraft_tail: booking.tail_number,
+      title: booking.purpose || "Rental",
+    })),
+  ];
 
   const dateFormat = "d";
   const rows = [];
@@ -240,13 +322,14 @@ export function AvailabilityCalendar({
       formattedDate = format(day, dateFormat);
       const cloneDay = day;
       
-      // Find availability for this day
-      const dayAvailability = availability.filter(item => {
+      const dayAvailability = scheduleEvents.filter(item => {
         // Skip items with null dates
-        if (!item.start_date || !item.end_date) return false;
+        const startSource = item.start_at || item.start_date;
+        const endSource = item.end_at || item.end_date;
+        if (!startSource || !endSource) return false;
         
-        const startDate = toET(item.start_date);
-        const endDate = toET(item.end_date);
+        const startDate = toET(startSource);
+        const endDate = toET(endSource);
         
         // Skip invalid dates
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return false;
@@ -444,31 +527,6 @@ export function AvailabilityCalendar({
       resourceType: 'aircraft'
     }))
   ];
-  const scheduleEvents = [
-    ...availability,
-    ...lessons
-      .filter((lesson) => lesson.aircraft_id || lesson.instructor_id || lesson.student_id)
-      .map((lesson) => ({
-        ...lesson,
-        event_type: "lesson",
-        title: lesson.lesson || lesson.kind || "Lesson",
-      })),
-    ...aircraftFlights.map((flight) => ({
-      ...flight,
-      event_type: "aircraft-flight",
-      aircraft_id: flight.aircraft_id,
-      aircraft_tail: flight.tail_number,
-      title: flight.purpose || "Solo Flight",
-    })),
-    ...rentalBookings.map((booking) => ({
-      ...booking,
-      event_type: "rental-booking",
-      aircraft_id: booking.aircraft_id,
-      aircraft_tail: booking.tail_number,
-      title: booking.purpose || "Rental",
-    })),
-  ];
-
   // Render different views
   if (view === 'schedule') {
     // Schedule view - Mixed resources (users + aircraft)
