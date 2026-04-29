@@ -113,10 +113,10 @@ export function RentalsClient() {
   const isStudentWorkflow = isAdmin && selectedWorkflow === "STUDENT";
   const selectedPeople = isStudentWorkflow ? students : renters;
   const selectedPersonLabel = isStudentWorkflow ? "student" : "renter";
-  const scheduleHeading = isStudentWorkflow ? "Student Flight Hours" : "Rental Operations";
+  const scheduleHeading = isStudentWorkflow ? "Student Flight Hours" : "Flight Operations";
   const scheduleDescription = isStudentWorkflow
     ? "Track student flight hours and manage hour balances."
-    : "Track renter hours, schedule aircraft, and close out flights.";
+    : "";
 
   const filteredBookings = useMemo(() => {
     if (!isAdmin || !selectedRenterId) return bookings;
@@ -443,7 +443,9 @@ export function RentalsClient() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">{scheduleHeading}</h1>
-          <p className="text-muted-foreground">{scheduleDescription}</p>
+          {scheduleDescription && (
+            <p className="text-muted-foreground">{scheduleDescription}</p>
+          )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAdmin && (
