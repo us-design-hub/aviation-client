@@ -236,31 +236,43 @@ export function WeekScheduleView({
     return { total, completed, scheduled, cancelled };
   }, [filteredEvents]);
 
-  // Calculate event positioning
-  const getEventStyle = (event, slotHour) => {
+  // Calculate event positioning across horizontal hour columns.
+  const getEventStyle = (event, slotHour, slotDate) => {
     const { start: eventStart, end: eventEnd } = parseEventTimes(event);
     
-    const slotStart = new Date(eventStart);
+    const slotStart = new Date(slotDate || eventStart);
     slotStart.setHours(slotHour, 0, 0, 0);
-    const slotEnd = new Date(eventStart);
+    const slotEnd = new Date(slotDate || eventStart);
     slotEnd.setHours(slotHour + 1, 0, 0, 0);
+    const visibleStart = new Date(slotDate || eventStart);
+    visibleStart.setHours(startHour, 0, 0, 0);
+    const visibleEnd = new Date(slotDate || eventStart);
+    visibleEnd.setHours(endHour + 1, 0, 0, 0);
+
+    if (eventEnd <= slotStart || eventStart >= slotEnd) {
+      return { display: 'none' };
+    }
+
+    const isFirstVisibleSlot = eventStart >= slotStart && eventStart < slotEnd;
+    const startsBeforeVisibleRange = eventStart < visibleStart && slotHour === startHour && eventEnd > visibleStart;
+
+    if (!isFirstVisibleSlot && !startsBeforeVisibleRange) {
+      return { display: 'none' };
+    }
     
-    // Clamp event to visible slot boundaries
-    const visibleStart = eventStart < slotStart ? slotStart : eventStart;
-    const visibleEnd = eventEnd > slotEnd ? slotEnd : eventEnd;
+    const renderedStart = eventStart < visibleStart ? visibleStart : eventStart;
+    const renderedEnd = eventEnd > visibleEnd ? visibleEnd : eventEnd;
     
-    // Calculate minutes offset from slot start
-    const minuteOffset = (visibleStart.getTime() - slotStart.getTime()) / (1000 * 60);
-    const top = (minuteOffset / 60) * 100; // Percentage of hour
-    
-    // Calculate visible duration in minutes
-    const visibleDuration = (visibleEnd.getTime() - visibleStart.getTime()) / (1000 * 60);
-    const height = (visibleDuration / 60) * 100; // Percentage of hour(s)
+    const minuteOffset = (renderedStart.getTime() - slotStart.getTime()) / (1000 * 60);
+    const durationMinutes = Math.max((renderedEnd.getTime() - renderedStart.getTime()) / (1000 * 60), 10);
+    const columnWidth = 120;
     
     return {
-      top: `${Math.max(0, top)}%`,
-      height: `${Math.max(height, 10)}%`, // Minimum 10% height
-      minHeight: '20px',
+      left: `${Math.max(0, (minuteOffset / 60) * 100)}%`,
+      width: `${Math.max((durationMinutes / 60) * columnWidth, 28)}px`,
+      top: '6px',
+      height: 'calc(100% - 12px)',
+      minHeight: '32px',
     };
   };
 
@@ -588,16 +600,17 @@ function TimeSlotCell({
       
       {/* Events in this slot */}
       {events.map((event, idx) => {
-        const style = getEventStyle(event, hour);
+        const style = getEventStyle(event, hour, date);
+        if (style.display === 'none') return null;
         
         return (
           <div
             key={event.id}
-            className="absolute left-1 right-1 z-10"
+            className="absolute z-10"
             style={{
               ...style,
               // Stack overlapping events
-              transform: events.length > 1 ? `translateX(${idx * 4}px)` : 'none',
+              transform: events.length > 1 ? `translateY(${idx * 4}px)` : 'none',
             }}
             onClick={(e) => {
               e.stopPropagation();
