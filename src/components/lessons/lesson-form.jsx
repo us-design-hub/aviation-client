@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription} from "@/components/ui/alert";
+import { TimeSelect } from "@/components/ui/time-select";
 import { lessonsAPI, usersAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -207,6 +208,12 @@ export function LessonForm({
       form.setValue("kind", selectedLesson.kind);
     }
   }, [watchedValues.lesson]);
+
+  useEffect(() => {
+    if (watchedValues.kind === "GROUND" && watchedValues.aircraftId !== "none") {
+      form.setValue("aircraftId", "none");
+    }
+  }, [watchedValues.kind]);
 
   // Keep dependent fields consistent when program/stage changes
   useEffect(() => {
@@ -479,7 +486,7 @@ export function LessonForm({
                       Start Time
                     </FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeSelect value={field.value} onChange={field.onChange} placeholder="Select start time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -496,7 +503,7 @@ export function LessonForm({
                       End Time
                     </FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeSelect value={field.value} onChange={field.onChange} placeholder="Select end time" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

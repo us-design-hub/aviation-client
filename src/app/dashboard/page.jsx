@@ -323,7 +323,7 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Hours Purchased</CardTitle>
@@ -338,6 +338,17 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{studentData?.hours?.hoursFlown?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Manual Adjustments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">
+                    {(studentData?.hours?.manualAdjustments ?? 0) > 0 ? '+' : ''}
+                    {studentData?.hours?.manualAdjustments?.toFixed?.(1) ?? '0.0'}
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -558,7 +569,7 @@ export default function DashboardPage() {
               </GoldenBadge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Hours Purchased</CardTitle>
@@ -573,6 +584,17 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{renterData?.hours?.hoursFlown?.toFixed?.(1) ?? '0.0'}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Manual Adjustments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">
+                    {(renterData?.hours?.manualAdjustments ?? 0) > 0 ? '+' : ''}
+                    {renterData?.hours?.manualAdjustments?.toFixed?.(1) ?? '0.0'}
+                  </div>
                 </CardContent>
               </Card>
               <Card>

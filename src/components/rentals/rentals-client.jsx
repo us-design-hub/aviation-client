@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Calendar, Clock3, Plane, Plus, Wallet } from "lucide-react";
 import { rentalsAPI, usersAPI, aircraftAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { WeekScheduleView } from "@/components/ui/schedule-view";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckoutModal } from "@/components/aircraft/checkout-modal";
 import { etToISO } from "@/lib/format-tz";
+import { TimeSelect } from "@/components/ui/time-select";
 
 const documentLabels = {
   PILOT_LICENSE: "Pilot License",
@@ -22,12 +24,9 @@ const documentLabels = {
   RENTERS_INSURANCE: "Renters Insurance",
 };
 
-function datetimeLocalToETISO(value) {
-  if (!value) return null;
-  const [datePart, timePart] = value.split("T");
-  if (!datePart || !timePart) return null;
-
-  return etToISO(new Date(`${datePart}T12:00:00Z`), timePart.slice(0, 5));
+function dateAndTimeToETISO(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return null;
+  return etToISO(new Date(`${dateValue}T12:00:00Z`), timeValue);
 }
 
 function asArray(value) {
@@ -56,8 +55,10 @@ function formatDateTime(value) {
 const emptyBookingForm = {
   renterId: "",
   aircraftId: "",
-  startAt: "",
-  endAt: "",
+  startDate: "",
+  startTime: "",
+  endDate: "",
+  endTime: "",
   purpose: "",
   notes: "",
 };
@@ -65,8 +66,10 @@ const emptyBookingForm = {
 const emptyAircraftFlightForm = {
   pilotId: "",
   aircraftId: "",
-  startAt: "",
-  endAt: "",
+  startDate: "",
+  startTime: "",
+  endDate: "",
+  endTime: "",
   purpose: "",
   notes: "",
 };
@@ -93,6 +96,9 @@ export function RentalsClient() {
   const [aircraft, setAircraft] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [aircraftFlights, setAircraftFlights] = useState([]);
+  const [scheduleEvents, setScheduleEvents] = useState([]);
+  const [scheduleDate, setScheduleDate] = useState(new Date());
+  const [scheduleView, setScheduleView] = useState("week");
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -126,16 +132,17 @@ export function RentalsClient() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const requests = [rentalsAPI.getAll(), aircraftAPI.getAll()];
+      const requests = [rentalsAPI.getAll(), aircraftAPI.getAll(), rentalsAPI.getSchedule()];
       if (isAdmin) {
         requests.push(aircraftAPI.getFlights());
         requests.push(usersAPI.getRenters());
         requests.push(usersAPI.getStudents());
         requests.push(usersAPI.getAll());
       }
-      const [bookingsRes, aircraftRes, flightsRes, rentersRes, studentsRes, usersRes] = await Promise.all(requests);
+      const [bookingsRes, aircraftRes, scheduleRes, flightsRes, rentersRes, studentsRes, usersRes] = await Promise.all(requests);
       setBookings(asArray(bookingsRes.data));
       setAircraft(asArray(aircraftRes.data).filter((item) => item?.status === "OK"));
+      setScheduleEvents(asArray(scheduleRes?.data));
       if (isAdmin) {
         setAircraftFlights(asArray(flightsRes?.data));
         const renterRows = asArray(rentersRes?.data);
@@ -215,12 +222,12 @@ export function RentalsClient() {
       toast.error("Please select a plane");
       return;
     }
-    if (!bookingForm.startAt || !bookingForm.endAt) {
+    if (!bookingForm.startDate || !bookingForm.startTime || !bookingForm.endDate || !bookingForm.endTime) {
       toast.error("Please select start and end times");
       return;
     }
-    const startAt = datetimeLocalToETISO(bookingForm.startAt);
-    const endAt = datetimeLocalToETISO(bookingForm.endAt);
+    const startAt = dateAndTimeToETISO(bookingForm.startDate, bookingForm.startTime);
+    const endAt = dateAndTimeToETISO(bookingForm.endDate, bookingForm.endTime);
     if (!startAt || !endAt || new Date(endAt) <= new Date(startAt)) {
       toast.error("End time must be after start time");
       return;
@@ -245,7 +252,7 @@ export function RentalsClient() {
       if (payload?.error === "RENTER_NOT_COMPLIANT") {
         toast.error("Rental blocked until required documents are valid");
       } else if (payload?.error === "INSUFFICIENT_HOURS") {
-        toast.error("Not enough hours remaining for this booking");
+        toast.error(payload?.message || "Not enough hours remaining for this booking");
       } else if (payload?.error === "conflicts") {
         toast.error("That aircraft is already booked or blocked for that time");
       } else {
@@ -267,12 +274,12 @@ export function RentalsClient() {
       toast.error("Please select a plane");
       return;
     }
-    if (!aircraftFlightForm.startAt || !aircraftFlightForm.endAt) {
+    if (!aircraftFlightForm.startDate || !aircraftFlightForm.startTime || !aircraftFlightForm.endDate || !aircraftFlightForm.endTime) {
       toast.error("Please select start and end times");
       return;
     }
-    const startAt = datetimeLocalToETISO(aircraftFlightForm.startAt);
-    const endAt = datetimeLocalToETISO(aircraftFlightForm.endAt);
+    const startAt = dateAndTimeToETISO(aircraftFlightForm.startDate, aircraftFlightForm.startTime);
+    const endAt = dateAndTimeToETISO(aircraftFlightForm.endDate, aircraftFlightForm.endTime);
     if (!startAt || !endAt || new Date(endAt) <= new Date(startAt)) {
       toast.error("End time must be after start time");
       return;
@@ -424,6 +431,7 @@ export function RentalsClient() {
   const summary = {
     totalPurchased: asNumber(dashboard?.hours?.totalPurchased),
     hoursFlown: asNumber(dashboard?.hours?.hoursFlown),
+    manualAdjustments: asNumber(dashboard?.hours?.manualAdjustments),
     hoursRemaining: asNumber(dashboard?.hours?.hoursRemaining),
     transactions: asArray(dashboard?.hours?.transactions),
   };
@@ -435,6 +443,12 @@ export function RentalsClient() {
   const safeRenters = asArray(renters);
   const safeBookings = asArray(filteredBookings);
   const safeAircraft = asArray(aircraft);
+  const scheduleResources = safeAircraft.map((item) => ({
+    ...item,
+    resourceType: "aircraft",
+    name: item.tail_number,
+  }));
+  const safeScheduleEvents = asArray(scheduleEvents);
   const safePilots = asArray(pilots);
   const safeAircraftFlights = asArray(aircraftFlights);
 
@@ -508,7 +522,7 @@ export function RentalsClient() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Total Hours Purchased</CardTitle>
@@ -523,6 +537,17 @@ export function RentalsClient() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{summary.hoursFlown.toFixed(1)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Manual Adjustments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {summary.manualAdjustments > 0 ? "+" : ""}
+              {summary.manualAdjustments.toFixed(1)}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -769,6 +794,28 @@ export function RentalsClient() {
         </div>
       </div>
 
+      {!isStudentWorkflow && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Aircraft Schedule</CardTitle>
+            <CardDescription>Current aircraft reservations and blocked time.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WeekScheduleView
+              currentDate={scheduleDate}
+              events={safeScheduleEvents}
+              onDateChange={setScheduleDate}
+              view={scheduleView}
+              onViewChange={(value) => setScheduleView(value === "month" || value === "schedule" ? "week" : value)}
+              resources={scheduleResources}
+              showResourceColumns
+              startHour={6}
+              endHour={23}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Dialog open={bookingDialogOpen && !isStudentWorkflow} onOpenChange={setBookingDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -810,21 +857,43 @@ export function RentalsClient() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="startAt">Start</Label>
+                <Label htmlFor="startDate">Start Date</Label>
                 <Input
-                  id="startAt"
-                  type="datetime-local"
-                  value={bookingForm.startAt}
-                  onChange={(event) => setBookingForm((current) => ({ ...current, startAt: event.target.value }))}
+                  id="startDate"
+                  type="date"
+                  value={bookingForm.startDate}
+                  onChange={(event) => setBookingForm((current) => ({
+                    ...current,
+                    startDate: event.target.value,
+                    endDate: current.endDate || event.target.value,
+                  }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endAt">End</Label>
+                <Label htmlFor="startTime">Start Time</Label>
+                <TimeSelect
+                  id="startTime"
+                  value={bookingForm.startTime}
+                  onChange={(value) => setBookingForm((current) => ({ ...current, startTime: value }))}
+                  placeholder="Select start time"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
                 <Input
-                  id="endAt"
-                  type="datetime-local"
-                  value={bookingForm.endAt}
-                  onChange={(event) => setBookingForm((current) => ({ ...current, endAt: event.target.value }))}
+                  id="endDate"
+                  type="date"
+                  value={bookingForm.endDate}
+                  onChange={(event) => setBookingForm((current) => ({ ...current, endDate: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <TimeSelect
+                  id="endTime"
+                  value={bookingForm.endTime}
+                  onChange={(value) => setBookingForm((current) => ({ ...current, endTime: value }))}
+                  placeholder="Select end time"
                 />
               </div>
             </div>
@@ -891,21 +960,43 @@ export function RentalsClient() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="soloStartAt">Start</Label>
+                <Label htmlFor="soloStartDate">Start Date</Label>
                 <Input
-                  id="soloStartAt"
-                  type="datetime-local"
-                  value={aircraftFlightForm.startAt}
-                  onChange={(event) => setAircraftFlightForm((current) => ({ ...current, startAt: event.target.value }))}
+                  id="soloStartDate"
+                  type="date"
+                  value={aircraftFlightForm.startDate}
+                  onChange={(event) => setAircraftFlightForm((current) => ({
+                    ...current,
+                    startDate: event.target.value,
+                    endDate: current.endDate || event.target.value,
+                  }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="soloEndAt">End</Label>
+                <Label htmlFor="soloStartTime">Start Time</Label>
+                <TimeSelect
+                  id="soloStartTime"
+                  value={aircraftFlightForm.startTime}
+                  onChange={(value) => setAircraftFlightForm((current) => ({ ...current, startTime: value }))}
+                  placeholder="Select start time"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="soloEndDate">End Date</Label>
                 <Input
-                  id="soloEndAt"
-                  type="datetime-local"
-                  value={aircraftFlightForm.endAt}
-                  onChange={(event) => setAircraftFlightForm((current) => ({ ...current, endAt: event.target.value }))}
+                  id="soloEndDate"
+                  type="date"
+                  value={aircraftFlightForm.endDate}
+                  onChange={(event) => setAircraftFlightForm((current) => ({ ...current, endDate: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="soloEndTime">End Time</Label>
+                <TimeSelect
+                  id="soloEndTime"
+                  value={aircraftFlightForm.endTime}
+                  onChange={(value) => setAircraftFlightForm((current) => ({ ...current, endTime: value }))}
+                  placeholder="Select end time"
                 />
               </div>
             </div>

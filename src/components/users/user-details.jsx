@@ -361,7 +361,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <p className="text-2xl font-bold text-primary">{hourSummary?.totalPurchased?.toFixed?.(1) ?? "0.0"}</p>
                 <p className="text-sm text-muted-foreground">Hours Purchased</p>
@@ -369,6 +369,13 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <p className="text-2xl font-bold text-green-600">{hourSummary?.hoursFlown?.toFixed?.(1) ?? "0.0"}</p>
                 <p className="text-sm text-muted-foreground">Hours Flown</p>
+              </div>
+              <div className="text-center p-4 bg-amber-50 rounded-lg">
+                <p className="text-2xl font-bold text-amber-700">
+                  {(hourSummary?.manualAdjustments ?? 0) > 0 ? "+" : ""}
+                  {hourSummary?.manualAdjustments?.toFixed?.(1) ?? "0.0"}
+                </p>
+                <p className="text-sm text-muted-foreground">Manual Adjustments</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">{hourSummary?.hoursRemaining?.toFixed?.(1) ?? "0.0"}</p>

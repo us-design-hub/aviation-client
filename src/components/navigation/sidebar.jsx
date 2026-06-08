@@ -238,6 +238,15 @@ export function Sidebar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full justify-start"
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+              Sign out
+            </Button>
           </div>
         </div>
       </div>

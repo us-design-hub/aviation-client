@@ -6,8 +6,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { lessonsAPI, syllabusAPI, usersAPI, aircraftAPI, rentalsAPI } from "@/lib/api";
 import { LessonsCalendar } from "./lessons-calendar";
@@ -38,6 +41,9 @@ export function LessonsClient() {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [editingLesson, setEditingLesson] = useState(null);
   const [formInitialValues, setFormInitialValues] = useState(null); // For pre-filling form
+  const [groundCompleteDialog, setGroundCompleteDialog] = useState({ open: false, lesson: null });
+  const [groundCompleteForm, setGroundCompleteForm] = useState({ groundInstructionTime: "", instructorNote: "" });
+  const [groundCompleteSaving, setGroundCompleteSaving] = useState(false);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -275,6 +281,15 @@ export function LessonsClient() {
   };
 
   const handleCompleteLesson = async (lesson) => {
+    if (lesson.kind === "GROUND") {
+      setGroundCompleteDialog({ open: true, lesson });
+      setGroundCompleteForm({
+        groundInstructionTime: lesson.ground_instruction_time ? String(lesson.ground_instruction_time) : "",
+        instructorNote: "",
+      });
+      return;
+    }
+
     const confirmed = await showConfirm({
       title: "Complete Lesson",
       description: `Mark this ${lesson.kind.toLowerCase()} lesson as completed?`,
@@ -289,6 +304,36 @@ export function LessonsClient() {
     } catch (error) {
       console.error("Error completing lesson:", error);
       toast.error("Failed to complete lesson");
+    }
+  };
+
+  const submitGroundComplete = async () => {
+    const lesson = groundCompleteDialog.lesson;
+    if (!lesson) return;
+
+    const groundInstructionTime = Number(groundCompleteForm.groundInstructionTime);
+    if (!Number.isFinite(groundInstructionTime) || groundInstructionTime < 0) {
+      toast.error("Ground instruction time must be a valid non-negative number");
+      return;
+    }
+
+    try {
+      setGroundCompleteSaving(true);
+      await lessonsAPI.complete(lesson.id, {
+        instructionGiven: false,
+        dualGivenTime: 0,
+        groundInstructionTime,
+        instructorNote: groundCompleteForm.instructorNote,
+      });
+      toast.success("Ground lesson marked as completed");
+      setGroundCompleteDialog({ open: false, lesson: null });
+      setGroundCompleteForm({ groundInstructionTime: "", instructorNote: "" });
+      fetchAllData();
+    } catch (error) {
+      console.error("Error completing ground lesson:", error);
+      toast.error(error.response?.data?.message || "Failed to complete ground lesson");
+    } finally {
+      setGroundCompleteSaving(false);
     }
   };
 
@@ -628,6 +673,80 @@ export function LessonsClient() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={groundCompleteDialog.open}
+        onOpenChange={(open) => {
+          if (!groundCompleteSaving) {
+            setGroundCompleteDialog({ open, lesson: open ? groundCompleteDialog.lesson : null });
+            if (!open) setGroundCompleteForm({ groundInstructionTime: "", instructorNote: "" });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complete Ground Lesson</DialogTitle>
+            <DialogDescription>
+              Record the ground instruction time and instructor feedback for this lesson.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="groundInstructionTime">Ground instruction time</Label>
+              <Input
+                id="groundInstructionTime"
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="2.4"
+                value={groundCompleteForm.groundInstructionTime}
+                onChange={(event) =>
+                  setGroundCompleteForm((current) => ({
+                    ...current,
+                    groundInstructionTime: event.target.value,
+                  }))
+                }
+              />
+              <p className="text-sm text-muted-foreground">
+                Enter decimal hours. Example: 2.4 means 2 hours and 24 minutes.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="groundInstructorNote">Instructor feedback</Label>
+              <Textarea
+                id="groundInstructorNote"
+                rows={4}
+                value={groundCompleteForm.instructorNote}
+                onChange={(event) =>
+                  setGroundCompleteForm((current) => ({
+                    ...current,
+                    instructorNote: event.target.value,
+                  }))
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setGroundCompleteDialog({ open: false, lesson: null });
+                setGroundCompleteForm({ groundInstructionTime: "", instructorNote: "" });
+              }}
+              disabled={groundCompleteSaving}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={submitGroundComplete} disabled={groundCompleteSaving}>
+              {groundCompleteSaving ? "Saving..." : "Mark Complete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       {ConfirmDialog}

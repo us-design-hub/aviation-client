@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
 import { GoldenButton } from '@/components/ui/golden-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plane, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,23 +39,41 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="icon-container dark:icon-container-dark">
-              <Plane className="icon-xl icon-black dark:icon-black-dark" />
+    <div className="min-h-screen bg-[#050505] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-10">
+        <div className="grid w-full overflow-hidden rounded-lg border border-[#f4c21b]/35 bg-[#111111] shadow-2xl shadow-black/50 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="hidden border-r border-[#f4c21b]/25 bg-black p-10 lg:flex lg:flex-col lg:justify-between">
+            <div>
+              <div className="mb-8 h-1 w-full rounded-full bg-[#f4c21b]" />
+              <h1 className="text-4xl font-bold leading-tight text-[#f9d24a]">
+                Wings of Angel Aviation
+              </h1>
+              <p className="mt-4 max-w-md text-base text-zinc-300">
+                Flight training, aircraft scheduling, and school operations.
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#f4c21b]/25 bg-zinc-950/80 p-5">
+              <div className="flex items-center gap-3 text-[#f9d24a]">
+                <Plane className="h-6 w-6" />
+                <span className="text-sm font-semibold uppercase">Wings CRM</span>
+              </div>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-golden dark:text-golden-dark">Wings of Angel Aviation</CardTitle>
-          <CardDescription>
-            Sign in to your Flight School CRM account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          <div className="bg-[#151515] p-6 sm:p-10">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-lg border border-[#f4c21b]/40 bg-black">
+                <img src="/icon.png" alt="Wings of Angel Aviation" className="h-16 w-16 object-contain" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#f9d24a]">Wings of Angel Aviation</h2>
+              <p className="mt-2 text-sm text-zinc-300">
+                Sign in to your Flight School CRM account
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-zinc-100">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,10 +81,11 @@ export default function LoginPage() {
                 value={credentials.email}
                 onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
                 required
+                className="border-zinc-700 bg-black text-white placeholder:text-zinc-500 focus-visible:ring-[#f4c21b]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-zinc-100">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -77,12 +94,12 @@ export default function LoginPage() {
                   value={credentials.password}
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
                   required
-                  className="pr-10"
+                  className="border-zinc-700 bg-black pr-10 text-white placeholder:text-zinc-500 focus-visible:ring-[#f4c21b]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors hover:text-[#f9d24a]"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
@@ -95,7 +112,7 @@ export default function LoginPage() {
             </div>
             <GoldenButton 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-[#f4c21b] text-black hover:bg-[#ffd84d]" 
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
@@ -104,14 +121,15 @@ export default function LoginPage() {
             <div className="text-center">
               <a 
                 href="/forgot-password" 
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm text-zinc-300 transition-colors hover:text-[#f9d24a]"
               >
                 Forgot your password?
               </a>
             </div>
           </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
