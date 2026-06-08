@@ -2,20 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Filter, Settings, Wrench, AlertTriangle, Clock, CheckCircle, Calendar } from "lucide-react";
+import { Plus, Search, Filter, Wrench, AlertTriangle, Clock, CheckCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { maintenanceAPI, aircraftAPI } from "@/lib/api";
 import { MaintenanceTable } from "./maintenance-table";
 import { MaintenanceForm } from "./maintenance-form";
 import { MaintenanceDetails } from "./maintenance-details";
-import { useConfirmDialog, confirmPresets } from "@/components/ui/confirm-dialog";
-import { useAuth } from "@/contexts/auth-context";
 import { usePermission } from "@/components/rbac/role-gate";
 
 export function MaintenanceClient() {
@@ -30,6 +27,10 @@ export function MaintenanceClient() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [completingMaintenance, setCompletingMaintenance] = useState(null);
+  const [nextDueHobbs, setNextDueHobbs] = useState("");
+  const [completing, setCompleting] = useState(false);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -39,10 +40,7 @@ export function MaintenanceClient() {
     dateRange: "all", // all, overdue, upcoming
   });
 
-  const { showConfirm, ConfirmDialog } = useConfirmDialog();
-  const { user } = useAuth();
   const canPostMaintenance = usePermission('postMaintenance');
-  const canResolveMaint = usePermission('resolveMaint');
 
   // Fetch all data on mount
   useEffect(() => {
@@ -122,22 +120,43 @@ export function MaintenanceClient() {
 
   // Complete maintenance item
   const handleCompleteMaintenance = async (maintenanceItem) => {
-    const confirmed = await showConfirm({
-      title: "Complete Maintenance",
-      description: `Mark "${maintenanceItem.title}" as completed?`,
-      confirmText: "Complete",
-      onConfirm: async () => {
-        try {
-          await maintenanceAPI.complete(maintenanceItem.id);
-          toast.success("Maintenance item completed successfully");
-          fetchAllData();
-        } catch (error) {
-          console.error("Error completing maintenance item:", error);
-          toast.error("Failed to complete maintenance item");
-          throw error;
-        }
+    setCompletingMaintenance(maintenanceItem);
+    setNextDueHobbs("");
+    setCompletionDialogOpen(true);
+  };
+
+  const submitCompleteMaintenance = async () => {
+    if (!completingMaintenance) return;
+
+    try {
+      setCompleting(true);
+      const payload = {};
+      if (nextDueHobbs !== "") {
+        payload.nextDueHobbs = Number(nextDueHobbs);
       }
-    });
+
+      const response = await maintenanceAPI.complete(completingMaintenance.id, payload);
+      const nextItem = response?.data?.data?.nextItem;
+      toast.success(
+        nextItem
+          ? `Maintenance completed and next due hours saved for ${Number(nextItem.due_hobbs).toFixed(1)}`
+          : "Maintenance item completed successfully"
+      );
+      setCompletionDialogOpen(false);
+      setCompletingMaintenance(null);
+      setNextDueHobbs("");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error completing maintenance item:", error);
+      const message =
+        error?.response?.data?.details ||
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Failed to complete maintenance item";
+      toast.error(message);
+    } finally {
+      setCompleting(false);
+    }
   };
 
   // Handle maintenance item click
@@ -453,8 +472,79 @@ export function MaintenanceClient() {
         </SheetContent>
       </Sheet>
 
-      {/* Confirmation Dialog */}
-      {ConfirmDialog}
+      <Dialog
+        open={completionDialogOpen}
+        onOpenChange={(open) => {
+          if (!completing) {
+            setCompletionDialogOpen(open);
+            if (!open) {
+              setCompletingMaintenance(null);
+              setNextDueHobbs("");
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Maintenance</DialogTitle>
+            <DialogDescription>
+              Mark this maintenance item as complete and optionally save new due hours for the next cycle.
+            </DialogDescription>
+          </DialogHeader>
+
+          {completingMaintenance && (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-3">
+                <div className="font-medium">{completingMaintenance.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  {(aircraft.find((ac) => ac.id === completingMaintenance.aircraft_id)?.tail_number) || "Unknown aircraft"}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="next-due-hours">
+                  New due hours
+                </label>
+                <Input
+                  id="next-due-hours"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="Leave blank to just mark complete"
+                  value={nextDueHobbs}
+                  onChange={(e) => setNextDueHobbs(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter the next tach/hour threshold for this maintenance item. Leave blank if you only want to close the current item.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setCompletionDialogOpen(false);
+                setCompletingMaintenance(null);
+                setNextDueHobbs("");
+              }}
+              disabled={completing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-golden-gradient hover:bg-golden-gradient/90"
+              onClick={submitCompleteMaintenance}
+              disabled={completing}
+            >
+              {completing ? "Saving..." : "Save Completion"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

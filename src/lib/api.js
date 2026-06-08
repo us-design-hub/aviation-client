@@ -187,7 +187,7 @@ export const maintenanceAPI = {
   create: (aircraftId, maintenanceData) => api.post(`/maintenance/aircraft/${aircraftId}`, maintenanceData),
   update: (id, maintenanceData) => api.patch(`/maintenance/${id}`, maintenanceData),
   delete: (id) => api.delete(`/maintenance/${id}`),
-  complete: (id) => api.post(`/maintenance/${id}/complete`),
+  complete: (id, data = {}) => api.post(`/maintenance/${id}/complete`, data),
 };
 
 // Rentals API
