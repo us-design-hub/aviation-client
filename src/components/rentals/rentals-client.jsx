@@ -29,6 +29,32 @@ function dateAndTimeToETISO(dateValue, timeValue) {
   return etToISO(new Date(`${dateValue}T12:00:00Z`), timeValue);
 }
 
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toTimeInputValue(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function getSlotDefaultTimes(date, hour) {
+  const start = new Date(date);
+  start.setHours(hour, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setHours(end.getHours() + 1);
+
+  return {
+    startDate: toDateInputValue(start),
+    startTime: toTimeInputValue(start),
+    endDate: toDateInputValue(end),
+    endTime: toTimeInputValue(end),
+  };
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -420,6 +446,24 @@ export function RentalsClient() {
     }
   }
 
+  function handleScheduleSlotClick({ date, hour, resourceId, resourceType }) {
+    if (isStudentWorkflow || resourceType !== "aircraft" || !resourceId) return;
+
+    const renterId = isAdmin ? selectedRenterId : user?.id;
+    if (!renterId) {
+      toast.error("Please select a renter");
+      return;
+    }
+
+    setBookingForm({
+      ...emptyBookingForm,
+      renterId,
+      aircraftId: resourceId,
+      ...getSlotDefaultTimes(date, hour),
+    });
+    setBookingDialogOpen(true);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -804,6 +848,7 @@ export function RentalsClient() {
             <WeekScheduleView
               currentDate={scheduleDate}
               events={safeScheduleEvents}
+              onTimeSlotClick={handleScheduleSlotClick}
               onDateChange={setScheduleDate}
               view={scheduleView}
               onViewChange={(value) => setScheduleView(value === "month" || value === "schedule" ? "week" : value)}
