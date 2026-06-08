@@ -40,27 +40,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-10">
-        <div className="grid w-full overflow-hidden rounded-lg border border-[#f4c21b]/35 bg-[#111111] shadow-2xl shadow-black/50 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="hidden border-r border-[#f4c21b]/25 bg-black p-10 lg:flex lg:flex-col lg:justify-between">
-            <div>
-              <div className="mb-8 h-1 w-full rounded-full bg-[#f4c21b]" />
-              <h1 className="text-4xl font-bold leading-tight text-[#f9d24a]">
-                Wings of Angel Aviation
-              </h1>
-              <p className="mt-4 max-w-md text-base text-zinc-300">
-                Flight training, aircraft scheduling, and school operations.
-              </p>
-            </div>
-            <div className="rounded-lg border border-[#f4c21b]/25 bg-zinc-950/80 p-5">
-              <div className="flex items-center gap-3 text-[#f9d24a]">
-                <Plane className="h-6 w-6" />
-                <span className="text-sm font-semibold uppercase">Wings CRM</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#151515] p-6 sm:p-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-xl items-center justify-center px-4 py-10">
+        <div className="w-full overflow-hidden rounded-lg border border-[#f4c21b]/35 bg-[#151515] p-6 shadow-2xl shadow-black/50 sm:p-10">
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-lg border border-[#f4c21b]/40 bg-black">
                 <img src="/icon.png" alt="Wings of Angel Aviation" className="h-16 w-16 object-contain" />
@@ -127,7 +108,6 @@ export default function LoginPage() {
               </a>
             </div>
           </form>
-          </div>
         </div>
       </div>
     </div>
