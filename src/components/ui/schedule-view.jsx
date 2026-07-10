@@ -40,6 +40,30 @@ import {
  * @param {Number} props.startHour - Start hour for schedule (default: 7)
  * @param {Number} props.endHour - End hour for schedule (default: 22)
  */
+function parseScheduleEventTimes(event) {
+  if (event.start_at) {
+    return {
+      start: toET(event.start_at),
+      end: toET(event.end_at || event.end_date),
+    };
+  }
+  if (event.start_time) {
+    const dateStr = dateKeyET(event.start_date);
+    return {
+      start: new Date(`${dateStr}T${event.start_time}:00`),
+      end: new Date(`${dateStr}T${event.end_time || '23:59'}:00`),
+    };
+  }
+  return {
+    start: toET(event.start_date),
+    end: toET(event.end_date),
+  };
+}
+
+function scheduleIndexKey(date, hour, resourceId = '*') {
+  return `${format(date, 'yyyy-MM-dd')}|${hour}|${resourceId || '*'}`;
+}
+
 export function WeekScheduleView({
   currentDate,
   events = [],
@@ -157,88 +181,102 @@ export function WeekScheduleView({
     onDateChange(nowET());
   };
 
-  // Parse an event's start/end into local Date objects.
-  // Lessons have start_at/end_at as proper UTC ISO strings → new Date() handles conversion.
-  // Availability events store local time with a "Z" suffix in start_date → we must
-  // reconstruct from the date string + start_time to avoid a false UTC→local shift.
-  const parseEventTimes = (event) => {
-    if (event.start_at) {
-      return {
-        start: toET(event.start_at),
-        end: toET(event.end_at || event.end_date),
-      };
-    }
-    if (event.start_time) {
-      const dateStr = dateKeyET(event.start_date);
-      return {
-        start: new Date(`${dateStr}T${event.start_time}:00`),
-        end: new Date(`${dateStr}T${event.end_time || '23:59'}:00`),
-      };
-    }
-    return {
-      start: toET(event.start_date),
-      end: toET(event.end_date),
-    };
-  };
+  const visibleEvents = useMemo(() => {
+    const windowStart = new Date(displayDates[0]);
+    windowStart.setHours(0, 0, 0, 0);
+    const windowEnd = new Date(displayDates[displayDates.length - 1]);
+    windowEnd.setHours(0, 0, 0, 0);
+    windowEnd.setDate(windowEnd.getDate() + 1);
 
-  // Get events for a specific time slot (using filtered events)
-  const getEventsForSlot = (date, hour, resourceId = null) => {
-    const slotStart = new Date(date);
-    slotStart.setHours(hour, 0, 0, 0);
-    const slotEnd = new Date(date);
-    slotEnd.setHours(hour + 1, 0, 0, 0);
-
-    const slotDateOnly = new Date(date);
-    slotDateOnly.setHours(0, 0, 0, 0);
-
-    return filteredEvents.filter(event => {
-      // All-day events: no start_at AND no start_time
-      if (!event.start_at && !event.start_time && !event.end_time) {
-        const eventStartDate = toET(event.start_date);
-        eventStartDate.setHours(0, 0, 0, 0);
-        const eventEndDate = toET(event.end_date);
-        eventEndDate.setHours(23, 59, 59, 999);
-        
-        const isInDateRange = slotDateOnly >= eventStartDate && slotDateOnly <= eventEndDate;
-        
-        if (showResourceColumns && resourceId) {
-          return isInDateRange && (event.user_id === resourceId || event.aircraft_id === resourceId);
-        }
-        return isInDateRange;
-      }
-      
-      const { start: eventStart, end: eventEnd } = parseEventTimes(event);
-      
-      // Compare local dates
-      const eventDateOnly = new Date(eventStart);
-      eventDateOnly.setHours(0, 0, 0, 0);
-      if (eventDateOnly.getTime() !== slotDateOnly.getTime()) {
-        return false;
-      }
-      
-      // Check if event overlaps with this hour slot
-      const overlaps = eventStart < slotEnd && eventEnd > slotStart;
-      
-      if (showResourceColumns && resourceId) {
-        return overlaps && (event.user_id === resourceId || event.aircraft_id === resourceId || event.instructor_id === resourceId || event.student_id === resourceId);
-      }
-      
-      return overlaps;
+    return filteredEvents.filter((event) => {
+      const { start, end } = parseScheduleEventTimes(event);
+      return (
+        !Number.isNaN(start.getTime()) &&
+        !Number.isNaN(end.getTime()) &&
+        start < windowEnd &&
+        end > windowStart
+      );
     });
-  };
-  
+  }, [displayDates, filteredEvents]);
+
+  const eventIndex = useMemo(() => {
+    const index = new Map();
+
+    const addEvent = (date, hour, resourceId, event) => {
+      const key = scheduleIndexKey(date, hour, resourceId);
+      const existing = index.get(key);
+      if (existing) {
+        existing.push(event);
+      } else {
+        index.set(key, [event]);
+      }
+    };
+
+    for (const event of visibleEvents) {
+      const { start: eventStart, end: eventEnd } = parseScheduleEventTimes(event);
+      if (
+        Number.isNaN(eventStart.getTime()) ||
+        Number.isNaN(eventEnd.getTime()) ||
+        eventEnd <= eventStart
+      ) {
+        continue;
+      }
+
+      const resourceIds = showResourceColumns
+        ? [...new Set([
+            event.user_id,
+            event.aircraft_id,
+            event.instructor_id,
+            event.student_id,
+          ].filter(Boolean))]
+        : ['*'];
+
+      if (showResourceColumns && resourceIds.length === 0) {
+        continue;
+      }
+
+      for (const date of displayDates) {
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        if (eventStart >= dayEnd || eventEnd <= dayStart) {
+          continue;
+        }
+
+        const beginsOnThisDay = isSameDay(eventStart, date);
+        const firstHour = beginsOnThisDay
+          ? Math.max(startHour, Math.min(endHour, eventStart.getHours()))
+          : startHour;
+
+        if (beginsOnThisDay && eventStart.getHours() > endHour) {
+          continue;
+        }
+
+        for (const resourceId of resourceIds) {
+          addEvent(date, firstHour, resourceId, event);
+        }
+      }
+    }
+
+    return index;
+  }, [displayDates, endHour, showResourceColumns, startHour, visibleEvents]);
+
+  const getEventsForSlot = (date, hour, resourceId = null) =>
+    eventIndex.get(scheduleIndexKey(date, hour, resourceId || '*')) || [];
   // Get event count summary
   const eventSummary = useMemo(() => {
-    const total = filteredEvents.length;
-    const completed = filteredEvents.filter(e => e.status === 'COMPLETED').length;
-    const scheduled = filteredEvents.filter(e => e.status === 'SCHEDULED').length;
-    const cancelled = filteredEvents.filter(e => e.status === 'CANCELED').length;
+    const total = visibleEvents.length;
+    const completed = visibleEvents.filter(e => e.status === 'COMPLETED').length;
+    const scheduled = visibleEvents.filter(e => e.status === 'SCHEDULED').length;
+    const cancelled = visibleEvents.filter(e => e.status === 'CANCELED').length;
     return { total, completed, scheduled, cancelled };
-  }, [filteredEvents]);
+  }, [visibleEvents]);
 
   // Calculate event positioning across horizontal hour columns.
   const getEventStyle = (event, slotHour, slotDate) => {
-    const { start: eventStart, end: eventEnd } = parseEventTimes(event);
+    const { start: eventStart, end: eventEnd } = parseScheduleEventTimes(event);
     
     const slotStart = new Date(slotDate || eventStart);
     slotStart.setHours(slotHour, 0, 0, 0);

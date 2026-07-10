@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Plus, Calendar, List, Search, Filter, Plane, User, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,14 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { availabilityAPI, usersAPI, aircraftAPI, lessonsAPI, rentalsAPI } from "@/lib/api";
+import { availabilityAPI, usersAPI, aircraftAPI, rentalsAPI } from "@/lib/api";
 import { AvailabilityCalendar } from "./availability-calendar";
 import { AvailabilityTable } from "./availability-table";
 import { AvailabilityForm } from "./availability-form";
 import { AvailabilityDetails } from "./availability-details";
 import { useConfirmDialog, confirmPresets } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
-import { formatET, isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET } from "@/lib/format-tz";
+import { formatET, isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET, scheduleRangeParams } from "@/lib/format-tz";
 
 function normalizeAvailabilityTimes(item) {
   if (!item?.start_date || !item?.end_date) return item;
@@ -37,9 +37,7 @@ export function AvailabilityClient() {
   const [availability, setAvailability] = useState([]);
   const [users, setUsers] = useState([]);
   const [aircraft, setAircraft] = useState([]);
-  const [lessons, setLessons] = useState([]);
-  const [aircraftFlights, setAircraftFlights] = useState([]);
-  const [rentalBookings, setRentalBookings] = useState([]);
+  const [scheduleEvents, setScheduleEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -94,19 +92,6 @@ export function AvailabilityClient() {
       }
       
       apiCalls.push(aircraftAPI.getAll());
-      apiCalls.push(lessonsAPI.getAll());
-
-      if (user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') {
-        apiCalls.push(aircraftAPI.getFlights());
-      } else {
-        apiCalls.push(Promise.resolve({ data: [] }));
-      }
-
-      if (user?.role === 'ADMIN') {
-        apiCalls.push(rentalsAPI.getAll());
-      } else {
-        apiCalls.push(Promise.resolve({ data: [] }));
-      }
       
       const results = await Promise.allSettled(apiCalls);
 
@@ -114,9 +99,6 @@ export function AvailabilityClient() {
       const availabilityRes = results[0];
       const usersRes = results[1];
       const aircraftRes = results[2];
-      const lessonsRes = results[3];
-      const aircraftFlightsRes = results[4];
-      const rentalsRes = results[5];
 
       // Set data from successful responses
       if (availabilityRes.status === 'fulfilled') {
@@ -136,24 +118,6 @@ export function AvailabilityClient() {
         setAircraft(aircraftData);
       }
 
-      if (lessonsRes.status === 'fulfilled') {
-        setLessons(lessonsRes.value.data || lessonsRes.value || []);
-      } else {
-        setLessons([]);
-      }
-
-      if (aircraftFlightsRes.status === 'fulfilled') {
-        setAircraftFlights(aircraftFlightsRes.value.data || aircraftFlightsRes.value || []);
-      } else {
-        setAircraftFlights([]);
-      }
-
-      if (rentalsRes.status === 'fulfilled') {
-        setRentalBookings(rentalsRes.value.data || rentalsRes.value || []);
-      } else {
-        setRentalBookings([]);
-      }
-
     } catch (error) {
       console.error("Error fetching availability data:", error);
       setError("Failed to fetch availability data");
@@ -162,6 +126,21 @@ export function AvailabilityClient() {
       setLoading(false);
     }
   };
+
+
+  const fetchSchedule = useCallback(async ({ date, view }) => {
+    try {
+      const response = await rentalsAPI.getSchedule(
+        scheduleRangeParams(date, view)
+      );
+      setScheduleEvents(
+        (response.data || []).filter((event) => event.event_type !== "aircraft-hold")
+      );
+    } catch (error) {
+      console.error("Error fetching schedule data:", error);
+      toast.error("Failed to fetch schedule data");
+    }
+  }, []);
 
   const matchesDateRange = (dateValue) => {
     if (filters.dateRange === "all") return true;
@@ -192,38 +171,14 @@ export function AvailabilityClient() {
     return matchesSearch && matchesType && matchesDateRange(item.start_date);
   });
 
-  const filteredLessons = lessons.filter((lesson) => {
+  const filteredScheduleEvents = scheduleEvents.filter((event) => {
     const query = filters.search.toLowerCase();
     const matchesSearch = !filters.search ||
-      lesson.lesson?.toLowerCase().includes(query) ||
-      lesson.kind?.toLowerCase().includes(query) ||
-      lesson.student_name?.toLowerCase().includes(query) ||
-      lesson.instructor_name?.toLowerCase().includes(query) ||
-      lesson.aircraft_tail?.toLowerCase().includes(query);
-    const matchesType = filters.type === "all" || filters.type === "lesson";
-    return matchesSearch && matchesType && matchesDateRange(lesson.start_at);
-  });
-
-  const filteredAircraftFlights = aircraftFlights.filter((flight) => {
-    const query = filters.search.toLowerCase();
-    const matchesSearch = !filters.search ||
-      flight.purpose?.toLowerCase().includes(query) ||
-      flight.pilot_name?.toLowerCase().includes(query) ||
-      flight.pilot_email?.toLowerCase().includes(query) ||
-      flight.tail_number?.toLowerCase().includes(query);
-    const matchesType = filters.type === "all" || filters.type === "aircraft-flight";
-    return matchesSearch && matchesType && matchesDateRange(flight.start_at);
-  });
-
-  const filteredRentalBookings = rentalBookings.filter((booking) => {
-    const query = filters.search.toLowerCase();
-    const matchesSearch = !filters.search ||
-      booking.purpose?.toLowerCase().includes(query) ||
-      booking.renter_name?.toLowerCase().includes(query) ||
-      booking.renter_email?.toLowerCase().includes(query) ||
-      booking.tail_number?.toLowerCase().includes(query);
-    const matchesType = filters.type === "all" || filters.type === "rental";
-    return matchesSearch && matchesType && matchesDateRange(booking.start_at);
+      event.title?.toLowerCase().includes(query) ||
+      event.kind?.toLowerCase().includes(query) ||
+      event.aircraft_tail?.toLowerCase().includes(query);
+    const matchesType = filters.type === "all" || filters.type === event.event_type;
+    return matchesSearch && matchesType && matchesDateRange(event.start_at);
   });
 
   // Get availability counts
@@ -579,9 +534,8 @@ export function AvailabilityClient() {
             availability={filteredAvailability}
             users={users}
             aircraft={aircraft}
-            lessons={filteredLessons}
-            aircraftFlights={filteredAircraftFlights}
-            rentalBookings={filteredRentalBookings}
+            scheduleEvents={filteredScheduleEvents}
+            onRangeChange={fetchSchedule}
             onAvailabilityClick={handleAvailabilityClick}
             onEditAvailability={handleEditAvailability}
             onDeleteAvailability={handleDeleteAvailability}

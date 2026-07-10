@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckoutModal } from "@/components/aircraft/checkout-modal";
-import { etToISO } from "@/lib/format-tz";
+import { etToISO, scheduleRangeParams } from "@/lib/format-tz";
 import { TimeSelect } from "@/components/ui/time-select";
 
 const documentLabels = {
@@ -151,24 +151,26 @@ export function RentalsClient() {
     : "";
 
   const filteredBookings = useMemo(() => {
-    if (!isAdmin || !selectedRenterId) return bookings;
-    return bookings.filter((booking) => booking.renter_id === selectedRenterId);
+    const activeBookings = bookings.filter((booking) =>
+      ['SCHEDULED', 'CHECKED_OUT'].includes(booking.status)
+    );
+    if (!isAdmin || !selectedRenterId) return activeBookings;
+    return activeBookings.filter((booking) => booking.renter_id === selectedRenterId);
   }, [bookings, isAdmin, selectedRenterId]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const requests = [rentalsAPI.getAll(), aircraftAPI.getAll(), rentalsAPI.getSchedule()];
+      const requests = [rentalsAPI.getAll(), aircraftAPI.getAll()];
       if (isAdmin) {
         requests.push(aircraftAPI.getFlights());
         requests.push(usersAPI.getRenters());
         requests.push(usersAPI.getStudents());
         requests.push(usersAPI.getAll());
       }
-      const [bookingsRes, aircraftRes, scheduleRes, flightsRes, rentersRes, studentsRes, usersRes] = await Promise.all(requests);
+      const [bookingsRes, aircraftRes, flightsRes, rentersRes, studentsRes, usersRes] = await Promise.all(requests);
       setBookings(asArray(bookingsRes.data));
       setAircraft(asArray(aircraftRes.data).filter((item) => item?.status === "OK"));
-      setScheduleEvents(asArray(scheduleRes?.data));
       if (isAdmin) {
         setAircraftFlights(asArray(flightsRes?.data));
         const renterRows = asArray(rentersRes?.data);
@@ -220,10 +222,32 @@ export function RentalsClient() {
     }
   }, [isAdmin, isStudentWorkflow, selectedRenterId, selectedWorkflow]);
 
+  const loadSchedule = useCallback(async () => {
+    if (isStudentWorkflow) {
+      setScheduleEvents([]);
+      return;
+    }
+
+    try {
+      const response = await rentalsAPI.getSchedule(
+        scheduleRangeParams(scheduleDate, scheduleView)
+      );
+      setScheduleEvents(asArray(response.data));
+    } catch (error) {
+      console.error("Failed to load aircraft schedule:", error);
+      toast.error("Failed to load aircraft schedule");
+    }
+  }, [isStudentWorkflow, scheduleDate, scheduleView]);
+
   useEffect(() => {
     if (!user?.role) return;
     loadData();
   }, [loadData, user?.role, selectedRenterId]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    loadSchedule();
+  }, [loadSchedule, user?.role]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -272,7 +296,7 @@ export function RentalsClient() {
       toast.success("Rental scheduled");
       setBookingDialogOpen(false);
       setBookingForm(emptyBookingForm);
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       const payload = error.response?.data;
       if (payload?.error === "RENTER_NOT_COMPLIANT") {
@@ -324,7 +348,7 @@ export function RentalsClient() {
       toast.success("Aircraft flight scheduled");
       setAircraftFlightDialogOpen(false);
       setAircraftFlightForm(emptyAircraftFlightForm);
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       if (error.response?.data?.error === "conflicts") {
         toast.error("That aircraft is already booked or blocked for that time");
@@ -348,7 +372,7 @@ export function RentalsClient() {
       });
       toast.success("Hours updated");
       setHoursForm(emptyHoursForm);
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       toast.error(error.response?.data?.error || "Could not update hours");
     } finally {
@@ -396,7 +420,7 @@ export function RentalsClient() {
         toast.success("Rental checked in");
       }
       setMeterDialog({ open: false, action: "checkout", booking: null, lastLog: null });
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       toast.error(error.response?.data?.error || "Meter update failed");
       throw error;
@@ -415,7 +439,7 @@ export function RentalsClient() {
         toast.success("Aircraft flight checked in");
       }
       setAircraftFlightMeterDialog({ open: false, action: "checkout", flight: null, lastLog: null });
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       if (error.response?.data?.error === "conflicts") {
         toast.error("That aircraft is already booked or blocked for that time");
@@ -430,7 +454,7 @@ export function RentalsClient() {
     try {
       await rentalsAPI.remove(bookingId);
       toast.success("Rental removed");
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       toast.error(error.response?.data?.error || "Could not remove rental");
     }
@@ -440,7 +464,7 @@ export function RentalsClient() {
     try {
       await aircraftAPI.removeFlight(flightId);
       toast.success("Aircraft flight removed");
-      await loadData();
+      await Promise.all([loadData(), loadSchedule()]);
     } catch (error) {
       toast.error(error.response?.data?.error || "Could not remove aircraft flight");
     }
@@ -494,7 +518,9 @@ export function RentalsClient() {
   }));
   const safeScheduleEvents = asArray(scheduleEvents);
   const safePilots = asArray(pilots);
-  const safeAircraftFlights = asArray(aircraftFlights);
+  const safeAircraftFlights = asArray(aircraftFlights).filter((flight) =>
+    ['SCHEDULED', 'CHECKED_OUT'].includes(flight.status)
+  );
 
   return (
     <div className="space-y-6">

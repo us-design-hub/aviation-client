@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { BookOpen, ChevronLeft, ChevronRight, User, Plane, Clock, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -258,10 +258,9 @@ function CalendarDay({
 export function AvailabilityCalendar({ 
   availability, 
   users, 
-  aircraft, 
-  lessons = [],
-  aircraftFlights = [],
-  rentalBookings = [],
+  aircraft,
+  scheduleEvents = [],
+  onRangeChange,
   onAvailabilityClick, 
   onEditAvailability, 
   onDeleteAvailability,
@@ -285,30 +284,15 @@ export function AvailabilityCalendar({
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
   const endDate = endOfWeek(monthEnd);
-  const scheduleEvents = [
-    ...availability,
-    ...lessons
-      .filter((lesson) => lesson.aircraft_id || lesson.instructor_id || lesson.student_id)
-      .map((lesson) => ({
-        ...lesson,
-        event_type: "lesson",
-        title: lesson.lesson || lesson.kind || "Lesson",
-      })),
-    ...aircraftFlights.map((flight) => ({
-      ...flight,
-      event_type: "aircraft-flight",
-      aircraft_id: flight.aircraft_id,
-      aircraft_tail: flight.tail_number,
-      title: flight.purpose || "Solo Flight",
-    })),
-    ...rentalBookings.map((booking) => ({
-      ...booking,
-      event_type: "rental-booking",
-      aircraft_id: booking.aircraft_id,
-      aircraft_tail: booking.tail_number,
-      title: booking.purpose || "Rental",
-    })),
-  ];
+  const combinedScheduleEvents = [...availability, ...scheduleEvents];
+
+  useEffect(() => {
+    if (!onRangeChange) return;
+    onRangeChange({
+      date: currentDate,
+      view: view === "schedule" ? "day" : view,
+    });
+  }, [currentDate, onRangeChange, view]);
 
   const dateFormat = "d";
   const rows = [];
@@ -322,7 +306,7 @@ export function AvailabilityCalendar({
       formattedDate = format(day, dateFormat);
       const cloneDay = day;
       
-      const dayAvailability = scheduleEvents.filter(item => {
+      const dayAvailability = combinedScheduleEvents.filter(item => {
         // Skip items with null dates
         const startSource = item.start_at || item.start_date;
         const endSource = item.end_at || item.end_date;
@@ -533,7 +517,7 @@ export function AvailabilityCalendar({
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={scheduleEvents}
+        events={combinedScheduleEvents}
         onEventClick={(event) => {
           if (!event.event_type) onAvailabilityClick(event);
         }}
@@ -552,7 +536,7 @@ export function AvailabilityCalendar({
     return (
       <WeekScheduleView
         currentDate={currentDate}
-        events={scheduleEvents}
+        events={combinedScheduleEvents}
         onEventClick={(event) => {
           if (!event.event_type) onAvailabilityClick(event);
         }}

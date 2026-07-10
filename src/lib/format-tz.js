@@ -89,6 +89,39 @@ export function isDateInCurrentWeekET(date, reference = new Date()) {
  *
  * This works correctly regardless of the browser's local timezone.
  */
+
+/**
+ * Build a bounded API range around the visible calendar period.
+ * One-day buffers protect Eastern-time events near UTC day boundaries.
+ */
+export function scheduleRangeParams(date, view = "week") {
+  const anchor = new Date(date);
+  let from = new Date(anchor);
+  let to = new Date(anchor);
+
+  from.setHours(0, 0, 0, 0);
+  to.setHours(0, 0, 0, 0);
+
+  if (view === "month") {
+    from.setDate(1);
+    to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+  } else if (view === "week") {
+    from.setDate(from.getDate() - from.getDay());
+    to = new Date(from);
+    to.setDate(to.getDate() + 7);
+  } else {
+    to.setDate(to.getDate() + 1);
+  }
+
+  from.setDate(from.getDate() - 1);
+  to.setDate(to.getDate() + 1);
+
+  return {
+    from: `${format(from, "yyyy-MM-dd")}T00:00:00.000Z`,
+    to: `${format(to, "yyyy-MM-dd")}T00:00:00.000Z`,
+  };
+}
+
 export function etToISO(dateObj, timeStr) {
   const y = dateObj.toLocaleString("en-US", { year: "numeric", timeZone: TZ });
   const m = dateObj.toLocaleString("en-US", { month: "2-digit", timeZone: TZ });

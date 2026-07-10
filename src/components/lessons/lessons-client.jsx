@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Plus, Calendar, List, Filter, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { LessonForm } from "./lesson-form";
 import { LessonDetails } from "./lesson-details";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
-import { isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET } from "@/lib/format-tz";
+import { isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET, scheduleRangeParams } from "@/lib/format-tz";
 
 export function LessonsClient() {
   // State
@@ -28,8 +28,7 @@ export function LessonsClient() {
   const [syllabus, setSyllabus] = useState(null);
   const [users, setUsers] = useState([]);
   const [aircraft, setAircraft] = useState([]);
-  const [aircraftFlights, setAircraftFlights] = useState([]);
-  const [rentalBookings, setRentalBookings] = useState([]);
+  const [scheduleEvents, setScheduleEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [assignedStudents, setAssignedStudents] = useState([]); // For instructors: list of assigned student IDs
@@ -111,13 +110,6 @@ export function LessonsClient() {
       
       // All roles can access aircraft
       apiCalls.push(aircraftAPI.getAll());
-      if (user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') {
-        apiCalls.push(aircraftAPI.getFlights());
-        apiCalls.push(rentalsAPI.getAll());
-      } else {
-        apiCalls.push(Promise.resolve({ data: [] }));
-        apiCalls.push(Promise.resolve({ data: [] }));
-      }
       
       const results = await Promise.allSettled(apiCalls);
 
@@ -126,8 +118,6 @@ export function LessonsClient() {
       const syllabusRes = results[1];
       const usersRes = results[2];
       const aircraftRes = results[3];
-      const aircraftFlightsRes = results[4];
-      const rentalsRes = results[5];
 
       // Set data from successful responses
       if (lessonsRes.status === 'fulfilled') {
@@ -163,13 +153,6 @@ export function LessonsClient() {
       if (aircraftRes.status === 'fulfilled') {
         setAircraft(aircraftRes.value.data || []);
       }
-      if (aircraftFlightsRes.status === 'fulfilled') {
-        setAircraftFlights(aircraftFlightsRes.value.data || []);
-      }
-      if (rentalsRes.status === 'fulfilled') {
-        setRentalBookings(rentalsRes.value.data || []);
-      }
-
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to fetch lessons data");
@@ -178,6 +161,19 @@ export function LessonsClient() {
       setLoading(false);
     }
   };
+
+
+  const fetchSchedule = useCallback(async ({ date, view }) => {
+    try {
+      const response = await rentalsAPI.getSchedule(
+        scheduleRangeParams(date, view)
+      );
+      setScheduleEvents(response.data || []);
+    } catch (error) {
+      console.error("Error fetching lesson schedule:", error);
+      toast.error("Failed to fetch lesson schedule");
+    }
+  }, []);
 
   // Filter lessons based on current filters
   const filteredLessons = lessons.filter(lesson => {
@@ -626,8 +622,8 @@ export function LessonsClient() {
             lessons={filteredLessons}
             users={users}
             aircraft={aircraft}
-            aircraftFlights={aircraftFlights}
-            rentalBookings={rentalBookings}
+            externalScheduleEvents={scheduleEvents}
+            onRangeChange={fetchSchedule}
             onLessonClick={handleLessonClick}
             onEditLesson={handleEditLesson}
             onDeleteLesson={handleDeleteLesson}

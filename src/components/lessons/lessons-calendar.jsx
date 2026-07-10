@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { formatET, nowET, toET } from "@/lib/format-tz";
 import { ChevronLeft, ChevronRight, Plane, BookOpen, Clock, User, MoreHorizontal } from "lucide-react";
@@ -27,9 +27,9 @@ function isFlightCheckedOut(lesson) {
 export function LessonsCalendar({ 
   lessons, 
   users, 
-  aircraft, 
-  aircraftFlights = [],
-  rentalBookings = [],
+  aircraft,
+  externalScheduleEvents = [],
+  onRangeChange,
   onLessonClick, 
   onEditLesson, 
   onDeleteLesson, 
@@ -48,6 +48,15 @@ export function LessonsCalendar({
     setCurrentDate(nowET());
     setSelectedDate(nowET());
   };
+
+
+  useEffect(() => {
+    if (!onRangeChange) return;
+    onRangeChange({
+      date: currentDate,
+      view: view === "schedule" ? "day" : view,
+    });
+  }, [currentDate, onRangeChange, view]);
 
   // Calendar helpers
   const monthStart = startOfMonth(currentDate);
@@ -137,7 +146,10 @@ export function LessonsCalendar({
 
     const isAircraftFlight = lesson.event_type === "aircraft-flight";
     const isRentalBooking = lesson.event_type === "rental-booking";
-    const studentName = isRentalBooking
+    const isAircraftHold = lesson.event_type === "aircraft-hold";
+    const studentName = isAircraftHold
+      ? "Aircraft Hold"
+      : isRentalBooking
       ? (lesson.renter_name || lesson.renter_email || "Rental")
       : isAircraftFlight
       ? (lesson.pilot_name || lesson.pilot_email || "Solo Flight")
@@ -155,6 +167,7 @@ export function LessonsCalendar({
           "hover:shadow-md transition-shadow cursor-pointer group",
           isRentalBooking && "bg-emerald-100 border-emerald-300 text-emerald-950",
           isAircraftFlight && "bg-sky-100 border-sky-300 text-sky-950",
+          isAircraftHold && "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-950",
           lesson.kind === "FLIGHT" &&
             !isFlightCheckedOut(lesson) &&
             !isAircraftFlight &&
@@ -168,7 +181,7 @@ export function LessonsCalendar({
       >
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1">
-              {lesson.kind === "FLIGHT" ? (
+              {lesson.kind === "FLIGHT" || lesson.event_type ? (
                 <Plane className="h-3 w-3" />
             ) : (
               <BookOpen className="h-3 w-3" />
@@ -178,7 +191,7 @@ export function LessonsCalendar({
             </span>
           </div>
           
-          {!isAircraftFlight && !isRentalBooking && (
+          {!isAircraftFlight && !isRentalBooking && !isAircraftHold && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100">
@@ -249,7 +262,7 @@ export function LessonsCalendar({
             isFlightCheckedOut(lesson) && "border-amber-600 bg-amber-200/80 text-amber-950"
           )}
         >
-          {isRentalBooking ? "Rental" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
+          {isAircraftHold ? "Aircraft hold" : isRentalBooking ? "Rental" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
         </Badge>
       </div>
     );
@@ -265,22 +278,7 @@ export function LessonsCalendar({
   ];
   const scheduleEvents = [
     ...lessons,
-    ...aircraftFlights.map((flight) => ({
-      ...flight,
-      event_type: "aircraft-flight",
-      kind: "FLIGHT",
-      aircraft_id: flight.aircraft_id,
-      aircraft_tail: flight.tail_number,
-      title: flight.purpose || "Solo Flight",
-    })),
-    ...rentalBookings.map((booking) => ({
-      ...booking,
-      event_type: "rental-booking",
-      kind: "FLIGHT",
-      aircraft_id: booking.aircraft_id,
-      aircraft_tail: booking.tail_number,
-      title: booking.purpose || "Rental",
-    })),
+    ...externalScheduleEvents.filter((event) => event.event_type !== "lesson"),
   ];
 
   // Render different views

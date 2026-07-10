@@ -193,7 +193,7 @@ export const maintenanceAPI = {
 // Rentals API
 export const rentalsAPI = {
   getAll: () => api.get('/rentals'),
-  getSchedule: () => api.get('/rentals/schedule'),
+  getSchedule: (params = {}) => api.get('/rentals/schedule', { params }),
   getDashboard: (userId) => api.get(userId ? `/rentals/dashboard/${userId}` : '/rentals/dashboard'),
   getHours: (userId) => api.get(userId ? `/rentals/hours/${userId}` : '/rentals/hours'),
   allocateHours: (userId, data) => api.post(`/rentals/hours/${userId}/allocate`, data),
