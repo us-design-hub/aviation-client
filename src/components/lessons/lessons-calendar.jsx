@@ -91,7 +91,17 @@ export function LessonsCalendar({
           users={users}
           aircraft={aircraft}
           user={user}
-          onClick={() => setSelectedDate(cloneDay)}
+          onClick={() => {
+            setSelectedDate(cloneDay);
+            if (user?.role === "ADMIN" || user?.role === "INSTRUCTOR") {
+              onTimeSlotClick?.({
+                date: cloneDay,
+                hour: 9,
+                resourceId: null,
+                resourceType: null,
+              });
+            }
+          }}
           onLessonClick={onLessonClick}
           onEditLesson={onEditLesson}
           onDeleteLesson={onDeleteLesson}
