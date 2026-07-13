@@ -90,6 +90,7 @@ const emptyBookingForm = {
 };
 
 const emptyAircraftFlightForm = {
+  flightType: "SOLO",
   pilotId: "",
   aircraftId: "",
   startDate: "",
@@ -97,6 +98,8 @@ const emptyAircraftFlightForm = {
   endDate: "",
   endTime: "",
   purpose: "",
+  origin: "",
+  destination: "",
   notes: "",
 };
 
@@ -291,7 +294,7 @@ export function RentalsClient() {
         startAt,
         endAt,
         purpose: bookingForm.purpose,
-        notes: bookingForm.notes,
+        notes: event.currentTarget.elements.notes?.value || "",
       });
       toast.success("Rental scheduled");
       setBookingDialogOpen(false);
@@ -343,7 +346,10 @@ export function RentalsClient() {
         startAt,
         endAt,
         purpose: aircraftFlightForm.purpose,
-        notes: aircraftFlightForm.notes,
+        flightType: aircraftFlightForm.flightType,
+        origin: aircraftFlightForm.origin,
+        destination: aircraftFlightForm.destination,
+        notes: event.currentTarget.elements.soloNotes?.value || "",
       });
       toast.success("Aircraft flight scheduled");
       setAircraftFlightDialogOpen(false);
@@ -981,8 +987,7 @@ export function RentalsClient() {
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
-                value={bookingForm.notes}
-                onChange={(event) => setBookingForm((current) => ({ ...current, notes: event.target.value }))}
+                defaultValue={bookingForm.notes}
               />
             </div>
             <Button type="submit" disabled={saving}>
@@ -995,10 +1000,20 @@ export function RentalsClient() {
       <Dialog open={aircraftFlightDialogOpen} onOpenChange={setAircraftFlightDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Schedule Solo Flight</DialogTitle>
-            <DialogDescription>Log aircraft usage for proficiency, ferry, maintenance, or other non-student flights.</DialogDescription>
+            <DialogTitle>Schedule Aircraft Flight</DialogTitle>
+            <DialogDescription>Schedule a solo or relocation flight without a student booking.</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleAircraftFlightSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="flightType">Flight Type</Label>
+              <Select value={aircraftFlightForm.flightType} onValueChange={(value) => setAircraftFlightForm((current) => ({ ...current, flightType: value }))}>
+                <SelectTrigger id="flightType"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SOLO">Solo / Proficiency</SelectItem>
+                  <SelectItem value="RELOCATION">Relocation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="pilotId">Pilot</Label>
               <Select value={aircraftFlightForm.pilotId} onValueChange={(value) => setAircraftFlightForm((current) => ({ ...current, pilotId: value }))}>
@@ -1071,6 +1086,18 @@ export function RentalsClient() {
                 />
               </div>
             </div>
+            {aircraftFlightForm.flightType === "RELOCATION" && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="flightOrigin">Origin Airport</Label>
+                  <Input id="flightOrigin" value={aircraftFlightForm.origin} onChange={(event) => setAircraftFlightForm((current) => ({ ...current, origin: event.target.value }))} placeholder="e.g., KINF - Inverness" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="flightDestination">Destination Airport</Label>
+                  <Input id="flightDestination" value={aircraftFlightForm.destination} onChange={(event) => setAircraftFlightForm((current) => ({ ...current, destination: event.target.value }))} placeholder="Airport name or code" required />
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="soloPurpose">Purpose</Label>
               <Input
@@ -1084,12 +1111,11 @@ export function RentalsClient() {
               <Label htmlFor="soloNotes">Notes</Label>
               <Textarea
                 id="soloNotes"
-                value={aircraftFlightForm.notes}
-                onChange={(event) => setAircraftFlightForm((current) => ({ ...current, notes: event.target.value }))}
+                defaultValue={aircraftFlightForm.notes}
               />
             </div>
             <Button type="submit" disabled={saving}>
-              Save Solo Flight
+              Save Aircraft Flight
             </Button>
           </form>
         </DialogContent>

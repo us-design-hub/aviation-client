@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { User, Lock, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
+import { DocumentsClient } from '@/components/rentals/documents-client';
 
 export function ProfileClient() {
-  const { setSessionFromToken } = useAuth();
+  const { user, setSessionFromToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
@@ -98,7 +99,7 @@ export function ProfileClient() {
   }
 
   return (
-    <div className="space-y-8 max-w-lg">
+    <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
         <p className="text-muted-foreground text-sm mt-1">
@@ -237,6 +238,8 @@ export function ProfileClient() {
           </form>
         </CardContent>
       </Card>
+
+      {(user?.role === 'STUDENT' || user?.role === 'RENTER') && <DocumentsClient />}
     </div>
   );
 }

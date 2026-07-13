@@ -272,7 +272,7 @@ export function LessonDetails({
           ) : (
             <BookOpen className="h-5 w-5 text-orange-600" />
           )}
-          {lesson.kind} Lesson
+          {lesson.flight_type === "RELOCATION" ? "Relocation Flight" : `${lesson.kind} Lesson`}
         </SheetTitle>
         <SheetDescription>
           {formatDateTime(lesson.start_at)}

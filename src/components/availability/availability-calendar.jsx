@@ -51,7 +51,8 @@ function CalendarDay({
 
   const getItemMeta = (item) => {
     const isLesson = item.event_type === "lesson";
-    const isAircraftFlight = item.event_type === "aircraft-flight";
+    const isRelocationFlight = item.event_type === "relocation-flight";
+    const isAircraftFlight = item.event_type === "aircraft-flight" || isRelocationFlight;
     const isRentalBooking = item.event_type === "rental-booking";
     const isScheduleOverlay = isLesson || isAircraftFlight || isRentalBooking;
     const isPersonal = item.type === "user";
@@ -389,7 +390,8 @@ export function AvailabilityCalendar({
     };
 
     const isLesson = item.event_type === "lesson";
-    const isAircraftFlight = item.event_type === "aircraft-flight";
+    const isRelocationFlight = item.event_type === "relocation-flight";
+    const isAircraftFlight = item.event_type === "aircraft-flight" || isRelocationFlight;
     const isRentalBooking = item.event_type === "rental-booking";
     const isScheduleOverlay = isLesson || isAircraftFlight || isRentalBooking;
     const isPersonal = item.type === "user";

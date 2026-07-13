@@ -144,7 +144,8 @@ export function LessonsCalendar({
       return ac ? ac.tail_number : null;
     };
 
-    const isAircraftFlight = lesson.event_type === "aircraft-flight";
+    const isRelocationFlight = lesson.event_type === "relocation-flight";
+    const isAircraftFlight = lesson.event_type === "aircraft-flight" || isRelocationFlight;
     const isRentalBooking = lesson.event_type === "rental-booking";
     const isAircraftHold = lesson.event_type === "aircraft-hold";
     const studentName = isAircraftHold
@@ -262,7 +263,7 @@ export function LessonsCalendar({
             isFlightCheckedOut(lesson) && "border-amber-600 bg-amber-200/80 text-amber-950"
           )}
         >
-          {isAircraftHold ? "Aircraft hold" : isRentalBooking ? "Rental" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
+          {isAircraftHold ? "Aircraft hold" : isRentalBooking ? "Rental" : isRelocationFlight ? "Relocation" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
         </Badge>
       </div>
     );
@@ -391,6 +392,7 @@ export function LessonsCalendar({
           onEditLesson={onEditLesson}
           onDeleteLesson={onDeleteLesson}
           onCompleteLesson={onCompleteLesson}
+          onSchedule={() => onTimeSlotClick?.({ date: selectedDate, hour: 9, resourceId: null, resourceType: null })}
         />
       )}
     </div>
@@ -471,7 +473,7 @@ function LessonItem({
   onLessonClick, 
   onEditLesson, 
   onDeleteLesson, 
-  onCompleteLesson 
+  onCompleteLesson
 }) {
   const getUserName = (userId, fallbackName) => {
     if (fallbackName) return fallbackName.split(' ')[0];
@@ -614,15 +616,19 @@ function SelectedDateDetails({
   onLessonClick, 
   onEditLesson, 
   onDeleteLesson, 
-  onCompleteLesson 
+  onCompleteLesson,
+  onSchedule
 }) {
   if (lessons.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">
-            {format(date, "EEEE, MMMM d, yyyy")}
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-lg">{format(date, "EEEE, MMMM d, yyyy")}</CardTitle>
+            {(user?.role === "ADMIN" || user?.role === "INSTRUCTOR") && (
+              <Button size="sm" onClick={onSchedule}>Schedule Lesson</Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">No lessons scheduled for this date.</p>
@@ -672,7 +678,7 @@ function LessonCard({
   onLessonClick, 
   onEditLesson, 
   onDeleteLesson, 
-  onCompleteLesson 
+  onCompleteLesson
 }) {
   const getUserName = (userId, fallbackName) => {
     if (fallbackName) return fallbackName;
@@ -710,7 +716,7 @@ function LessonCard({
               <BookOpen className="h-4 w-4 text-orange-600" />
             )}
             <span className="font-medium">
-              {lesson.kind} - {startTime} to {endTime}
+              {lesson.flight_type === "RELOCATION" ? "RELOCATION" : lesson.kind} - {startTime} to {endTime}
             </span>
             <Badge
               variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}

@@ -493,6 +493,7 @@ export function AvailabilityClient() {
                 <SelectItem value="lesson">Lessons</SelectItem>
                 <SelectItem value="rental">Rentals</SelectItem>
                 <SelectItem value="aircraft-flight">Solo Flights</SelectItem>
+                <SelectItem value="relocation-flight">Relocation Flights</SelectItem>
               </SelectContent>
             </Select>
             

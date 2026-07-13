@@ -9,7 +9,7 @@ export default function MaintenancePage() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <RoleGate allowedRoles={["ADMIN", "MAINT"]}>
+        <RoleGate allowedRoles={["ADMIN", "MAINT", "STUDENT", "INSTRUCTOR"]}>
           <MaintenanceClient />
         </RoleGate>
       </MainLayout>

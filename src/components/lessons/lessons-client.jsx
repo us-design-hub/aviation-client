@@ -67,7 +67,7 @@ export function LessonsClient() {
 
   const fetchAllData = async () => {
     try {
-      setLoading(true);
+      // Keep the mounted calendar stable during background refreshes.
       setError(null);
       
       // Wait for user to be loaded
@@ -228,7 +228,7 @@ export function LessonsClient() {
       const response = await lessonsAPI.create(lessonData);
       toast.success("Lesson scheduled successfully");
       setIsFormOpen(false);
-      fetchAllData(); // Refresh data
+      setLessons((current) => [...current, response.data]);
       return response.data;
     } catch (error) {
       console.error("Error creating lesson:", error);
@@ -245,11 +245,11 @@ export function LessonsClient() {
 
   const handleUpdateLesson = async (id, lessonData) => {
     try {
-      await lessonsAPI.update(id, lessonData);
+      const response = await lessonsAPI.update(id, lessonData);
       toast.success("Lesson updated successfully");
       setIsFormOpen(false);
       setEditingLesson(null);
-      fetchAllData();
+      setLessons((current) => current.map((item) => item.id === id ? response.data : item));
     } catch (error) {
       console.error("Error updating lesson:", error);
       toast.error("Failed to update lesson");

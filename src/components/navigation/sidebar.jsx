@@ -46,7 +46,7 @@ const allNavigation = [
   { name: "Schedule", href: "/rentals", icon: Calendar, roles: ["RENTER", "ADMIN"] },
   { name: "Aircraft", href: "/aircraft", icon: PlaneIcon, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"] },
   { name: "Documents", href: "/documents", icon: FileText, roles: ["RENTER", "ADMIN"] },
-  { name: "Maintenance", href: "/maintenance", icon: Wrench, roles: ["ADMIN", "MAINT"] },
+  { name: "Maintenance", href: "/maintenance", icon: Wrench, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Squawks", href: "/squawks", icon: AlertTriangle, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"] },
   { name: "Availability", href: "/availability", icon: Clock, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
   { name: "Users", href: "/users", icon: Users, roles: ["ADMIN"] },

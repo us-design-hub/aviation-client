@@ -28,6 +28,9 @@ const lessonSchema = z.object({
   kind: z.enum(["FLIGHT", "GROUND"], {
     required_error: "Lesson type is required",
   }),
+  flightType: z.enum(["TRAINING", "RELOCATION"]).default("TRAINING"),
+  origin: z.string().optional(),
+  destination: z.string().optional(),
   startDate: z.date({
     required_error: "Start date is required",
   }),
@@ -61,6 +64,9 @@ export function LessonForm({
       instructorId: lesson?.instructor_id || initialValues?.instructorId || "",
       aircraftId: lesson?.aircraft_id || initialValues?.aircraftId || "none",
       kind: lesson?.kind || initialValues?.kind || "FLIGHT",
+      flightType: lesson?.flight_type || initialValues?.flightType || "TRAINING",
+      origin: lesson?.origin || initialValues?.origin || "",
+      destination: lesson?.destination || initialValues?.destination || "",
       startDate: lesson?.start_at ? new Date(lesson.start_at) : (initialValues?.startDate ? new Date(initialValues.startDate) : new Date()),
       startTime: lesson?.start_at ? formatET(lesson.start_at, "HH:mm") : (initialValues?.startTime || "09:00"),
       endTime: lesson?.end_at ? formatET(lesson.end_at, "HH:mm") : (initialValues?.endTime || "10:00"),
@@ -134,6 +140,17 @@ export function LessonForm({
   };
 
   const handleSubmit = async (data) => {
+    if (data.kind === "FLIGHT" && data.flightType === "RELOCATION") {
+      if (!data.aircraftId || data.aircraftId === "none") {
+        form.setError("aircraftId", { message: "Aircraft is required for relocation" });
+        return;
+      }
+      if (!data.origin?.trim() || !data.destination?.trim()) {
+        if (!data.origin?.trim()) form.setError("origin", { message: "Origin is required" });
+        if (!data.destination?.trim()) form.setError("destination", { message: "Destination is required" });
+        return;
+      }
+    }
     try {
       setLoading(true);
       
@@ -142,6 +159,9 @@ export function LessonForm({
         instructorId: data.instructorId,
         aircraftId: data.aircraftId && data.aircraftId !== "none" ? data.aircraftId : null,
         kind: data.kind,
+        flightType: data.kind === "FLIGHT" ? data.flightType : "TRAINING",
+        origin: data.flightType === "RELOCATION" ? data.origin?.trim() : "",
+        destination: data.flightType === "RELOCATION" ? data.destination?.trim() : "",
         startAt: etToISO(data.startDate, data.startTime),
         endAt: etToISO(data.startDate, data.endTime),
         program: data.program || "",
@@ -201,13 +221,6 @@ export function LessonForm({
       }));
   };
 
-  // Auto-set lesson type based on selected syllabus lesson
-  useEffect(() => {
-    const selectedLesson = getLessonOptions().find(l => l.value === watchedValues.lesson);
-    if (selectedLesson && selectedLesson.kind !== watchedValues.kind) {
-      form.setValue("kind", selectedLesson.kind);
-    }
-  }, [watchedValues.lesson]);
 
   useEffect(() => {
     if (watchedValues.kind === "GROUND" && watchedValues.aircraftId !== "none") {
@@ -420,6 +433,38 @@ export function LessonForm({
                 )}
               />
             </div>
+
+            {watchedValues.kind === "FLIGHT" && (
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="flightType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Flight Purpose</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="TRAINING">Training Flight</SelectItem>
+                          <SelectItem value="RELOCATION">Relocation Flight</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {watchedValues.flightType === "RELOCATION" && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField control={form.control} name="origin" render={({ field }) => (
+                      <FormItem><FormLabel>Origin Airport</FormLabel><FormControl><Input placeholder="e.g., KINF - Inverness" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="destination" render={({ field }) => (
+                      <FormItem><FormLabel>Destination Airport</FormLabel><FormControl><Input placeholder="Airport name or code" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
