@@ -60,6 +60,7 @@ export function DocumentsClient() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [renters, setRenters] = useState([]);
+  const [documentAudience, setDocumentAudience] = useState("RENTER");
   const [selectedRenterId, setSelectedRenterId] = useState("");
   const [compliance, setCompliance] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +79,9 @@ export function DocumentsClient() {
     try {
       setLoading(true);
       if (isAdmin) {
-        const rentersRes = await usersAPI.getRenters();
+        const rentersRes = documentAudience === "STUDENT"
+          ? await usersAPI.getStudents()
+          : await usersAPI.getRenters();
         setRenters(asArray(rentersRes.data));
         if (!selectedRenterId && rentersRes.data?.[0]?.id) {
           setSelectedRenterId(rentersRes.data[0].id);
@@ -97,7 +100,7 @@ export function DocumentsClient() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, selectedRenterId]);
+  }, [documentAudience, isAdmin, selectedRenterId]);
 
   useEffect(() => {
     if (!user?.role) return;
@@ -200,19 +203,37 @@ export function DocumentsClient() {
         <div>
           <h1 className="text-3xl font-bold">Compliance Documents</h1>
           <p className="text-muted-foreground">
-            Track renter eligibility documents and upcoming renewals.
+            Review renter and student documents and upcoming renewals.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAdmin && (
-            <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select renter" />
+            <Select
+              value={documentAudience}
+              onValueChange={(value) => {
+                setDocumentAudience(value);
+                setSelectedRenterId("");
+                setCompliance(null);
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {safeRenters.map((renter) => (
-                  <SelectItem key={renter.id} value={renter.id}>
-                    {renter.name || renter.email}
+                <SelectItem value="RENTER">Renters</SelectItem>
+                <SelectItem value="STUDENT">Students</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {isAdmin && (
+            <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder={documentAudience === "STUDENT" ? "Select student" : "Select renter"} />
+              </SelectTrigger>
+              <SelectContent>
+                {safeRenters.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.name || person.email}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -270,7 +291,7 @@ export function DocumentsClient() {
             <FileText className="h-5 w-5" />
             Documents
           </CardTitle>
-          <CardDescription>Current document set for the selected renter.</CardDescription>
+          <CardDescription>Current document set for the selected user.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {safeCompliance.documents.length ? (
