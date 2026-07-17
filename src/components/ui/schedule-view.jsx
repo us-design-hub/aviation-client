@@ -23,6 +23,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const DATE_COLUMN_WIDTH = 200;
+const HOUR_COLUMN_WIDTH = 160;
+const EVENT_SCROLL_CONTEXT_HOURS = 1;
+
 /**
  * WeekScheduleView - A professional schedule view with hourly time slots
  * Similar to FlightCircle's interface
@@ -83,19 +87,6 @@ export function WeekScheduleView({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTimePosition, setCurrentTimePosition] = useState(0);
   const scheduleRef = useRef(null);
-  
-  // Auto-scroll to current time on mount
-  useEffect(() => {
-    const now = nowET();
-    if (scheduleRef.current && isSameDay(currentDate, now)) {
-      const currentHour = now.getHours();
-      if (currentHour >= startHour && currentHour <= endHour) {
-        const hourIndex = currentHour - startHour;
-        const scrollPosition = hourIndex * 120; // 120px per hour column (matches table cell width)
-        scheduleRef.current.scrollLeft = Math.max(0, scrollPosition - 200);
-      }
-    }
-  }, [currentDate, startHour, endHour]);
   
   // Update current time indicator position every minute
   useEffect(() => {
@@ -198,6 +189,38 @@ export function WeekScheduleView({
       );
     });
   }, [displayDates, filteredEvents]);
+
+  // Keep the first relevant booking in view. On an empty current-day calendar,
+  // fall back to the current time instead of opening at midnight.
+  useEffect(() => {
+    if (!scheduleRef.current) return;
+
+    const eventMinutes = visibleEvents
+      .map((event) => parseScheduleEventTimes(event).start)
+      .filter((start) => !Number.isNaN(start.getTime()))
+      .map((start) => (start.getHours() * 60) + start.getMinutes());
+    const now = nowET();
+    const fallbackMinutes = isSameDay(currentDate, now)
+      ? (now.getHours() * 60) + now.getMinutes()
+      : startHour * 60;
+    const focusMinutes = eventMinutes.length > 0
+      ? Math.min(...eventMinutes)
+      : fallbackMinutes;
+    const boundedMinutes = Math.max(
+      startHour * 60,
+      Math.min((endHour + 1) * 60, focusMinutes)
+    );
+    const hoursFromStart = (boundedMinutes - (startHour * 60)) / 60;
+    const scrollLeft = Math.max(
+      0,
+      (hoursFromStart - EVENT_SCROLL_CONTEXT_HOURS) * HOUR_COLUMN_WIDTH
+    );
+    const frame = window.requestAnimationFrame(() => {
+      scheduleRef.current?.scrollTo({ left: scrollLeft, behavior: 'auto' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentDate, endHour, startHour, view, visibleEvents]);
 
   const eventIndex = useMemo(() => {
     const index = new Map();
@@ -303,7 +326,7 @@ export function WeekScheduleView({
     
     const minuteOffset = (renderedStart.getTime() - slotStart.getTime()) / (1000 * 60);
     const durationMinutes = Math.max((renderedEnd.getTime() - renderedStart.getTime()) / (1000 * 60), 10);
-    const columnWidth = 120;
+    const columnWidth = HOUR_COLUMN_WIDTH;
     
     return {
       left: `${Math.max(0, (minuteOffset / 60) * 100)}%`,
@@ -443,7 +466,7 @@ export function WeekScheduleView({
                 const hoursSinceStart = currentHour - startHour;
                 const minutesFraction = currentMinute / 60;
                 const totalHoursFraction = hoursSinceStart + minutesFraction;
-                const leftPosition = 200 + (totalHoursFraction * 120);
+                const leftPosition = DATE_COLUMN_WIDTH + (totalHoursFraction * HOUR_COLUMN_WIDTH);
                 
                 return (
                   <div 
@@ -462,11 +485,11 @@ export function WeekScheduleView({
             <table className="w-full border-collapse">
               <thead className="sticky top-0 z-20 bg-muted">
                 <tr>
-                  <th className="sticky left-0 z-40 p-4 border-r border-b text-sm font-semibold bg-muted text-left shadow-[2px_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_8px_rgba(0,0,0,0.4)]" style={{ width: '200px', minWidth: '200px' }}>
+                  <th className="sticky left-0 z-40 p-4 border-r border-b text-sm font-semibold bg-muted text-left shadow-[2px_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_8px_rgba(0,0,0,0.4)]" style={{ width: `${DATE_COLUMN_WIDTH}px`, minWidth: `${DATE_COLUMN_WIDTH}px` }}>
                     {showResourceColumns ? 'Resources' : 'Date'}
                   </th>
                   {timeSlots.map(({ hour, label }) => (
-                    <th key={hour} className="px-2 py-3 border-r border-b last:border-r-0 text-center bg-muted/50 text-sm font-medium text-foreground" style={{ width: '120px', minWidth: '120px' }}>
+                    <th key={hour} className="px-2 py-3 border-r border-b last:border-r-0 text-center bg-muted/50 text-sm font-medium text-foreground" style={{ width: `${HOUR_COLUMN_WIDTH}px`, minWidth: `${HOUR_COLUMN_WIDTH}px` }}>
                       {label}
                     </th>
                   ))}
@@ -477,7 +500,7 @@ export function WeekScheduleView({
                   filteredResources.length > 0 ? (
                     filteredResources.map(resource => (
                       <tr key={resource.id} className="border-b last:border-b-0" style={{ height: '120px' }}>
-                        <td className="sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]" style={{ width: '200px' }}>
+                        <td className="sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]" style={{ width: `${DATE_COLUMN_WIDTH}px` }}>
                           <div className="flex items-center gap-2">
                             {resource.resourceType === 'aircraft' && <span className="text-base">✈️</span>}
                             <div>
@@ -494,7 +517,7 @@ export function WeekScheduleView({
                         {timeSlots.map(({ hour }) => {
                           const slotEvents = getEventsForSlot(displayDates[0], hour, resource.id);
                           return (
-                            <td key={`${resource.id}-${hour}`} className="border-r border-border last:border-r-0 p-0 relative" style={{ width: '120px' }}>
+                            <td key={`${resource.id}-${hour}`} className="border-r border-border last:border-r-0 p-0 relative" style={{ width: `${HOUR_COLUMN_WIDTH}px` }}>
                               <TimeSlotCell
                                 date={displayDates[0]}
                                 hour={hour}
@@ -529,7 +552,7 @@ export function WeekScheduleView({
                         <td className={cn(
                           "sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]",
                           isTodayDate && "bg-blue-50 dark:bg-blue-950"
-                        )} style={{ width: '200px' }}>
+                        )} style={{ width: `${DATE_COLUMN_WIDTH}px` }}>
                           <div className={cn("font-semibold text-sm", isTodayDate && "text-blue-600")}>
                             {format(date, "EEEE")}
                           </div>
@@ -541,7 +564,7 @@ export function WeekScheduleView({
                         {timeSlots.map(({ hour }) => {
                           const slotEvents = getEventsForSlot(date, hour);
                           return (
-                            <td key={`${date.toString()}-${hour}`} className="border-r border-border last:border-r-0 p-0 relative" style={{ width: '120px' }}>
+                            <td key={`${date.toString()}-${hour}`} className="border-r border-border last:border-r-0 p-0 relative" style={{ width: `${HOUR_COLUMN_WIDTH}px` }}>
                               <TimeSlotCell
                                 date={date}
                                 hour={hour}
