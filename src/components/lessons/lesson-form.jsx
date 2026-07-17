@@ -22,7 +22,7 @@ import { lessonsAPI, usersAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const lessonSchema = z.object({
-  studentId: z.string().min(1, "Student is required"),
+  studentId: z.string().optional(),
   instructorId: z.string().min(1, "Instructor is required"),
   aircraftId: z.string().optional(),
   kind: z.enum(["FLIGHT", "GROUND"], {
@@ -82,17 +82,19 @@ export function LessonForm({
   useEffect(() => {
     const { studentId, instructorId, aircraftId, startDate, startTime, endTime } = watchedValues;
     
-    if (studentId && instructorId && startDate && startTime && endTime) {
+    const studentIsOptional = watchedValues.kind === "FLIGHT" && watchedValues.flightType === "RELOCATION";
+    if ((studentId || studentIsOptional) && instructorId && startDate && startTime && endTime) {
       checkConflicts();
     } else {
       setConflicts([]);
     }
   }, [watchedValues.studentId, watchedValues.instructorId, watchedValues.aircraftId, 
-      watchedValues.startDate, watchedValues.startTime, watchedValues.endTime]);
+      watchedValues.startDate, watchedValues.startTime, watchedValues.endTime,
+      watchedValues.kind, watchedValues.flightType]);
 
   useEffect(() => {
     const studentId = watchedValues.studentId;
-    if (!studentId) {
+    if (!studentId || studentId === "none") {
       setInstructionBilling(null);
       return;
     }
@@ -123,11 +125,12 @@ export function LessonForm({
       const { studentId, instructorId, aircraftId, startDate, startTime, endTime } = watchedValues;
 
       const response = await lessonsAPI.checkConflicts({
-        studentId,
+        studentId: studentId && studentId !== "none" ? studentId : undefined,
         instructorId,
         aircraftId: aircraftId && aircraftId !== "none" ? aircraftId : undefined,
         startAt: etToISO(startDate, startTime),
         endAt: etToISO(startDate, endTime),
+        excludeLessonId: lesson?.id || undefined,
       });
 
       setConflicts(response.data.conflicts || []);
@@ -140,7 +143,12 @@ export function LessonForm({
   };
 
   const handleSubmit = async (data) => {
-    if (data.kind === "FLIGHT" && data.flightType === "RELOCATION") {
+    const isRelocation = data.kind === "FLIGHT" && data.flightType === "RELOCATION";
+    if (!isRelocation && (!data.studentId || data.studentId === "none")) {
+      form.setError("studentId", { message: "Student is required" });
+      return;
+    }
+    if (isRelocation) {
       if (!data.aircraftId || data.aircraftId === "none") {
         form.setError("aircraftId", { message: "Aircraft is required for relocation" });
         return;
@@ -155,7 +163,7 @@ export function LessonForm({
       setLoading(true);
       
       const lessonData = {
-        studentId: data.studentId,
+        studentId: data.studentId && data.studentId !== "none" ? data.studentId : null,
         instructorId: data.instructorId,
         aircraftId: data.aircraftId && data.aircraftId !== "none" ? data.aircraftId : null,
         kind: data.kind,
@@ -315,7 +323,7 @@ export function LessonForm({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      Student
+                      Student {watchedValues.kind === "FLIGHT" && watchedValues.flightType === "RELOCATION" && "(Optional)"}
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
@@ -324,6 +332,9 @@ export function LessonForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {watchedValues.kind === "FLIGHT" && watchedValues.flightType === "RELOCATION" && (
+                          <SelectItem value="none">No student</SelectItem>
+                        )}
                         {students.map((student) => (
                           <SelectItem key={student.id} value={student.id}>
                             {student.name}

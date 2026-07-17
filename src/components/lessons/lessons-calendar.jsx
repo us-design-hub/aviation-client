@@ -213,7 +213,7 @@ export function LessonsCalendar({
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLessonClick(lesson); }}>
                 View Details
               </DropdownMenuItem>
-              {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+              {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && lesson.status === 'SCHEDULED')) && (
                 <>
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditLesson(lesson); }}>
                     Edit
@@ -549,7 +549,7 @@ function LessonItem({
             </DropdownMenuItem>
             
             {/* RBAC: Only ADMIN and INSTRUCTOR can edit, complete, delete */}
-            {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+            {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && lesson.status === 'SCHEDULED')) && (
               <>
                 <DropdownMenuItem onClick={(e) => handleAction(e, onEditLesson)}>
                   Edit
@@ -587,7 +587,7 @@ function LessonItem({
       <div className="space-y-1">
         <div className="flex items-center gap-1">
           <User className="h-3 w-3" />
-          <span>{getUserName(lesson.student_id, lesson.student_name)}</span>
+          <span>{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</span>
         </div>
         
         {lesson.aircraft_id && (
@@ -737,7 +737,7 @@ function LessonCard({
           </div>
           
           <div className="space-y-1 text-sm text-muted-foreground">
-            <div>Student: {getUserName(lesson.student_id, lesson.student_name)}</div>
+            <div>Student: {lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</div>
             <div>Instructor: {getUserName(lesson.instructor_id, lesson.instructor_name)}</div>
             {lesson.aircraft_id && (
               <div>Aircraft: {getAircraftTail(lesson.aircraft_id)}</div>
@@ -759,7 +759,7 @@ function LessonCard({
             </DropdownMenuItem>
             
             {/* RBAC: Only ADMIN and INSTRUCTOR can edit, complete, delete */}
-            {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+            {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && lesson.status === 'SCHEDULED')) && (
               <>
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditLesson(lesson); }}>
                   Edit

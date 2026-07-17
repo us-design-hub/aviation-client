@@ -50,6 +50,8 @@ export function LessonDetails({
   });
   const [instructorNote, setInstructorNote] = useState("");
   const [lessonNotes, setLessonNotes] = useState([]);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const [savingMeters, setSavingMeters] = useState(false);
   const meterSectionRef = useRef(null);
   
@@ -109,6 +111,23 @@ export function LessonDetails({
     }
   };
 
+  const handleAddNote = async () => {
+    const content = noteDraft.trim();
+    if (!content) return;
+    try {
+      setSavingNote(true);
+      const response = await lessonsAPI.addNote(lesson.id, { content });
+      setLessonNotes((current) => [response.data, ...current]);
+      onNotesChanged?.(response.data);
+      setNoteDraft("");
+      toast.success("Lesson note added");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.response?.data?.error || "Could not add lesson note");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   const getUserName = (userId, serverProvidedName = null) => {
     // Use server-provided name first (from lesson.student_name or lesson.instructor_name)
     if (serverProvidedName) {
@@ -164,6 +183,9 @@ export function LessonDetails({
   const isCheckedOut = latestMeterLog?.action === "CHECKOUT";
 
   const canEditLesson =
+    user?.role === "ADMIN" ||
+    (user?.role === "INSTRUCTOR" && user?.id === lesson.instructor_id && lesson.status === "SCHEDULED");
+  const canAddNote =
     user?.role === "ADMIN" || (user?.role === "INSTRUCTOR" && user?.id === lesson.instructor_id);
   const currentHobbsTotal =
     lesson.hobbs_start != null && meterForm.hobbs !== "" && Number.isFinite(Number(meterForm.hobbs))
@@ -511,7 +533,7 @@ export function LessonDetails({
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Student</p>
-                  <p className="text-sm text-muted-foreground">{getUserName(lesson.student_id, lesson.student_name)}</p>
+                  <p className="text-sm text-muted-foreground">{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</p>
                 </div>
               </div>
               
@@ -681,6 +703,22 @@ export function LessonDetails({
           <CardDescription>Instructor feedback and recorded notes for later review.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {canAddNote && (
+            <div className="space-y-2 rounded-md border p-3">
+              <Label htmlFor="post-flight-note">Add debrief note</Label>
+              <Textarea
+                id="post-flight-note"
+                value={noteDraft}
+                onChange={(event) => setNoteDraft(event.target.value)}
+                placeholder="Add debrief details or follow-up notes after the lesson"
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleAddNote} disabled={savingNote || !noteDraft.trim()}>
+                  {savingNote ? "Saving..." : "Add Note"}
+                </Button>
+              </div>
+            </div>
+          )}
           {lessonNotes.length === 0 ? (
             <p className="text-sm text-muted-foreground">No lesson notes recorded yet.</p>
           ) : (

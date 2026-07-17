@@ -104,6 +104,7 @@ export function LessonsTable({
                 <TableHead>Instructor</TableHead>
                 <TableHead>Aircraft</TableHead>
                 <TableHead>Lesson</TableHead>
+                <TableHead>Notes</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]">Actions</TableHead>
               </TableRow>
@@ -140,7 +141,7 @@ export function LessonsTable({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{getUserName(lesson.student_id, lesson.student_name)}</span>
+                        <span>{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</span>
                       </div>
                     </TableCell>
                     
@@ -182,6 +183,19 @@ export function LessonsTable({
                     </TableCell>
                     
                     <TableCell>
+                      <div className="max-w-[220px]">
+                        <div className="text-sm font-medium">
+                          {Number(lesson.note_count || 0)} note{Number(lesson.note_count || 0) === 1 ? "" : "s"}
+                        </div>
+                        {lesson.latest_note && (
+                          <div className="truncate text-xs text-muted-foreground" title={lesson.latest_note}>
+                            {lesson.latest_note}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
                       {getStatusBadge(lesson.status)}
                     </TableCell>
                     
@@ -208,7 +222,7 @@ export function LessonsTable({
                           </DropdownMenuItem>
                           
                           {/* RBAC: Only ADMIN or lesson's INSTRUCTOR can edit, complete, delete */}
-                          {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && user?.id === lesson.instructor_id)) && (
+                          {(user?.role === 'ADMIN' || (user?.role === 'INSTRUCTOR' && user?.id === lesson.instructor_id && lesson.status === 'SCHEDULED')) && (
                             <>
                               <DropdownMenuItem 
                                 onClick={(e) => {

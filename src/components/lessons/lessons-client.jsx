@@ -665,6 +665,25 @@ export function LessonsClient() {
               onComplete={() => {
                 handleCompleteLesson(selectedLesson);
               }}
+              onNotesChanged={(note) => {
+                setLessons((current) => current.map((item) =>
+                  item.id === selectedLesson.id
+                    ? {
+                        ...item,
+                        note_count: Number(item.note_count || 0) + 1,
+                        latest_note: note.content,
+                      }
+                    : item
+                ));
+                setSelectedLesson((current) => current
+                  ? {
+                      ...current,
+                      note_count: Number(current.note_count || 0) + 1,
+                      latest_note: note.content,
+                    }
+                  : current
+                );
+              }}
             />
           )}
         </SheetContent>
