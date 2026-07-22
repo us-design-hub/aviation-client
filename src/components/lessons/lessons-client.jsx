@@ -472,6 +472,7 @@ export function LessonsClient() {
                 students={students}
                 instructors={instructors}
                 aircraft={aircraft}
+                canOverrideDebt={user?.role === 'ADMIN'}
                 onSubmit={editingLesson ? 
                   (data) => handleUpdateLesson(editingLesson.id, data) : 
                   handleCreateLesson

@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription} from "@/components/ui/alert";
 import { TimeSelect } from "@/components/ui/time-select";
+import { Switch } from "@/components/ui/switch";
 import { lessonsAPI, usersAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const lessonSchema = z.object({
   program: z.string().optional(),
   stage: z.string().optional(),
   lesson: z.string().optional(),
+  overrideInstructionDebt: z.boolean().default(false),
 });
 
 export function LessonForm({ 
@@ -49,6 +51,7 @@ export function LessonForm({
   students, 
   instructors, 
   aircraft, 
+  canOverrideDebt = false,
   onSubmit, 
   onCancel 
 }) {
@@ -73,6 +76,7 @@ export function LessonForm({
       program: lesson?.program || initialValues?.program || "",
       stage: lesson?.stage || initialValues?.stage || "",
       lesson: lesson?.lesson || initialValues?.lesson || "",
+      overrideInstructionDebt: false,
     },
   });
 
@@ -175,6 +179,7 @@ export function LessonForm({
         program: data.program || "",
         stage: data.stage || "",
         lesson: data.lesson || "",
+        overrideInstructionDebt: Boolean(data.overrideInstructionDebt),
       };
 
       await onSubmit(lessonData);
@@ -301,7 +306,28 @@ export function LessonForm({
         {instructionBilling?.status === "BLOCKED" && (
           <Alert className="border-destructive">
             <AlertDescription>
-              This student has {instructionBilling.outstandingHours.toFixed(1)} unpaid instructor hours. No further flight lessons can be scheduled until that debt is paid down.
+              <div className="space-y-3">
+                <p>
+                  This student has {instructionBilling.outstandingHours.toFixed(1)} unpaid instructor hours. No further flight lessons can be scheduled until that debt is paid down.
+                </p>
+                {canOverrideDebt && !lesson && (
+                  <FormField
+                    control={form.control}
+                    name="overrideInstructionDebt"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded border border-destructive/30 bg-background p-3">
+                        <div>
+                          <FormLabel>Authorize scheduling override</FormLabel>
+                          <p className="text-xs text-muted-foreground">Admin authorization will be recorded with this booking.</p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
             </AlertDescription>
           </Alert>
         )}
@@ -694,7 +720,11 @@ export function LessonForm({
           </Button>
           <Button 
             type="submit" 
-            disabled={loading || conflicts.length > 0 || (watchedValues.kind === "FLIGHT" && instructionBilling?.status === "BLOCKED")}
+            disabled={loading || conflicts.length > 0 || (
+              watchedValues.kind === "FLIGHT" &&
+              instructionBilling?.status === "BLOCKED" &&
+              !(canOverrideDebt && watchedValues.overrideInstructionDebt)
+            )}
             className="bg-golden-gradient hover:bg-golden-gradient/90"
           >
             {loading ? "Scheduling..." : lesson ? "Update Lesson" : "Schedule Lesson"}

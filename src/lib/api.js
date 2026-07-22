@@ -208,6 +208,21 @@ export const rentalsAPI = {
   checkin: (id, data) => api.post(`/rentals/${id}/checkin`, data),
 };
 
+// Billing and hour-package API
+export const billingAPI = {
+  getCatalog: () => api.get('/billing/catalog'),
+  updateConfig: (data) => api.post('/billing/config', data),
+  getSummary: (userId) => api.get(userId ? `/billing/summary/${userId}` : '/billing/summary'),
+  getPurchases: (params = {}) => api.get('/billing/purchases', { params }),
+  createPurchase: (data) => api.post('/billing/purchases', data),
+  confirmPurchase: (id, data = {}) => api.post(`/billing/purchases/${id}/confirm`, data),
+  cancelPurchase: (id) => api.post(`/billing/purchases/${id}/cancel`),
+  getPayables: (params = {}) => api.get('/billing/payables', { params }),
+  recordInstructorPayment: (instructorId, data) => api.post(`/billing/payables/${instructorId}/payments`, data),
+  recordStudentInstructionPayment: (userId, data) => api.post(`/users/${userId}/instructor-billing`, { ...data, entryType: 'PAYMENT' }),
+  getAdminOverview: () => api.get('/billing/admin/overview'),
+};
+
 
 
 // Availability API
