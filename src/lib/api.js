@@ -123,6 +123,7 @@ export const aircraftAPI = {
   updateWeightBalance: (id, wbData) => api.post(`/aircraft/${id}/wb`, wbData),
   // Hobbs & Tach Logs
   getLogs: (id) => api.get(`/aircraft/${id}/logs`),
+  getMonthlyUsage: (id, month) => api.get(`/aircraft/${id}/monthly-usage`, { params: { month } }),
   checkout: (id, hobbsTachData) => api.post(`/aircraft/${id}/checkout`, hobbsTachData),
   checkin: (id, hobbsTachData) => api.post(`/aircraft/${id}/checkin`, hobbsTachData),
   getFlights: () => api.get('/aircraft/flights'),

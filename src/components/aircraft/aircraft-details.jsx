@@ -17,6 +17,7 @@ import {
   Trash2, 
   Settings, 
   Clock, 
+  Gauge,
   Calendar,
   AlertTriangle,
   CheckCircle,
@@ -36,6 +37,33 @@ import { formatET } from '@/lib/format-tz';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 
+const PORTAL_TIME_ZONE = 'America/New_York';
+
+function currentEasternMonth() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: PORTAL_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}`;
+}
+
+function shiftMonth(month, amount) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1 + amount, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(month) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+}
+
 export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   const [isLoading, setIsLoading] = useState(false);
   const [weightBalance, setWeightBalance] = useState(null);
@@ -50,6 +78,9 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   const [activityAction, setActivityAction] = useState('ALL');
   const [activityDate, setActivityDate] = useState('');
   const [activityPage, setActivityPage] = useState(1);
+  const [usageMonth, setUsageMonth] = useState(currentEasternMonth);
+  const [monthlyUsage, setMonthlyUsage] = useState(null);
+  const [monthlyUsageLoading, setMonthlyUsageLoading] = useState(false);
   const [hobbsTachForm, setHobbsTachForm] = useState({ hobbs: '', tach: '' });
   const [squawkForm, setSquawkForm] = useState({ description: '' });
   const [wbForm, setWBForm] = useState({ basicEmptyWeight: '', moment: '' });
@@ -62,6 +93,30 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
       fetchAircraftDetails();
     }
   }, [aircraft?.id]);
+
+  useEffect(() => {
+    setUsageMonth(currentEasternMonth());
+  }, [aircraft?.id]);
+
+  useEffect(() => {
+    if (!aircraft?.id || !usageMonth) return;
+    let active = true;
+    setMonthlyUsageLoading(true);
+    aircraftAPI.getMonthlyUsage(aircraft.id, usageMonth)
+      .then((response) => {
+        if (active) setMonthlyUsage(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching monthly aircraft usage:', error);
+        if (active) setMonthlyUsage(null);
+      })
+      .finally(() => {
+        if (active) setMonthlyUsageLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [aircraft?.id, usageMonth]);
 
   const fetchAircraftDetails = async () => {
     if (!aircraft?.id) return;
@@ -331,6 +386,66 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
       </div>
 
       <Separator />
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Gauge className="icon-lg icon-black dark:icon-black-dark" />
+                <span>Monthly Flight Time</span>
+              </CardTitle>
+              <CardDescription>Completed aircraft operations in Eastern Time</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Previous month"
+                aria-label="Previous month"
+                onClick={() => setUsageMonth((month) => shiftMonth(month, -1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <p className="min-w-32 text-center text-sm font-semibold">{monthLabel(usageMonth)}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Next month"
+                aria-label="Next month"
+                disabled={usageMonth >= currentEasternMonth()}
+                onClick={() => setUsageMonth((month) => shiftMonth(month, 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 border-y sm:grid-cols-3 sm:divide-x">
+            <div className="py-4 sm:px-4 sm:first:pl-0">
+              <p className="text-sm text-muted-foreground">Hobbs flown</p>
+              <p className="mt-1 text-2xl font-bold">
+                {monthlyUsageLoading ? '...' : `${Number(monthlyUsage?.hobbsHours || 0).toFixed(1)} hrs`}
+              </p>
+            </div>
+            <div className="border-t py-4 sm:border-t-0 sm:px-4">
+              <p className="text-sm text-muted-foreground">Tach flown</p>
+              <p className="mt-1 text-2xl font-bold">
+                {monthlyUsageLoading ? '...' : `${Number(monthlyUsage?.tachHours || 0).toFixed(1)} hrs`}
+              </p>
+            </div>
+            <div className="border-t py-4 sm:border-t-0 sm:px-4 sm:last:pr-0">
+              <p className="text-sm text-muted-foreground">Completed flights</p>
+              <p className="mt-1 text-2xl font-bold">
+                {monthlyUsageLoading ? '...' : Number(monthlyUsage?.completedFlights || 0)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Aircraft Status & Maintenance Alerts */}
       <Card>
