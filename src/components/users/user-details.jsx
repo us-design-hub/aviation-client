@@ -11,12 +11,10 @@ import {
   KeyRound, 
   Users2,
   Calendar,
-  BookOpen,
   Activity,
   Trash2,
   Wallet
 } from "lucide-react";
-import { format } from "date-fns";
 import { formatET } from "@/lib/format-tz";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { lessonsAPI, rentalsAPI, usersAPI } from "@/lib/api";
+import { LessonHistory } from "@/components/users/lesson-history";
 import { cn } from "@/lib/utils";
 
 export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onManageAssignments }) {
@@ -33,7 +32,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
     totalLessons: 0,
     completedLessons: 0,
     scheduledLessons: 0,
-    recentLessons: [],
+    lessons: [],
   });
   const [hourSummary, setHourSummary] = useState(null);
   const [hourForm, setHourForm] = useState({
@@ -75,7 +74,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
           totalLessons: 0,
           completedLessons: 0,
           scheduledLessons: 0,
-          recentLessons: [],
+          lessons: [],
         });
         setLoading(false);
         return;
@@ -104,9 +103,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         totalLessons: lessons.length,
         completedLessons: lessons.filter(l => l.status === "COMPLETED").length,
         scheduledLessons: lessons.filter(l => l.status === "SCHEDULED").length,
-        recentLessons: lessons
-          .sort((a, b) => new Date(b.start_at) - new Date(a.start_at))
-          .slice(0, 5),
+        lessons,
       });
     } catch (error) {
       console.error("Error fetching user stats:", error);
@@ -186,15 +183,6 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       default:
         return role;
     }
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      SCHEDULED: "text-blue-600 bg-blue-50 border-blue-200",
-      COMPLETED: "text-green-600 bg-green-50 border-green-200",
-      CANCELED: "text-gray-600 bg-gray-50 border-gray-200"
-    };
-    return colors[status] || colors.SCHEDULED;
   };
 
   const formatDateTime = (dateTime) => {
@@ -533,48 +521,8 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
         </Card>
       )}
 
-      {/* Recent Lessons */}
-      {(user.role === "STUDENT" || user.role === "INSTRUCTOR") && userStats.recentLessons.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Recent Lessons
-            </CardTitle>
-            <CardDescription>
-              Latest lesson activity
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {userStats.recentLessons.map((lesson) => (
-                <div key={lesson.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background">
-                      {lesson.kind === "FLIGHT" ? (
-                        <Calendar className="h-4 w-4 text-purple-600" />
-                      ) : (
-                        <BookOpen className="h-4 w-4 text-orange-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {lesson.lesson || `${lesson.kind} Lesson`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(lesson.start_at)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Badge className={cn("text-xs", getStatusColor(lesson.status))}>
-                    {lesson.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {(user.role === "STUDENT" || user.role === "INSTRUCTOR") && (
+        <LessonHistory lessons={userStats.lessons} subjectRole={user.role} />
       )}
 
       {/* System Information */}
