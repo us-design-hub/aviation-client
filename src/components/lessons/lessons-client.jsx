@@ -299,7 +299,7 @@ export function LessonsClient() {
       fetchAllData();
     } catch (error) {
       console.error("Error completing lesson:", error);
-      toast.error("Failed to complete lesson");
+      toast.error(error.response?.data?.message || "Failed to complete lesson");
     }
   };
 
