@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GoldenButton } from '@/components/ui/golden-button';
@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useConfirmDialog, confirmPresets } from '@/components/ui/confirm-dialog';
 import { 
   Plane, 
@@ -26,7 +27,9 @@ import {
   LogIn,
   LogOut,
   FileText,
-  Users
+  Users,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { aircraftAPI, squawksAPI, maintenanceAPI } from '@/lib/api';
 import { formatET } from '@/lib/format-tz';
@@ -43,6 +46,10 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   const [showCheckinDialog, setShowCheckinDialog] = useState(false);
   const [showSquawkDialog, setShowSquawkDialog] = useState(false);
   const [showWBDialog, setShowWBDialog] = useState(false);
+  const [showActivityHistory, setShowActivityHistory] = useState(false);
+  const [activityAction, setActivityAction] = useState('ALL');
+  const [activityDate, setActivityDate] = useState('');
+  const [activityPage, setActivityPage] = useState(1);
   const [hobbsTachForm, setHobbsTachForm] = useState({ hobbs: '', tach: '' });
   const [squawkForm, setSquawkForm] = useState({ description: '' });
   const [wbForm, setWBForm] = useState({ basicEmptyWeight: '', moment: '' });
@@ -103,6 +110,53 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString('en-US', { timeZone: 'America/New_York' });
   };
+
+  const activityDateKey = (dateString) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date(dateString));
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  };
+
+  const filteredActivity = useMemo(() => hobbsTachLogs.filter((log) => {
+    const matchesAction = activityAction === 'ALL' || log.action === activityAction;
+    const matchesDate = !activityDate || activityDateKey(log.ts) === activityDate;
+    return matchesAction && matchesDate;
+  }), [hobbsTachLogs, activityAction, activityDate]);
+  const activityPageSize = 20;
+  const activityPageCount = Math.max(Math.ceil(filteredActivity.length / activityPageSize), 1);
+  const pagedActivity = filteredActivity.slice(
+    (activityPage - 1) * activityPageSize,
+    activityPage * activityPageSize,
+  );
+
+  const activityLabel = (action) => {
+    if (action === 'CHECKOUT') return 'Checked Out';
+    if (action === 'CHECKIN') return 'Checked In';
+    if (action === 'MAINTENANCE_UPDATE') return 'Maintenance Update';
+    return action?.replaceAll('_', ' ') || 'Activity';
+  };
+
+  const activityIcon = (action) => {
+    if (action === 'CHECKOUT') return <LogOut className="icon-lg icon-black dark:icon-black-dark" />;
+    if (action === 'MAINTENANCE_UPDATE') return <Wrench className="icon-lg icon-black dark:icon-black-dark" />;
+    return <LogIn className="icon-lg icon-black dark:icon-black-dark" />;
+  };
+
+  const activityRow = (log) => (
+    <div key={log.id} className="flex items-start justify-between gap-3 border-b py-3 last:border-b-0">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="icon-container dark:icon-container-dark shrink-0">{activityIcon(log.action)}</div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{activityLabel(log.action)}</p>
+          <p className="text-xs text-gray-500">Hobbs: {log.hobbs} · Tach: {log.tach}</p>
+          {log.reason && <p className="mt-1 break-words text-xs text-muted-foreground">{log.reason}</p>}
+        </div>
+      </div>
+      <p className="max-w-28 shrink-0 text-right text-xs text-gray-600 sm:max-w-none sm:text-sm">{formatDateTime(log.ts)}</p>
+    </div>
+  );
 
   // Role-based permissions
   const canPerformInstructorActions = () => {
@@ -713,40 +767,46 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
               <Clock className="icon-lg icon-black dark:icon-black-dark" />
               <span>Recent Activity</span>
             </CardTitle>
-            <CardDescription>
-              Latest check-in/out activity for this aircraft
-            </CardDescription>
+            <CardDescription>Latest meter activity for this aircraft</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {hobbsTachLogs.slice(0, 5).map((log) => (
-                <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="icon-container dark:icon-container-dark">
-                      {log.action === 'CHECKOUT' ? (
-                        <LogOut className="icon-lg icon-black dark:icon-black-dark" />
-                      ) : (
-                        <LogIn className="icon-lg icon-black dark:icon-black-dark" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {log.action === 'CHECKOUT' ? 'Checked Out' : 'Checked In'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Hobbs: {log.hobbs} • Tach: {log.tach}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">{formatDateTime(log.ts)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div>{hobbsTachLogs.slice(0, 5).map(activityRow)}</div>
+            {hobbsTachLogs.length > 5 && <Button variant="outline" className="mt-4 w-full" onClick={() => setShowActivityHistory(true)}>View All Activity ({hobbsTachLogs.length})</Button>}
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showActivityHistory} onOpenChange={setShowActivityHistory}>
+        <DialogContent className="max-h-[90vh] sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Aircraft Activity</DialogTitle>
+            <DialogDescription>Complete meter history for {aircraft?.tail_number}.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select value={activityAction} onValueChange={(value) => { setActivityAction(value); setActivityPage(1); }}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All activity</SelectItem>
+                <SelectItem value="CHECKOUT">Check-outs</SelectItem>
+                <SelectItem value="CHECKIN">Check-ins</SelectItem>
+                <SelectItem value="MAINTENANCE_UPDATE">Maintenance updates</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input type="date" aria-label="Filter activity by date" value={activityDate} onChange={(event) => { setActivityDate(event.target.value); setActivityPage(1); }} />
+          </div>
+          <div className="max-h-[56vh] overflow-y-auto pr-1">
+            {pagedActivity.length > 0 ? pagedActivity.map(activityRow) : <p className="py-10 text-center text-sm text-muted-foreground">No activity matches these filters.</p>}
+          </div>
+          <div className="flex items-center justify-between border-t pt-3">
+            <p className="text-sm text-muted-foreground">{filteredActivity.length} {filteredActivity.length === 1 ? 'entry' : 'entries'}</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" title="Previous page" disabled={activityPage <= 1} onClick={() => setActivityPage((page) => Math.max(page - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="min-w-20 text-center text-sm">{activityPage} of {activityPageCount}</span>
+              <Button variant="outline" size="icon" title="Next page" disabled={activityPage >= activityPageCount} onClick={() => setActivityPage((page) => Math.min(page + 1, activityPageCount))}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       {ConfirmDialog}
