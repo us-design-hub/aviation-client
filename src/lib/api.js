@@ -211,6 +211,8 @@ export const rentalsAPI = {
 // Billing and hour-package API
 export const billingAPI = {
   getCatalog: () => api.get('/billing/catalog'),
+  createPackage: (data) => api.post('/billing/packages', data),
+  updatePackage: (id, data) => api.patch(`/billing/packages/${id}`, data),
   updateConfig: (data) => api.post('/billing/config', data),
   getSummary: (userId) => api.get(userId ? `/billing/summary/${userId}` : '/billing/summary'),
   getPurchases: (params = {}) => api.get('/billing/purchases', { params }),
