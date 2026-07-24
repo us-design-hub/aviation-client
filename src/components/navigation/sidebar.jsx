@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Plane,
   LayoutDashboard,
   Calendar,
   PlaneIcon,
@@ -149,8 +149,15 @@ export function Sidebar() {
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
-              <div className="icon-container dark:icon-container-dark">
-                <Plane className="icon-xl icon-black dark:icon-black-dark" />
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-black">
+                <Image
+                  src="/icon.png"
+                  alt="Wings of an Angel Aviation"
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                  priority
+                />
               </div>
               <span className="text-xl font-bold text-golden dark:text-golden-dark">
                 Wings CRM
