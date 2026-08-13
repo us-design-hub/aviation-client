@@ -27,6 +27,9 @@ import { lessonsAPI, rentalsAPI, usersAPI } from "@/lib/api";
 import { LessonHistory } from "@/components/users/lesson-history";
 import { cn } from "@/lib/utils";
 
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const formatMoney = (cents = 0) => money.format(Number(cents || 0) / 100);
+
 export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onManageAssignments }) {
   const [userStats, setUserStats] = useState({
     totalLessons: 0,
@@ -44,6 +47,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
   const [instructionBillingForm, setInstructionBillingForm] = useState({
     hours: "",
     entryType: "PAYMENT",
+    instructionType: "FLIGHT",
     note: "",
   });
   const [savingHours, setSavingHours] = useState(false);
@@ -140,10 +144,11 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
       const response = await usersAPI.saveInstructionBilling(user.id, {
         hours: Number(instructionBillingForm.hours),
         entryType: instructionBillingForm.entryType,
+        instructionType: instructionBillingForm.instructionType,
         note: instructionBillingForm.note,
       });
       setInstructionBilling(response.data);
-      setInstructionBillingForm({ hours: "", entryType: "PAYMENT", note: "" });
+      setInstructionBillingForm((current) => ({ ...current, hours: "", note: "" }));
     } catch (error) {
       console.error("Error saving instructor billing:", error);
     } finally {
@@ -433,18 +438,22 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-primary">{instructionBilling?.totalInvoiced?.toFixed?.(1) ?? "0.0"}</p>
-                <p className="text-sm text-muted-foreground">Hours Invoiced</p>
+            <div className="overflow-x-auto border-y">
+              <div className="grid min-w-[620px] grid-cols-[1.2fr_repeat(4,1fr)] gap-3 border-b px-2 py-2 text-xs font-medium text-muted-foreground">
+                <span>Instruction</span><span>Invoiced</span><span>Paid</span><span>Outstanding</span><span>Amount Due</span>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{instructionBilling?.totalPaid?.toFixed?.(1) ?? "0.0"}</p>
-                <p className="text-sm text-muted-foreground">Hours Paid Down</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{instructionBilling?.outstandingHours?.toFixed?.(1) ?? "0.0"}</p>
-                <p className="text-sm text-muted-foreground">Outstanding Hours</p>
+              {[["Flight", instructionBilling?.flight], ["Ground", instructionBilling?.ground]].map(([label, summary]) => (
+                <div key={label} className="grid min-w-[620px] grid-cols-[1.2fr_repeat(4,1fr)] items-center gap-3 px-2 py-3 text-sm">
+                  <div><p className="font-semibold">{label}</p><p className="text-xs text-muted-foreground">{formatMoney(summary?.rateCents)}/hr</p></div>
+                  <span>{summary?.totalInvoiced?.toFixed?.(1) ?? "0.0"} hrs</span>
+                  <span>{summary?.totalPaid?.toFixed?.(1) ?? "0.0"} hrs</span>
+                  <span className="font-semibold">{summary?.outstandingHours?.toFixed?.(1) ?? "0.0"} hrs</span>
+                  <span className="font-semibold">{formatMoney(summary?.outstandingAmountCents)}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between border-t px-2 py-3 text-sm font-semibold">
+                <span>Combined outstanding</span>
+                <span>{instructionBilling?.outstandingHours?.toFixed?.(1) ?? "0.0"} hrs · {formatMoney(instructionBilling?.outstandingAmountCents)}</span>
               </div>
             </div>
 
@@ -456,7 +465,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
             )}
 
             <form onSubmit={handleInstructionBillingSubmit} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="instruction-hours-entry">Hours</label>
                   <Input
@@ -470,6 +479,13 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
                   <p className="text-xs text-muted-foreground">
                     Payments reduce the balance. Adjustments can add or remove hours.
                   </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="instruction-billing-type">Instruction</label>
+                  <Select value={instructionBillingForm.instructionType} onValueChange={(value) => setInstructionBillingForm((prev) => ({ ...prev, instructionType: value }))}>
+                    <SelectTrigger id="instruction-billing-type"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="FLIGHT">Flight ($45/hr)</SelectItem><SelectItem value="GROUND">Ground ($30/hr)</SelectItem></SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="instruction-entry-type">Entry Type</label>
@@ -506,7 +522,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
               {(instructionBilling?.entries || []).slice(0, 8).map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
-                    <p className="text-sm font-medium">{entry.entry_type}</p>
+                    <p className="text-sm font-medium">{entry.entry_type} · {entry.instruction_type || "Legacy payment"}</p>
                     <p className="text-xs text-muted-foreground">{formatDateTime(entry.created_at)}</p>
                     {entry.note && <p className="mt-1 text-sm text-muted-foreground">{entry.note}</p>}
                   </div>
