@@ -26,6 +26,8 @@ import {
 const DATE_COLUMN_WIDTH = 200;
 const HOUR_COLUMN_WIDTH = 160;
 const EVENT_SCROLL_CONTEXT_HOURS = 1;
+const EVENT_LANE_HEIGHT = 120;
+const MIN_SCHEDULE_ROW_HEIGHT = 120;
 
 /**
  * WeekScheduleView - A professional schedule view with hourly time slots
@@ -66,6 +68,14 @@ function parseScheduleEventTimes(event) {
 
 function scheduleIndexKey(date, hour, resourceId = '*') {
   return `${format(date, 'yyyy-MM-dd')}|${hour}|${resourceId || '*'}`;
+}
+
+function scheduleLayoutKey(date, resourceId = '*') {
+  return `${format(date, 'yyyy-MM-dd')}|${resourceId || '*'}`;
+}
+
+function scheduleEventKey(event) {
+  return `${event.event_type || event.type || 'lesson'}:${event.id}`;
 }
 
 export function WeekScheduleView({
@@ -288,6 +298,84 @@ export function WeekScheduleView({
 
   const getEventsForSlot = (date, hour, resourceId = null) =>
     eventIndex.get(scheduleIndexKey(date, hour, resourceId || '*')) || [];
+
+  const eventLayouts = useMemo(() => {
+    const groups = new Map();
+
+    const addToGroup = (date, resourceId, event, start, end) => {
+      const key = scheduleLayoutKey(date, resourceId);
+      const group = groups.get(key) || [];
+      group.push({ event, start, end });
+      groups.set(key, group);
+    };
+
+    for (const event of visibleEvents) {
+      const { start: eventStart, end: eventEnd } = parseScheduleEventTimes(event);
+      if (
+        Number.isNaN(eventStart.getTime()) ||
+        Number.isNaN(eventEnd.getTime()) ||
+        eventEnd <= eventStart
+      ) {
+        continue;
+      }
+
+      const resourceIds = showResourceColumns
+        ? [...new Set([
+            event.user_id,
+            event.aircraft_id,
+            event.instructor_id,
+            event.student_id,
+          ].filter(Boolean))]
+        : ['*'];
+
+      for (const date of displayDates) {
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const visibleStart = new Date(dayStart);
+        visibleStart.setHours(startHour, 0, 0, 0);
+        const visibleEnd = new Date(dayStart);
+        visibleEnd.setHours(endHour + 1, 0, 0, 0);
+        const renderedStart = eventStart < visibleStart ? visibleStart : eventStart;
+        const renderedEnd = eventEnd > visibleEnd ? visibleEnd : eventEnd;
+
+        if (renderedStart >= renderedEnd || eventStart >= dayEnd || eventEnd <= dayStart) {
+          continue;
+        }
+
+        for (const resourceId of resourceIds) {
+          addToGroup(date, resourceId, event, renderedStart, renderedEnd);
+        }
+      }
+    }
+
+    const layouts = new Map();
+    for (const [key, group] of groups) {
+      group.sort((a, b) => a.start - b.start || a.end - b.end);
+      const laneEnds = [];
+      const lanes = new Map();
+
+      for (const item of group) {
+        let lane = laneEnds.findIndex((laneEnd) => laneEnd <= item.start);
+        if (lane === -1) lane = laneEnds.length;
+        laneEnds[lane] = item.end;
+        lanes.set(scheduleEventKey(item.event), lane);
+      }
+
+      layouts.set(key, { lanes, laneCount: Math.max(laneEnds.length, 1) });
+    }
+
+    return layouts;
+  }, [displayDates, endHour, showResourceColumns, startHour, visibleEvents]);
+
+  const getEventLayout = (date, resourceId = null) =>
+    eventLayouts.get(scheduleLayoutKey(date, resourceId || '*')) || { lanes: new Map(), laneCount: 1 };
+
+  const getRowHeight = (layout) =>
+    Math.max(MIN_SCHEDULE_ROW_HEIGHT, layout.laneCount * EVENT_LANE_HEIGHT);
+
   // Get event count summary
   const eventSummary = useMemo(() => {
     const total = visibleEvents.length;
@@ -498,8 +586,11 @@ export function WeekScheduleView({
               <tbody>
                 {showResourceColumns ? (
                   filteredResources.length > 0 ? (
-                    filteredResources.map(resource => (
-                      <tr key={resource.id} className="border-b last:border-b-0" style={{ height: '120px' }}>
+                    filteredResources.map(resource => {
+                      const eventLayout = getEventLayout(displayDates[0], resource.id);
+                      const rowHeight = getRowHeight(eventLayout);
+                      return (
+                      <tr key={resource.id} className="border-b last:border-b-0" style={{ height: `${rowHeight}px` }}>
                         <td className="sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]" style={{ width: `${DATE_COLUMN_WIDTH}px` }}>
                           <div className="flex items-center gap-2">
                             {resource.resourceType === 'aircraft' && <span className="text-base">✈️</span>}
@@ -528,6 +619,8 @@ export function WeekScheduleView({
                                 onEventClick={onEventClick}
                                 renderEvent={renderEvent}
                                 getEventStyle={getEventStyle}
+                                eventLayout={eventLayout}
+                                rowHeight={rowHeight}
                                 hoveredSlot={hoveredSlot}
                                 setHoveredSlot={setHoveredSlot}
                               />
@@ -535,7 +628,8 @@ export function WeekScheduleView({
                           );
                         })}
                       </tr>
-                    ))
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={timeSlots.length + 1} className="p-8 text-center text-muted-foreground">
@@ -547,8 +641,10 @@ export function WeekScheduleView({
                 ) : (
                   displayDates.map(date => {
                     const isTodayDate = isSameDay(date, nowET());
+                    const eventLayout = getEventLayout(date);
+                    const rowHeight = getRowHeight(eventLayout);
                     return (
-                      <tr key={date.toString()} className="border-b last:border-b-0" style={{ height: '120px' }}>
+                      <tr key={date.toString()} className="border-b last:border-b-0" style={{ height: `${rowHeight}px` }}>
                         <td className={cn(
                           "sticky left-0 z-20 p-4 border-r bg-background dark:bg-gray-950 align-middle shadow-[2px_0_8px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_8px_rgba(0,0,0,0.3)]",
                           isTodayDate && "bg-blue-50 dark:bg-blue-950"
@@ -573,6 +669,8 @@ export function WeekScheduleView({
                                 onEventClick={onEventClick}
                                 renderEvent={renderEvent}
                                 getEventStyle={getEventStyle}
+                                eventLayout={eventLayout}
+                                rowHeight={rowHeight}
                                 hoveredSlot={hoveredSlot}
                                 setHoveredSlot={setHoveredSlot}
                                 isToday={isTodayDate}
@@ -637,6 +735,8 @@ function TimeSlotCell({
   onEventClick,
   renderEvent,
   getEventStyle,
+  eventLayout,
+  rowHeight = MIN_SCHEDULE_ROW_HEIGHT,
   hoveredSlot,
   setHoveredSlot,
   isToday = false,
@@ -648,10 +748,11 @@ function TimeSlotCell({
     <div
       className={cn(
         "relative cursor-pointer transition-all duration-150 bg-background",
-        "h-[120px] w-full",
+        "w-full",
         isHovered && "bg-blue-50/50 dark:bg-blue-950/20 ring-2 ring-blue-200 dark:ring-blue-800 ring-inset",
         !events.length && isHovered && "after:content-['+'] after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-4xl after:text-blue-400 after:font-light after:pointer-events-none"
       )}
+      style={{ height: `${rowHeight}px` }}
       onClick={() => onSlotClick(date, hour, resourceId, resourceType)}
       onMouseEnter={() => setHoveredSlot(slotKey)}
       onMouseLeave={() => setHoveredSlot(null)}
@@ -663,6 +764,7 @@ function TimeSlotCell({
       {events.map((event, idx) => {
         const style = getEventStyle(event, hour, date);
         if (style.display === 'none') return null;
+        const lane = eventLayout?.lanes.get(scheduleEventKey(event)) ?? idx;
         
         return (
           <div
@@ -670,8 +772,8 @@ function TimeSlotCell({
             className="absolute z-10"
             style={{
               ...style,
-              // Stack overlapping events
-              transform: events.length > 1 ? `translateY(${idx * 4}px)` : 'none',
+              top: `${lane * EVENT_LANE_HEIGHT + 6}px`,
+              height: `${EVENT_LANE_HEIGHT - 12}px`,
             }}
             onClick={(e) => {
               e.stopPropagation();
