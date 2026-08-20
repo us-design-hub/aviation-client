@@ -267,6 +267,8 @@ export function LessonForm({
         return "Student is not available";
       case "instructor-unavailable":
         return "Instructor is not available";
+      case "aircraft-lesson":
+        return "Aircraft already has another lesson scheduled";
       case "aircraft-hold":
         return "Aircraft is on hold";
       case "rental-booking":
