@@ -29,7 +29,7 @@ const lessonSchema = z.object({
   kind: z.enum(["FLIGHT", "GROUND"], {
     required_error: "Lesson type is required",
   }),
-  flightType: z.enum(["TRAINING", "RELOCATION"]).default("TRAINING"),
+  flightType: z.enum(["TRAINING", "RELOCATION", "DISCOVERY"]).default("TRAINING"),
   origin: z.string().optional(),
   destination: z.string().optional(),
   startDate: z.date({
@@ -485,6 +485,7 @@ export function LessonForm({
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="TRAINING">Training Flight</SelectItem>
+                          <SelectItem value="DISCOVERY">Discovery Flight</SelectItem>
                           <SelectItem value="RELOCATION">Relocation Flight</SelectItem>
                         </SelectContent>
                       </Select>

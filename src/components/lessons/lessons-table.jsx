@@ -122,7 +122,9 @@ export function LessonsTable({
                       <div className="flex items-center gap-2">
                         {getKindIcon(lesson.kind)}
                         <span className="font-medium text-sm">
-                          {lesson.flight_type === "RELOCATION" ? "RELOCATION" : lesson.kind}
+                          {lesson.flight_type === "RELOCATION"
+                            ? "RELOCATION"
+                            : lesson.flight_type === "DISCOVERY" ? "DISCOVERY" : lesson.kind}
                         </span>
                       </div>
                     </TableCell>

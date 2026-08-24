@@ -252,6 +252,10 @@ export function LessonsCalendar({
         <div className="text-[10px] opacity-75 truncate">
           {startTime} - {endTime}
         </div>
+
+        {lesson.flight_type === "DISCOVERY" && (
+          <div className="text-[10px] font-medium truncate">Discovery Flight</div>
+        )}
         
         {lesson.aircraft_id && getAircraftTail(lesson.aircraft_id) && (
           <div className="text-[10px] opacity-75 truncate flex items-center gap-1">
@@ -585,6 +589,9 @@ function LessonItem({
       </div>
       
       <div className="space-y-1">
+        {lesson.flight_type === "DISCOVERY" && (
+          <div className="font-medium">Discovery Flight</div>
+        )}
         <div className="flex items-center gap-1">
           <User className="h-3 w-3" />
           <span>{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</span>
@@ -726,7 +733,9 @@ function LessonCard({
               <BookOpen className="h-4 w-4 text-orange-600" />
             )}
             <span className="font-medium">
-              {lesson.flight_type === "RELOCATION" ? "RELOCATION" : lesson.kind} - {startTime} to {endTime}
+              {lesson.flight_type === "RELOCATION"
+                ? "RELOCATION"
+                : lesson.flight_type === "DISCOVERY" ? "DISCOVERY" : lesson.kind} - {startTime} to {endTime}
             </span>
             <Badge
               variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}

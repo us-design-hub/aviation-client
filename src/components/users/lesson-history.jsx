@@ -159,7 +159,9 @@ export function LessonHistory({ lessons, subjectRole }) {
                     )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {lesson.lesson || `${lesson.kind === "GROUND" ? "Ground" : "Flight"} Lesson`}
+                        {lesson.flight_type === "DISCOVERY"
+                          ? "Discovery Flight"
+                          : lesson.lesson || `${lesson.kind === "GROUND" ? "Ground" : "Flight"} Lesson`}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {formatDateTime(lesson.start_at)}
@@ -244,7 +246,9 @@ export function LessonHistory({ lessons, subjectRole }) {
                 />
                 <Metric
                   label="Lesson type"
-                  value={selectedLesson.flight_type === "RELOCATION" ? "Relocation flight" : selectedLesson.kind}
+                  value={selectedLesson.flight_type === "RELOCATION"
+                    ? "Relocation flight"
+                    : selectedLesson.flight_type === "DISCOVERY" ? "Discovery flight" : selectedLesson.kind}
                   icon={BookOpen}
                 />
                 <Metric
