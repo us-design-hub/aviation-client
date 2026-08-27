@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 const lessonSchema = z.object({
   studentId: z.string().optional(),
+  guestName: z.string().max(120, "Guest name must be 120 characters or fewer").optional(),
   instructorId: z.string().min(1, "Instructor is required"),
   aircraftId: z.string().optional(),
   kind: z.enum(["FLIGHT", "GROUND"], {
@@ -64,6 +65,7 @@ export function LessonForm({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
       studentId: lesson?.student_id || initialValues?.studentId || "",
+      guestName: lesson?.guest_name || (lesson?.flight_type === "DISCOVERY" ? lesson?.student_name : "") || initialValues?.guestName || "",
       instructorId: lesson?.instructor_id || initialValues?.instructorId || "",
       aircraftId: lesson?.aircraft_id || initialValues?.aircraftId || "none",
       kind: lesson?.kind || initialValues?.kind || "FLIGHT",
@@ -86,7 +88,7 @@ export function LessonForm({
   useEffect(() => {
     const { studentId, instructorId, aircraftId, startDate, startTime, endTime } = watchedValues;
     
-    const studentIsOptional = watchedValues.kind === "FLIGHT" && watchedValues.flightType === "RELOCATION";
+    const studentIsOptional = watchedValues.kind === "FLIGHT" && ["RELOCATION", "DISCOVERY"].includes(watchedValues.flightType);
     if ((studentId || studentIsOptional) && instructorId && startDate && startTime && endTime) {
       checkConflicts();
     } else {
@@ -95,6 +97,12 @@ export function LessonForm({
   }, [watchedValues.studentId, watchedValues.instructorId, watchedValues.aircraftId, 
       watchedValues.startDate, watchedValues.startTime, watchedValues.endTime,
       watchedValues.kind, watchedValues.flightType]);
+
+  useEffect(() => {
+    if (watchedValues.kind === "FLIGHT" && watchedValues.flightType === "DISCOVERY" && watchedValues.studentId) {
+      form.setValue("studentId", "");
+    }
+  }, [watchedValues.kind, watchedValues.flightType, watchedValues.studentId, form]);
 
   useEffect(() => {
     const studentId = watchedValues.studentId;
@@ -148,7 +156,12 @@ export function LessonForm({
 
   const handleSubmit = async (data) => {
     const isRelocation = data.kind === "FLIGHT" && data.flightType === "RELOCATION";
-    if (!isRelocation && (!data.studentId || data.studentId === "none")) {
+    const isDiscovery = data.kind === "FLIGHT" && data.flightType === "DISCOVERY";
+    if (isDiscovery && !data.guestName?.trim()) {
+      form.setError("guestName", { message: "Guest name is required" });
+      return;
+    }
+    if (!isRelocation && !isDiscovery && (!data.studentId || data.studentId === "none")) {
       form.setError("studentId", { message: "Student is required" });
       return;
     }
@@ -167,7 +180,8 @@ export function LessonForm({
       setLoading(true);
       
       const lessonData = {
-        studentId: data.studentId && data.studentId !== "none" ? data.studentId : null,
+        studentId: !isDiscovery && data.studentId && data.studentId !== "none" ? data.studentId : null,
+        guestName: isDiscovery ? data.guestName.trim() : null,
         instructorId: data.instructorId,
         aircraftId: data.aircraftId && data.aircraftId !== "none" ? data.aircraftId : null,
         kind: data.kind,
@@ -339,11 +353,29 @@ export function LessonForm({
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Basic Information</CardTitle>
             <CardDescription>
-              Select the student, instructor, and lesson type
+              Enter the participant, instructor, and lesson type
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {watchedValues.kind === "FLIGHT" && watchedValues.flightType === "DISCOVERY" ? (
+                <FormField
+                  control={form.control}
+                  name="guestName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Guest Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter discovery flight guest name" autoComplete="off" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
               <FormField
                 control={form.control}
                 name="studentId"
@@ -374,6 +406,7 @@ export function LessonForm({
                   </FormItem>
                 )}
               />
+              )}
 
               <FormField
                 control={form.control}

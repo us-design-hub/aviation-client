@@ -100,7 +100,7 @@ export function LessonsTable({
               <TableRow>
                 <TableHead className="w-[100px]">Type</TableHead>
                 <TableHead>Date & Time</TableHead>
-                <TableHead>Student</TableHead>
+                <TableHead>Student / Guest</TableHead>
                 <TableHead>Instructor</TableHead>
                 <TableHead>Aircraft</TableHead>
                 <TableHead>Lesson</TableHead>
@@ -143,7 +143,7 @@ export function LessonsTable({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</span>
+                        <span>{lesson.guest_name || (lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)")}</span>
                       </div>
                     </TableCell>
                     

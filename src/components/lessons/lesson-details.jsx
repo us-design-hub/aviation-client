@@ -534,8 +534,8 @@ export function LessonDetails({
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Student</p>
-                  <p className="text-sm text-muted-foreground">{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</p>
+                  <p className="text-sm font-medium">{lesson.guest_name ? "Guest" : "Student"}</p>
+                  <p className="text-sm text-muted-foreground">{lesson.guest_name || (lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)")}</p>
                 </div>
               </div>
               

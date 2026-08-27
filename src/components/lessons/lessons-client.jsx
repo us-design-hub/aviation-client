@@ -180,7 +180,8 @@ export function LessonsClient() {
     const matchesSearch = !filters.search || 
       lesson.lesson?.toLowerCase().includes(filters.search.toLowerCase()) ||
       lesson.program?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      lesson.stage?.toLowerCase().includes(filters.search.toLowerCase());
+      lesson.stage?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      lesson.guest_name?.toLowerCase().includes(filters.search.toLowerCase());
     
     const matchesStatus = filters.status === "all" || lesson.status === filters.status;
     const matchesKind = filters.kind === "all" || lesson.kind === filters.kind;

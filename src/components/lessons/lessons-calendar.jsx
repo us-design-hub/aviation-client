@@ -164,6 +164,8 @@ export function LessonsCalendar({
       ? (lesson.renter_name || lesson.renter_email || "Rental")
       : isAircraftFlight
       ? (lesson.pilot_name || lesson.pilot_email || "Solo Flight")
+      : lesson.guest_name
+      ? lesson.guest_name.split(' ')[0]
       : lesson.student_name
       ? lesson.student_name.split(' ')[0]
       : getUserName(lesson.student_id);
@@ -594,7 +596,7 @@ function LessonItem({
         )}
         <div className="flex items-center gap-1">
           <User className="h-3 w-3" />
-          <span>{lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</span>
+          <span>{lesson.guest_name || (lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)")}</span>
         </div>
         
         {lesson.aircraft_id && (
@@ -746,7 +748,7 @@ function LessonCard({
           </div>
           
           <div className="space-y-1 text-sm text-muted-foreground">
-            <div>Student: {lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)"}</div>
+            <div>{lesson.guest_name ? "Guest" : "Student"}: {lesson.guest_name || (lesson.student_id ? getUserName(lesson.student_id, lesson.student_name) : "No student (relocation)")}</div>
             <div>Instructor: {getUserName(lesson.instructor_id, lesson.instructor_name)}</div>
             {lesson.aircraft_id && (
               <div>Aircraft: {getAircraftTail(lesson.aircraft_id)}</div>
