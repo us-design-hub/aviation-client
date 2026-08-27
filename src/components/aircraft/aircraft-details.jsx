@@ -332,10 +332,17 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   const latestLog = hobbsTachLogs[0];
   const openSquawks = squawks.filter(s => s.status === 'OPEN');
 
-  const maintPriority = { DUE: 0, NEARING: 1 };
-  const maintenanceAlerts = maintenanceItems
-    .filter((i) => i.status === 'DUE' || i.status === 'NEARING')
-    .sort((a, b) => (maintPriority[a.status] ?? 9) - (maintPriority[b.status] ?? 9));
+  const maintPriority = { DUE: 0, NEARING: 1, POSTED: 2 };
+  const activeMaintenance = maintenanceItems
+    .filter((item) => item.status !== 'COMPLETED')
+    .sort((a, b) => {
+      const statusOrder = (maintPriority[a.status] ?? 9) - (maintPriority[b.status] ?? 9);
+      if (statusOrder !== 0) return statusOrder;
+      if (a.due_date && b.due_date) return new Date(a.due_date) - new Date(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return Number(a.due_tach ?? a.due_hobbs ?? Infinity) - Number(b.due_tach ?? b.due_hobbs ?? Infinity);
+    });
 
   const formatMaintDue = (item) => {
     const parts = [];
@@ -346,8 +353,15 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         parts.push(`Due date: ${item.due_date}`);
       }
     }
-    if (item.due_hobbs != null && item.due_hobbs !== '') {
-      parts.push(`Tach due: ${Number(item.due_hobbs).toFixed(1)} hrs`);
+    const dueTach = item.due_tach ?? item.due_hobbs;
+    if (dueTach != null && dueTach !== '') {
+      parts.push(`Tach due: ${Number(dueTach).toFixed(1)} hrs`);
+      if (item.hours_remaining != null) {
+        const remaining = Number(item.hours_remaining);
+        parts.push(remaining <= 0
+          ? `${Math.abs(remaining).toFixed(1)} Tach hrs overdue`
+          : `${remaining.toFixed(1)} Tach hrs remaining`);
+      }
     }
     return parts.length ? parts.join(' · ') : 'See maintenance record for details';
   };
@@ -483,29 +497,31 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
             </div>
           </div>
 
-          {maintenanceAlerts.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/30">
-              <p className="text-sm font-semibold text-amber-950 dark:text-amber-100 mb-2">
-                Maintenance driving this status
+          <div className="rounded-lg border p-4">
+              <p className="mb-2 text-sm font-semibold">
+                Upcoming maintenance and inspections
               </p>
+              {activeMaintenance.length > 0 ? (
               <ul className="space-y-2">
-                {maintenanceAlerts.map((item) => (
+                {activeMaintenance.map((item) => (
                   <li
                     key={item.id}
-                    className="flex flex-col gap-1 rounded-md bg-white/80 p-3 text-sm dark:bg-gray-900/60"
+                    className="flex flex-col gap-1 rounded-md border bg-background p-3 text-sm"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-gray-900 dark:text-gray-100">{item.title}</span>
-                      <GoldenBadge variant={item.status === 'DUE' ? 'error' : 'warning'}>
-                        {item.status === 'DUE' ? 'Due' : 'Nearing'}
+                      <GoldenBadge variant={item.status === 'DUE' ? 'error' : item.status === 'NEARING' ? 'warning' : 'default'}>
+                        {item.status === 'DUE' ? 'Due' : item.status === 'NEARING' ? 'Nearing' : 'Scheduled'}
                       </GoldenBadge>
                     </div>
                     <span className="text-xs text-gray-600 dark:text-gray-400">{formatMaintDue(item)}</span>
                   </li>
                 ))}
               </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No maintenance or inspections scheduled.</p>
+              )}
             </div>
-          )}
           
           {aircraft.notes && (
             <div>

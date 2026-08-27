@@ -43,8 +43,8 @@ const getStatusBadge = (status) => {
   );
 };
 
-const getDueDateInfo = (dueDate, dueHobbs, currentHobbs = 0) => {
-  if (!dueDate && !dueHobbs) return null;
+const getDueDateInfo = (dueDate, dueTach, currentTach = 0) => {
+  if (!dueDate && dueTach == null) return null;
 
   const now = new Date();
   let isOverdue = false;
@@ -58,18 +58,18 @@ const getDueDateInfo = (dueDate, dueHobbs, currentHobbs = 0) => {
       : `Due ${formatDistanceToNow(due)}`;
   }
 
-  if (dueHobbs) {
-    const hobbsRemaining = dueHobbs - currentHobbs;
-    const hobbsInfo = hobbsRemaining <= 0 
-      ? `${Math.abs(hobbsRemaining).toFixed(1)}h overdue`
-      : `${hobbsRemaining.toFixed(1)}h remaining`;
+  if (dueTach != null) {
+    const tachRemaining = dueTach - currentTach;
+    const tachInfo = tachRemaining <= 0
+      ? `${Math.abs(tachRemaining).toFixed(1)} Tach hrs overdue`
+      : `${tachRemaining.toFixed(1)} Tach hrs remaining`;
     
-    timeInfo = timeInfo ? `${timeInfo}, ${hobbsInfo}` : hobbsInfo;
+    timeInfo = timeInfo ? `${timeInfo}, ${tachInfo}` : tachInfo;
   }
 
   return {
     text: timeInfo,
-    isOverdue: isOverdue || (dueHobbs && dueHobbs <= currentHobbs),
+    isOverdue: isOverdue || (dueTach != null && dueTach <= currentTach),
   };
 };
 
@@ -181,7 +181,7 @@ export function MaintenanceTable({
                     <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </TableHead>
-                <TableHead>Due Hours</TableHead>
+                <TableHead>Due Tach</TableHead>
                 <TableHead>Created By</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -189,7 +189,9 @@ export function MaintenanceTable({
             <TableBody>
               {sortedMaintenance.map((item) => {
                 const aircraftInfo = aircraft.find(ac => ac.id === item.aircraft_id);
-                const dueDateInfo = getDueDateInfo(item.due_date, item.due_hobbs, aircraftInfo?.hobbs_time || 0);
+                const dueTach = item.due_tach ?? item.due_hobbs;
+                const currentTach = item.current_tach ?? aircraftInfo?.tach_time ?? 0;
+                const dueDateInfo = getDueDateInfo(item.due_date, dueTach, currentTach);
                 
                 return (
                   <TableRow 
@@ -240,11 +242,11 @@ export function MaintenanceTable({
                     </TableCell>
                     
                     <TableCell>
-                      {item.due_hobbs ? (
+                      {dueTach != null ? (
                         <div>
-                          <div className="font-medium">{item.due_hobbs}h</div>
+                          <div className="font-medium">{dueTach}h</div>
                           <div className="text-sm text-muted-foreground">
-                            Current: {aircraftInfo?.hobbs_time || 0}h
+                            Current Tach: {currentTach}h
                           </div>
                         </div>
                       ) : (

@@ -44,7 +44,7 @@ const getStatusBadge = (status) => {
   };
 };
 
-const getDueDateInfo = (dueDate, dueHobbs, currentHobbs = 0) => {
+const getDueDateInfo = (dueDate, dueTach, currentTach = 0) => {
   const results = [];
   
   if (dueDate) {
@@ -63,19 +63,19 @@ const getDueDateInfo = (dueDate, dueHobbs, currentHobbs = 0) => {
     });
   }
 
-  if (dueHobbs) {
-    const hobbsRemaining = dueHobbs - currentHobbs;
-    const isOverdue = hobbsRemaining <= 0;
+  if (dueTach != null) {
+    const tachRemaining = dueTach - currentTach;
+    const isOverdue = tachRemaining <= 0;
     
     results.push({
-      type: 'hobbs',
-      value: `${dueHobbs}h`,
+      type: 'tach',
+      value: `${dueTach}h`,
       relative: isOverdue 
-        ? `${Math.abs(hobbsRemaining).toFixed(1)}h overdue`
-        : `${hobbsRemaining.toFixed(1)}h remaining`,
+        ? `${Math.abs(tachRemaining).toFixed(1)} Tach hrs overdue`
+        : `${tachRemaining.toFixed(1)} Tach hrs remaining`,
       isOverdue,
       icon: Clock,
-      current: `${currentHobbs}h`
+      current: `${currentTach}h`
     });
   }
 
@@ -97,8 +97,8 @@ export function MaintenanceDetails({
   const statusInfo = getStatusBadge(maintenance.status);
   const dueDateInfo = getDueDateInfo(
     maintenance.due_date, 
-    maintenance.due_hobbs, 
-    aircraft?.hobbs_time || 0
+    maintenance.due_tach ?? maintenance.due_hobbs,
+    maintenance.current_tach ?? aircraft?.tach_time ?? 0
   );
   
   const isCompleted = maintenance.status === 'COMPLETED';
@@ -138,8 +138,8 @@ export function MaintenanceDetails({
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-muted-foreground">Current Hobbs</div>
-              <div className="font-medium">{aircraft?.hobbs_time || 0}h</div>
+              <div className="text-sm text-muted-foreground">Current Tach</div>
+              <div className="font-medium">{maintenance.current_tach ?? aircraft?.tach_time ?? 0}h</div>
             </div>
           </div>
           
@@ -217,7 +217,7 @@ export function MaintenanceDetails({
                     </div>
                     <div>
                       <div className="font-medium">
-                        {info.type === 'date' ? 'Due Date' : 'Due Hours'}
+                        {info.type === 'date' ? 'Due Date' : 'Due Tach'}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {info.value}

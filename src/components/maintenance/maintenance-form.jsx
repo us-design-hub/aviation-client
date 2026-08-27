@@ -44,7 +44,7 @@ export function MaintenanceForm({
       aircraft_id: maintenance?.aircraft_id || "",
       title: maintenance?.title || "",
       due_date: maintenance?.due_date ? new Date(maintenance.due_date) : undefined,
-      due_hobbs: maintenance?.due_hobbs ? maintenance.due_hobbs.toString() : "",
+      due_hobbs: (maintenance?.due_tach ?? maintenance?.due_hobbs)?.toString() || "",
       status: maintenance?.status || 'POSTED',
     },
   });
@@ -58,7 +58,7 @@ export function MaintenanceForm({
       const submitData = {
         title: data.title,
         dueDate: data.due_date ? data.due_date.toISOString() : null,
-        dueHobbs: data.due_hobbs ? parseFloat(data.due_hobbs) : null,
+        dueTach: data.due_hobbs ? parseFloat(data.due_hobbs) : null,
         status: data.status,
       };
 
@@ -131,7 +131,7 @@ export function MaintenanceForm({
                   </div>
                 </div>
                 <Badge variant="outline">
-                  {selectedAircraft.hobbs_time || 0}h Hobbs
+                  {selectedAircraft.tach_time || 0}h Tach
                 </Badge>
               </div>
             </CardContent>
@@ -205,13 +205,13 @@ export function MaintenanceForm({
           )}
         />
 
-        {/* Due Hobbs Hours */}
+        {/* Due Tach Hours */}
         <FormField
           control={form.control}
           name="due_hobbs"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Due at Hobbs Hours (Optional)</FormLabel>
+              <FormLabel>Due at Tach Hours (Optional)</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input 
@@ -227,8 +227,8 @@ export function MaintenanceForm({
               </FormControl>
               <FormDescription>
                 {selectedAircraft 
-                  ? `When this maintenance is due (flight hours). Current: ${selectedAircraft.hobbs_time || 0}h`
-                  : "When this maintenance is due (flight hours-based)"
+                  ? `When this maintenance is due by Tach. Current: ${selectedAircraft.tach_time || 0}h`
+                  : "When this maintenance is due by Tach hours"
                 }
               </FormDescription>
               <FormMessage />

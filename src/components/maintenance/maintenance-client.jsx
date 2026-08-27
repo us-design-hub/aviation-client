@@ -29,7 +29,7 @@ export function MaintenanceClient() {
   const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completingMaintenance, setCompletingMaintenance] = useState(null);
-  const [nextDueHobbs, setNextDueHobbs] = useState("");
+  const [nextDueTach, setNextDueTach] = useState("");
   const [completing, setCompleting] = useState(false);
   
   // Filters
@@ -121,7 +121,7 @@ export function MaintenanceClient() {
   // Complete maintenance item
   const handleCompleteMaintenance = async (maintenanceItem) => {
     setCompletingMaintenance(maintenanceItem);
-    setNextDueHobbs("");
+    setNextDueTach("");
     setCompletionDialogOpen(true);
   };
 
@@ -131,20 +131,20 @@ export function MaintenanceClient() {
     try {
       setCompleting(true);
       const payload = {};
-      if (nextDueHobbs !== "") {
-        payload.nextDueHobbs = Number(nextDueHobbs);
+      if (nextDueTach !== "") {
+        payload.nextDueTach = Number(nextDueTach);
       }
 
       const response = await maintenanceAPI.complete(completingMaintenance.id, payload);
       const nextItem = response?.data?.data?.nextItem;
       toast.success(
         nextItem
-          ? `Maintenance completed and next due hours saved for ${Number(nextItem.due_hobbs).toFixed(1)}`
+          ? `Maintenance completed and next due Tach saved for ${Number(nextItem.due_tach ?? nextItem.due_hobbs).toFixed(1)}`
           : "Maintenance item completed successfully"
       );
       setCompletionDialogOpen(false);
       setCompletingMaintenance(null);
-      setNextDueHobbs("");
+      setNextDueTach("");
       fetchAllData();
     } catch (error) {
       console.error("Error completing maintenance item:", error);
@@ -479,7 +479,7 @@ export function MaintenanceClient() {
             setCompletionDialogOpen(open);
             if (!open) {
               setCompletingMaintenance(null);
-              setNextDueHobbs("");
+              setNextDueTach("");
             }
           }
         }}
@@ -488,7 +488,7 @@ export function MaintenanceClient() {
           <DialogHeader>
             <DialogTitle>Complete Maintenance</DialogTitle>
             <DialogDescription>
-              Mark this maintenance item as complete and optionally save new due hours for the next cycle.
+              Mark this maintenance item as complete and optionally save the next Tach threshold.
             </DialogDescription>
           </DialogHeader>
 
@@ -503,7 +503,7 @@ export function MaintenanceClient() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="next-due-hours">
-                  New due hours
+                  New due Tach
                 </label>
                 <Input
                   id="next-due-hours"
@@ -511,11 +511,11 @@ export function MaintenanceClient() {
                   step="0.1"
                   min="0"
                   placeholder="Leave blank to just mark complete"
-                  value={nextDueHobbs}
-                  onChange={(e) => setNextDueHobbs(e.target.value)}
+                  value={nextDueTach}
+                  onChange={(e) => setNextDueTach(e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Enter the next tach/hour threshold for this maintenance item. Leave blank if you only want to close the current item.
+                  Enter the next Tach threshold for this maintenance item. Leave blank if you only want to close the current item.
                 </p>
               </div>
             </div>
@@ -528,7 +528,7 @@ export function MaintenanceClient() {
               onClick={() => {
                 setCompletionDialogOpen(false);
                 setCompletingMaintenance(null);
-                setNextDueHobbs("");
+                setNextDueTach("");
               }}
               disabled={completing}
             >
