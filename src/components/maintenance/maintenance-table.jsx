@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { formatDistanceToNow, format, isAfter, isBefore, addDays } from "date-fns";
+import { formatDistanceToNow, isBefore } from "date-fns";
 import { formatET } from "@/lib/format-tz";
 import { MoreHorizontal, Edit, Trash2, CheckCircle, Plane, Clock, AlertTriangle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,79 @@ export function MaintenanceTable({
     }));
   };
 
+  const getItemContext = (item) => {
+    const aircraftInfo = aircraft.find(ac => ac.id === item.aircraft_id);
+    const dueTach = item.due_tach ?? item.due_hobbs;
+    const currentTach = item.current_tach ?? aircraftInfo?.tach_time ?? 0;
+    return {
+      aircraftInfo,
+      dueTach,
+      currentTach,
+      dueDateInfo: getDueDateInfo(item.due_date, dueTach, currentTach),
+    };
+  };
+
+  const renderActions = (item) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span className="sr-only">Actions for {item.title}</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {canEdit && (
+          <>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditMaintenance(item);
+              }}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {canComplete && item.status !== 'COMPLETED' && (
+          <>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                onCompleteMaintenance(item);
+              }}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Mark Complete
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {canEdit && (
+          <DropdownMenuItem
+            onClick={(event) => {
+              event.stopPropagation();
+              onDeleteMaintenance(item);
+            }}
+            className="text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   if (maintenance.length === 0) {
     return (
       <Card>
@@ -134,14 +207,77 @@ export function MaintenanceTable({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle>Maintenance Items ({maintenance.length})</CardTitle>
         <CardDescription>
           Manage aircraft maintenance schedules and track completion status
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
+      <CardContent className="px-4 sm:px-6">
+        <div className="divide-y rounded-md border md:hidden">
+          {sortedMaintenance.map((item) => {
+            const { aircraftInfo, dueTach, currentTach, dueDateInfo } = getItemContext(item);
+
+            return (
+              <div
+                key={item.id}
+                className="relative transition-colors hover:bg-muted/50"
+              >
+                <button
+                  type="button"
+                  className="w-full p-4 pr-14 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  onClick={() => onMaintenanceClick(item)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Plane className="h-4 w-4 shrink-0" />
+                        <span className="font-medium text-foreground">{item.tail_number || 'Unknown'}</span>
+                        {(aircraftInfo?.make || aircraftInfo?.model) && (
+                          <span className="truncate">{aircraftInfo?.make} {aircraftInfo?.model}</span>
+                        )}
+                      </div>
+                      <p className="mt-2 break-words font-semibold leading-snug">{item.title}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">{getStatusBadge(item.status)}</div>
+
+                  <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-3 text-sm min-[360px]:grid-cols-2">
+                    <div className="min-w-0">
+                      <dt className="text-xs font-medium text-muted-foreground">Due date</dt>
+                      <dd className="mt-1 break-words font-medium">
+                        {item.due_date ? formatET(item.due_date, 'MMM d, yyyy') : 'Not set'}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs font-medium text-muted-foreground">Due Tach</dt>
+                      <dd className="mt-1 font-medium">{dueTach != null ? `${dueTach}h` : 'Not set'}</dd>
+                      {dueTach != null && (
+                        <dd className="mt-0.5 text-xs text-muted-foreground">Current: {currentTach}h</dd>
+                      )}
+                    </div>
+                    <div className="min-w-0 min-[360px]:col-span-2">
+                      <dt className="text-xs font-medium text-muted-foreground">Created by</dt>
+                      <dd className="mt-1 break-words">{item.created_by_name || 'Unknown'}</dd>
+                    </div>
+                  </dl>
+
+                  {dueDateInfo?.text && (
+                    <p className={`mt-3 border-t pt-3 text-xs ${dueDateInfo.isOverdue ? 'font-medium text-red-600' : 'text-muted-foreground'}`}>
+                      {dueDateInfo.text}
+                    </p>
+                  )}
+                </button>
+                <div className="absolute right-3 top-3">
+                  {renderActions(item)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hidden rounded-md border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -188,10 +324,7 @@ export function MaintenanceTable({
             </TableHeader>
             <TableBody>
               {sortedMaintenance.map((item) => {
-                const aircraftInfo = aircraft.find(ac => ac.id === item.aircraft_id);
-                const dueTach = item.due_tach ?? item.due_hobbs;
-                const currentTach = item.current_tach ?? aircraftInfo?.tach_time ?? 0;
-                const dueDateInfo = getDueDateInfo(item.due_date, dueTach, currentTach);
+                const { aircraftInfo, dueTach, currentTach, dueDateInfo } = getItemContext(item);
                 
                 return (
                   <TableRow 
@@ -261,62 +394,7 @@ export function MaintenanceTable({
                     </TableCell>
                     
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canEdit && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditMaintenance(item);
-                                }}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-                          
-                          {canComplete && item.status !== 'COMPLETED' && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onCompleteMaintenance(item);
-                                }}
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Mark Complete
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-                          
-                          {canEdit && (
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteMaintenance(item);
-                              }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderActions(item)}
                     </TableCell>
                   </TableRow>
                 );
