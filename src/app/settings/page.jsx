@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Mail,
@@ -17,6 +18,8 @@ import {
   Shield,
   MessageSquare,
   Smartphone,
+  CreditCard,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoldenButton } from "@/components/ui/golden-button";
@@ -258,6 +261,24 @@ function SettingsClient() {
           Configure system settings for Wings CRM
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            QuickBooks Payments
+          </CardTitle>
+          <CardDescription>Connect QuickBooks for portal payment processing and accounting synchronization.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href="/settings/integrations/quickbooks">
+              Manage QuickBooks connection
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Current Status Card */}
       <Card>

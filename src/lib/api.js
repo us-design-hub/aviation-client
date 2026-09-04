@@ -252,6 +252,12 @@ export const settingsAPI = {
   testSms: (to) => api.post('/settings/sms/test', { to }),
 };
 
+export const quickBooksAPI = {
+  getStatus: () => api.get('/integrations/quickbooks/status'),
+  connect: () => api.post('/integrations/quickbooks/connect'),
+  disconnect: () => api.post('/integrations/quickbooks/disconnect'),
+};
+
 // Notifications API (placeholder for future implementation)
 export const notificationsAPI = {
   getAll: () => api.get('/notifications'),
