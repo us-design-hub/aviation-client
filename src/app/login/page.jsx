@@ -52,7 +52,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-zinc-100">Email</Label>
               <Input
@@ -108,6 +108,38 @@ export default function LoginPage() {
               </a>
             </div>
           </form>
+
+          <nav
+            aria-label="Legal policies"
+            className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-zinc-800 pt-5 text-xs text-zinc-400"
+          >
+            <a
+              href="https://wingsofanangelaviation.com/privacy-policy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[#f9d24a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4c21b]"
+            >
+              Privacy Policy
+            </a>
+            <span aria-hidden="true" className="text-zinc-600">|</span>
+            <a
+              href="https://wingsofanangelaviation.com/term-condition/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[#f9d24a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4c21b]"
+            >
+              Terms &amp; Conditions
+            </a>
+            <span aria-hidden="true" className="text-zinc-600">|</span>
+            <a
+              href="https://wingsofanangelaviation.com/refund-policy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[#f9d24a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4c21b]"
+            >
+              Refund Policy
+            </a>
+          </nav>
         </div>
       </div>
     </div>
