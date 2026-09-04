@@ -140,6 +140,9 @@ export default function LoginPage() {
               Refund Policy
             </a>
           </nav>
+          <p className="mt-3 text-center text-xs text-zinc-400">
+            Payment services are provided by Intuit Payments Inc.
+          </p>
         </div>
       </div>
     </div>

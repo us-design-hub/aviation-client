@@ -119,6 +119,7 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <DialogTitle>{receipt ? "Payment Complete" : "Secure Payment"}</DialogTitle>
         <DialogDescription>{description} · {money.format(Number(amountCents) / 100)}</DialogDescription>
       </DialogHeader>
+      {!receipt && <p className="text-xs text-muted-foreground">Payment services are provided by Intuit Payments Inc.</p>}
       {receipt ? <div className="space-y-4 py-4">
         <div className="flex items-center gap-3 text-green-700"><CheckCircle2 className="h-6 w-6" /><span className="font-semibold">Payment captured</span></div>
         <div className="space-y-2 border-y py-4 text-sm">

@@ -268,9 +268,10 @@ function SettingsClient() {
             <CreditCard className="h-5 w-5" />
             QuickBooks Payments
           </CardTitle>
-          <CardDescription>Connect QuickBooks for portal payment processing and accounting synchronization.</CardDescription>
+          <CardDescription>Connect QuickBooks Payments to collect customer payments for flight-hour and training packages.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">Successful payments update customer package balances; voids and refunds reverse those credits.</p>
           <Button variant="outline" asChild>
             <Link href="/settings/integrations/quickbooks">
               Manage QuickBooks connection

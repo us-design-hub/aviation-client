@@ -78,7 +78,7 @@ function QuickBooksIntegrationClient() {
 
       <div>
         <h1 className="text-3xl font-bold">QuickBooks Integration</h1>
-        <p className="mt-1 text-muted-foreground">Manage the school&apos;s QuickBooks Payments connection.</p>
+        <p className="mt-1 text-muted-foreground">Manage the school&apos;s QuickBooks Payments connection and customer payment workflow.</p>
       </div>
 
       <Card>
@@ -88,7 +88,7 @@ function QuickBooksIntegrationClient() {
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />QuickBooks Payments
               </CardTitle>
-              <CardDescription>Secure authorization for payment processing and accounting sync.</CardDescription>
+              <CardDescription>Process customer payments for flight-hour and training packages through Intuit Payments.</CardDescription>
             </div>
             {!loading && status && (
               <Badge variant={status.reconnectRequired ? "destructive" : status.connected ? "default" : "secondary"}>
@@ -210,6 +210,11 @@ function QuickBooksIntegrationClient() {
           ) : null}
         </CardContent>
       </Card>
+
+      <div className="border-t pt-5 text-sm text-muted-foreground">
+        <p>Successful payments update the customer&apos;s purchased flight and instruction balances. Voids and refunds reverse those credits and create a transaction receipt.</p>
+        <p className="mt-2">Payment services are provided by Intuit Payments Inc.</p>
+      </div>
     </div>
   );
 }

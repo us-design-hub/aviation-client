@@ -202,5 +202,5 @@ export function BillingClient() {
   }, [user?.role]);
   useEffect(() => { load(); }, [load]);
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading billing...</div>;
-  return <div className="mx-auto space-y-6 p-6"><div><h1 className="text-3xl font-bold">Billing</h1><p className="mt-1 text-muted-foreground">Flight hours, instructor balances, purchases, and payouts.</p></div>{user?.role === "ADMIN" ? <AdminBilling overview={data} catalog={catalog} refresh={load} /> : user?.role === "INSTRUCTOR" ? <InstructorPayables payables={data} /> : <CustomerBilling catalog={catalog} summary={data} refresh={load} />}</div>;
+  return <div className="mx-auto space-y-6 p-6"><div><h1 className="text-3xl font-bold">Billing</h1><p className="mt-1 text-muted-foreground">Flight hours, instructor balances, purchases, and payouts.</p><p className="mt-2 text-xs text-muted-foreground">Payment services are provided by Intuit Payments Inc.</p></div>{user?.role === "ADMIN" ? <AdminBilling overview={data} catalog={catalog} refresh={load} /> : user?.role === "INSTRUCTOR" ? <InstructorPayables payables={data} /> : <CustomerBilling catalog={catalog} summary={data} refresh={load} />}</div>;
 }
