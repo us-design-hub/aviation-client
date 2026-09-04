@@ -36,6 +36,7 @@ import {
   UserCircle,
   FileText,
   WalletCards,
+  LifeBuoy,
 } from "lucide-react";
 
 const allNavigation = [
@@ -51,6 +52,7 @@ const allNavigation = [
   { name: "Maintenance", href: "/maintenance", icon: Wrench, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT"] },
   { name: "Squawks", href: "/squawks", icon: AlertTriangle, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"] },
   { name: "Availability", href: "/availability", icon: Clock, roles: ["STUDENT", "INSTRUCTOR", "ADMIN"] },
+  { name: "Support", href: "/support", icon: LifeBuoy, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"] },
   { name: "Users", href: "/users", icon: Users, roles: ["ADMIN"] },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["ADMIN"] },
 ];
@@ -166,7 +168,7 @@ export function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, CheckCircle2, CreditCard, Loader2, RefreshCw, Unplug } from "lucide-react";
+import { Activity, AlertCircle, ArrowLeft, CheckCircle2, CreditCard, Loader2, RefreshCw, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -16,12 +16,18 @@ function QuickBooksIntegrationClient() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [logs, setLogs] = useState([]);
 
   const loadStatus = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await quickBooksAPI.getStatus();
-      setStatus(response.data);
+      const [statusResponse, logsResponse] = await Promise.all([
+        quickBooksAPI.getStatus(),
+        quickBooksAPI.getLogs(),
+      ]);
+      setStatus(statusResponse.data);
+      setLogs(logsResponse.data);
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not load QuickBooks status");
     } finally {
@@ -46,6 +52,21 @@ function QuickBooksIntegrationClient() {
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not start QuickBooks connection");
       setConnecting(false);
+    }
+  };
+
+  const runDiagnostics = async () => {
+    try {
+      setChecking(true);
+      const response = await quickBooksAPI.runDiagnostics();
+      const company = response.data.companyName ? ` for ${response.data.companyName}` : "";
+      toast.success(`QuickBooks connection verified${company}`);
+      await loadStatus();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "QuickBooks diagnostics failed");
+      await loadStatus();
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -127,12 +148,62 @@ function QuickBooksIntegrationClient() {
                   {connecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                   {status.connected || status.reconnectRequired ? "Reconnect QuickBooks" : "Connect QuickBooks"}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={runDiagnostics}
+                  disabled={!status.connected || checking}
+                >
+                  {checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
+                  Test connection
+                </Button>
                 {status.connected && (
                   <Button variant="outline" asChild>
                     <Link href="/settings/integrations/quickbooks/disconnect">
                       <Unplug className="mr-2 h-4 w-4" />Disconnect
                     </Link>
                   </Button>
+                )}
+              </div>
+
+              <div className="border-t pt-5">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  <h2 className="font-semibold">Recent Intuit diagnostics</h2>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Sanitized request results and Intuit troubleshooting IDs from the last 90 days.
+                </p>
+                {logs.length ? (
+                  <div className="mt-4 overflow-x-auto rounded-md border">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Time</th>
+                          <th className="px-3 py-2 font-medium">Operation</th>
+                          <th className="px-3 py-2 font-medium">Status</th>
+                          <th className="px-3 py-2 font-medium">Intuit TID</th>
+                          <th className="px-3 py-2 font-medium">Result</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {logs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                              {new Date(`${log.created_at.replace(" ", "T")}Z`).toLocaleString()}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 font-medium">{log.operation}</td>
+                            <td className="px-3 py-2">{log.status_code || "Network"}</td>
+                            <td className="max-w-48 break-all px-3 py-2 font-mono text-xs">{log.intuit_tid || "-"}</td>
+                            <td className="max-w-72 px-3 py-2 text-muted-foreground">
+                              {log.error_message || "Successful"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground">No Intuit requests have been recorded yet.</p>
                 )}
               </div>
             </>

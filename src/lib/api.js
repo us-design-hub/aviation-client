@@ -254,6 +254,8 @@ export const settingsAPI = {
 
 export const quickBooksAPI = {
   getStatus: () => api.get('/integrations/quickbooks/status'),
+  getLogs: (limit = 25) => api.get('/integrations/quickbooks/logs', { params: { limit } }),
+  runDiagnostics: () => api.post('/integrations/quickbooks/diagnostics'),
   connect: () => api.post('/integrations/quickbooks/connect'),
   disconnect: () => api.post('/integrations/quickbooks/disconnect'),
 };

@@ -1,6 +1,7 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import Link from "next/link";
+import { Heart, LifeBuoy } from "lucide-react";
 
 export function Footer() {
   return (
@@ -24,13 +25,15 @@ export function Footer() {
             </span>
           </div>
           
-          {/* Version */}
-          <div className="text-xs text-muted-foreground">
-            Version 1.0.0
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link href="/support" className="inline-flex items-center gap-1 hover:text-foreground hover:underline">
+              <LifeBuoy className="h-3.5 w-3.5" />
+              Support
+            </Link>
+            <span>Version 1.0.0</span>
           </div>
         </div>
       </div>
     </footer>
   );
 }
-
