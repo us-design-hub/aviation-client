@@ -379,3 +379,29 @@
     color: oklch(0.985 0 0) !important;
   }
 }
+/* Keep every sidebar destination reachable on shorter laptop viewports. */
+.sidebar-navigation-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #a3a3a3 transparent;
+}
+
+.sidebar-navigation-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-navigation-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-navigation-scroll::-webkit-scrollbar-thumb {
+  background: #a3a3a3;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background-clip: padding-box;
+}
+
+.sidebar-navigation-scroll::-webkit-scrollbar-thumb:hover {
+  background: #737373;
+  background-clip: padding-box;
+}
