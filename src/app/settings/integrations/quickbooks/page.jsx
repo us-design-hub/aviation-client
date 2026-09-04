@@ -70,8 +70,8 @@ function QuickBooksIntegrationClient() {
               <CardDescription>Secure authorization for payment processing and accounting sync.</CardDescription>
             </div>
             {!loading && status && (
-              <Badge variant={status.connected ? "default" : "secondary"}>
-                {status.connected ? "Connected" : "Not connected"}
+              <Badge variant={status.reconnectRequired ? "destructive" : status.connected ? "default" : "secondary"}>
+                {status.reconnectRequired ? "Reconnect required" : status.connected ? "Connected" : "Not connected"}
               </Badge>
             )}
           </div>
@@ -83,12 +83,21 @@ function QuickBooksIntegrationClient() {
             </div>
           ) : status ? (
             <>
-              <div className={`flex gap-3 rounded-md border p-4 ${status.connected ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30" : ""}`}>
+              <div className={`flex gap-3 rounded-md border p-4 ${status.reconnectRequired ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30" : status.connected ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30" : ""}`}>
                 {status.connected
                   ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-                  : <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />}
+                  : <AlertCircle className={`mt-0.5 h-5 w-5 shrink-0 ${status.reconnectRequired ? "text-red-600" : "text-amber-600"}`} />}
                 <div className="min-w-0">
-                  <p className="font-medium">{status.connected ? "QuickBooks is connected" : "QuickBooks is not connected"}</p>
+                  <p className="font-medium">
+                    {status.reconnectRequired
+                      ? "QuickBooks must be reconnected"
+                      : status.connected ? "QuickBooks is connected" : "QuickBooks is not connected"}
+                  </p>
+                  {status.reconnectRequired && (
+                    <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                      {status.connectionError || "Authorization is no longer valid. Reconnect QuickBooks to continue."}
+                    </p>
+                  )}
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     Environment: {status.environment}
                     {status.realmId ? ` | Company ID: ${status.realmId}` : ""}
@@ -116,7 +125,7 @@ function QuickBooksIntegrationClient() {
               <div className="flex flex-wrap gap-3">
                 <Button onClick={connect} disabled={!status.configured || connecting}>
                   {connecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  {status.connected ? "Reconnect QuickBooks" : "Connect QuickBooks"}
+                  {status.connected || status.reconnectRequired ? "Reconnect QuickBooks" : "Connect QuickBooks"}
                 </Button>
                 {status.connected && (
                   <Button variant="outline" asChild>
