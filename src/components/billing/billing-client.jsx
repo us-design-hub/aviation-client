@@ -58,7 +58,6 @@ function CustomerBilling({ catalog, summary, refresh }) {
       setSubmitting(packageId);
       const response = await billingAPI.createPurchase({ packageId, customHours: hours, checkout: true });
       setCheckoutPurchase(response.data);
-      await refresh();
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not start checkout");
     } finally {
@@ -97,7 +96,7 @@ function CustomerBilling({ catalog, summary, refresh }) {
       {user?.role === "STUDENT" && <section><h2 className="text-lg font-semibold">Instruction Credit Ledger</h2>{(credits.entries || []).length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No instruction-credit transactions yet.</p> : credits.entries.map((entry) => <div key={entry.id} className="flex justify-between border-b py-3"><div><p className="font-medium">{entry.instruction_type} · {entry.transaction_type.replaceAll("_", " ")}</p><p className="text-sm text-muted-foreground">{entry.note || "Instruction credit"} · {formatDate(entry.created_at)}</p></div><p className="font-medium">{Number(entry.delta_hours) > 0 ? "+" : ""}{Number(entry.delta_hours).toFixed(1)} hrs</p></div>)}</section>}
       {user?.role === "STUDENT" && <section><h2 className="text-lg font-semibold">Instructor Invoice Ledger</h2>{(debt.entries || []).length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No instructor invoices or payments yet.</p> : debt.entries.map((entry) => <div key={entry.id} className="flex justify-between border-b py-3"><div><p className="font-medium">{entry.entry_type}{entry.instruction_type ? ` · ${entry.instruction_type}` : ""}</p><p className="text-sm text-muted-foreground">{entry.note || "Instructor account"} · {formatDate(entry.created_at)}</p></div><div className="text-right"><p className="font-medium">{formatMoney(entry.amount_cents)}</p><p className="text-xs text-muted-foreground">{Number(entry.delta_hours) > 0 ? "+" : ""}{Number(entry.delta_hours).toFixed(1)} hrs</p></div></div>)}</section>}
     </TabsContent>
-    <PaymentDialog open={Boolean(checkoutPurchase)} onOpenChange={(value) => !value && setCheckoutPurchase(null)} purchase={checkoutPurchase} catalog={catalog} onSuccess={refresh} />
+    <PaymentDialog open={Boolean(checkoutPurchase)} onOpenChange={(value) => { if (!value) { setCheckoutPurchase(null); refresh(); } }} purchase={checkoutPurchase} catalog={catalog} onSuccess={refresh} />
     <Dialog open={receipts.length > 0} onOpenChange={(value) => !value && setReceipts([])}><DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Payment Receipts</DialogTitle><DialogDescription>Charge, void, and refund transaction records</DialogDescription></DialogHeader><div className="divide-y border-y">{receipts.map((receipt) => <section key={receipt.transactionId} className="space-y-3 py-5 text-sm"><div><h3 className="font-semibold">{receipt.receiptLabel || "Payment Receipt"}</h3><p className="text-xs text-muted-foreground">{receipt.receiptNumber}</p></div><div className="flex justify-between gap-4"><span>Description</span><strong className="text-right">{receipt.description}</strong></div><div className="flex justify-between gap-4"><span>Payment method</span><span className="text-right">{receipt.paymentMethod || "Not available"}</span></div><div className="flex justify-between"><span>Payment amount</span><span>{formatMoney(receipt.paymentAmountCents)}</span></div><div className="flex justify-between"><span>Fees</span><span>{formatMoney(receipt.feesCents)}</span></div><div className="flex justify-between font-semibold"><span>Total amount</span><span>{formatMoney(receipt.totalAmountCents)}</span></div><div className="flex justify-between gap-4"><span>Date</span><span className="text-right">{formatDate(receipt.transactionDate)}</span></div><div className="flex justify-between gap-4"><span>Transaction ID</span><span className="break-all text-right font-mono text-xs">{receipt.transactionId}</span></div><p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">{receipt.processorDisclosure}</p></section>)}</div></DialogContent></Dialog>
   </Tabs>;
 }
@@ -180,18 +179,19 @@ export function BillingClient() {
   const [catalog, setCatalog] = useState({});
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => {
+  const load = useCallback(async (showLoading = true) => {
     if (!user?.role) return;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const dataPromise = user.role === "ADMIN" ? billingAPI.getAdminOverview() : user.role === "INSTRUCTOR" ? billingAPI.getPayables() : billingAPI.getSummary();
       const [catalogResponse, dataResponse] = await Promise.all([billingAPI.getCatalog(), dataPromise]);
       setCatalog(catalogResponse.data);
       setData(dataResponse.data);
     } catch (error) { toast.error(error.response?.data?.message || "Could not load billing data"); }
-    finally { setLoading(false); }
+    finally { if (showLoading) setLoading(false); }
   }, [user?.role]);
-  useEffect(() => { load(); }, [load]);
+  const refresh = useCallback(() => load(false), [load]);
+  useEffect(() => { load(true); }, [load]);
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading billing...</div>;
-  return <div className="mx-auto space-y-6 p-6"><div><h1 className="text-3xl font-bold">Billing</h1><p className="mt-1 text-muted-foreground">Flight hours, instructor balances, purchases, and payouts.</p><p className="mt-2 text-xs text-muted-foreground">Payment services are provided by Intuit Payments Inc.</p></div>{user?.role === "ADMIN" ? <AdminBilling overview={data} catalog={catalog} refresh={load} /> : user?.role === "INSTRUCTOR" ? <InstructorPayables payables={data} /> : <CustomerBilling catalog={catalog} summary={data} refresh={load} />}</div>;
+  return <div className="mx-auto space-y-6 p-6"><div><h1 className="text-3xl font-bold">Billing</h1><p className="mt-1 text-muted-foreground">Flight hours, instructor balances, purchases, and payouts.</p><p className="mt-2 text-xs text-muted-foreground">Payment services are provided by Intuit Payments Inc.</p></div>{user?.role === "ADMIN" ? <AdminBilling overview={data} catalog={catalog} refresh={refresh} /> : user?.role === "INSTRUCTOR" ? <InstructorPayables payables={data} /> : <CustomerBilling catalog={catalog} summary={data} refresh={refresh} />}</div>;
 }
