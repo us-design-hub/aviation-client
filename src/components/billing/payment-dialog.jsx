@@ -86,7 +86,7 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     try {
       let target = purchase;
       if (!target) {
-        const created = await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours });
+        const created = await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours, checkout: true });
         target = created.data;
       }
       const response = await billingAPI.payPurchase(target.id, {
