@@ -126,7 +126,7 @@ function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPend
               progress={100 - ratio(credits.ground?.consumedHours, credits.ground?.purchasedHours)}
             />
             <StatCard
-              label="Instructor Balance Due"
+              label="Instruction Balance Due"
               value={formatMoney(debt.outstandingAmountCents)}
               icon={DollarSign}
               tone={debtTone}
@@ -397,7 +397,7 @@ function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, o
             note={paymentOutcome(item) === "PAYMENT_FAILED" ? item.latest_payment_error : null}
             actions={(
               <>
-                {item.gateway === "QUICKBOOKS_PAYMENTS" && item.status !== "PENDING" && (
+                {item.gateway === "QUICKBOOKS_PAYMENTS" && ["PAID", "REFUNDED", "VOIDED"].includes(paymentOutcome(item)) && (
                   <Button size="sm" variant="outline" onClick={() => onReceipts(item.id)}>
                     <ReceiptText className="size-4" />
                     Receipts
@@ -568,7 +568,10 @@ function CustomerBilling({ catalog, summary, refresh }) {
 
   const viewReceipts = async (id) => {
     try {
-      setReceipts((await billingAPI.getReceipts(id)).data);
+      const response = await billingAPI.getReceipts(id);
+      const availableReceipts = response.data || [];
+      setReceipts(availableReceipts);
+      if (availableReceipts.length === 0) toast.info("No receipts are available for this purchase.");
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not load receipts");
     }
