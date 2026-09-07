@@ -47,6 +47,7 @@ function loadRecaptcha() {
 export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog, onSuccess }) {
   const captchaRef = useRef(null);
   const widgetRef = useRef(null);
+  const pendingPurchaseRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -69,12 +70,16 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   }, [open, catalog?.recaptchaSiteKey]);
 
   useEffect(() => {
-    if (open) return;
+    if (open) {
+      pendingPurchaseRef.current = purchase || null;
+      return;
+    }
+    pendingPurchaseRef.current = null;
     setError("");
     setReceipt(null);
     setCaptchaToken("");
     if (window.grecaptcha && widgetRef.current !== null) window.grecaptcha.reset(widgetRef.current);
-  }, [open]);
+  }, [open, purchase]);
 
   const setField = (field, value) => setCard((current) => ({ ...current, [field]: value }));
   const amountCents = purchase?.amount_cents ?? selection?.amountCents ?? 0;
@@ -84,10 +89,11 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     setSubmitting(true);
     setError("");
     try {
-      let target = purchase;
+      let target = purchase || pendingPurchaseRef.current;
       if (!target) {
         const created = await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours, checkout: true });
         target = created.data;
+        pendingPurchaseRef.current = target;
       }
       const response = await billingAPI.payPurchase(target.id, {
         recaptchaToken: captchaToken,

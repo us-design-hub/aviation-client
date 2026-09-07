@@ -220,6 +220,7 @@ export const billingAPI = {
   updateConfig: (data) => api.post('/billing/config', data),
   getSummary: (userId) => api.get(userId ? `/billing/summary/${userId}` : '/billing/summary'),
   getPurchases: (params = {}) => api.get('/billing/purchases', { params }),
+  quotePurchase: (data) => api.post('/billing/purchases/quote', data),
   createPurchase: (data) => api.post('/billing/purchases', data),
   payPurchase: (id, data) => api.post(`/billing/purchases/${id}/pay`, data),
   getReceipt: (id) => api.get(`/billing/purchases/${id}/receipt`),
