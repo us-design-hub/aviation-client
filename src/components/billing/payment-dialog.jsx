@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { CheckCircle2, CreditCard } from "lucide-react";
 import { billingAPI } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -140,6 +141,11 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <p className="text-xs text-muted-foreground">{receipt.processorDisclosure}</p>
         <p className="text-sm text-muted-foreground">This receipt remains available from Billing under Transactions.</p>
       </div> : <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Accepted payment cards">
+          <Image src="/payments/visa.svg" alt="Visa" width={48} height={32} className="h-8 w-12 object-contain" />
+          <Image src="/payments/mastercard.svg" alt="Mastercard" width={48} height={32} className="h-8 w-12 object-contain" />
+          <Image src="/payments/american-express.svg" alt="American Express" width={48} height={32} className="h-8 w-12 object-contain" />
+        </div>
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
         <div className="space-y-2"><Label htmlFor="card-name">Name on card</Label><Input id="card-name" autoComplete="cc-name" value={card.name} onChange={(event) => setField("name", event.target.value)} /></div>
         <div className="space-y-2"><Label htmlFor="card-number">Card number</Label><Input id="card-number" inputMode="numeric" autoComplete="cc-number" maxLength={23} value={card.number} onChange={(event) => setField("number", event.target.value)} /></div>
