@@ -49,6 +49,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const captchaRef = useRef(null);
   const widgetRef = useRef(null);
   const pendingPurchaseRef = useRef(null);
+  const busyRef = useRef(false);
+  const [canceling, setCanceling] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -87,6 +89,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const description = purchase?.package_name ?? selection?.name ?? "Package purchase";
 
   const submit = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setSubmitting(true);
     setError("");
     try {
@@ -116,11 +120,31 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
       setCaptchaToken("");
       if (window.grecaptcha && widgetRef.current !== null) window.grecaptcha.reset(widgetRef.current);
     } finally {
+      busyRef.current = false;
       setSubmitting(false);
     }
   };
 
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  const cancelCheckout = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setCanceling(true);
+    setError("");
+    try {
+      const target = purchase || pendingPurchaseRef.current;
+      if (target) await billingAPI.cancelPurchase(target.id);
+      pendingPurchaseRef.current = null;
+      setCard({ name: "", number: "", expMonth: "", expYear: "", cvc: "", streetAddress: "", city: "", region: "", postalCode: "" });
+      onOpenChange(false);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Could not cancel purchase. Please try again.");
+    } finally {
+      busyRef.current = false;
+      setCanceling(false);
+    }
+  };
+
+  return <Dialog open={open} onOpenChange={(value) => { if (!busyRef.current) onOpenChange(value); }}>
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
       <DialogHeader>
         <DialogTitle>{receipt ? "Payment Complete" : "Secure Payment"}</DialogTitle>
@@ -164,7 +188,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <p className="text-xs text-muted-foreground">Card details are sent for this transaction only and are not saved by Wings CRM.</p>
       </div>}
       <DialogFooter>
-        {receipt ? <Button onClick={() => onOpenChange(false)}>Done</Button> : <Button onClick={submit} disabled={submitting || !captchaToken}><CreditCard className="h-4 w-4" />{submitting ? "Processing..." : `Pay ${money.format(Number(amountCents) / 100)}`}</Button>}
+        {!receipt && <Button variant="outline" onClick={cancelCheckout} disabled={submitting || canceling}>{canceling ? "Canceling..." : "Cancel purchase"}</Button>}
+        {receipt ? <Button onClick={() => onOpenChange(false)}>Done</Button> : <Button onClick={submit} disabled={submitting || canceling || !captchaToken}><CreditCard className="h-4 w-4" />{submitting ? "Processing..." : `Pay ${money.format(Number(amountCents) / 100)}`}</Button>}
       </DialogFooter>
     </DialogContent>
   </Dialog>;

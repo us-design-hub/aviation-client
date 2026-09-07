@@ -900,6 +900,7 @@ function AdminBilling({ overview, catalog, refresh }) {
   );
   const onlinePurchases = useMemo(() => (overview?.purchases || []).filter((item) => (
     item.gateway === "QUICKBOOKS_PAYMENTS"
+    && paymentOutcome(item) !== "CANCELED"
     && !(item.status === "PENDING" && !item.latest_payment_status)
   )), [overview]);
   const debtStudents = useMemo(
@@ -1113,7 +1114,7 @@ function AdminBilling({ overview, catalog, refresh }) {
             icon={CreditCard}
           >
             {onlinePurchases.length === 0 ? (
-              <EmptyRow icon={CreditCard} title="No online payments yet" description="Completed, canceled, and failed gateway charges appear here." />
+              <EmptyRow icon={CreditCard} title="No online payments yet" description="Paid, refunded, voided, and failed payments appear here." />
             ) : onlinePurchases.map((item) => (
               <ListRow
                 key={item.id}
