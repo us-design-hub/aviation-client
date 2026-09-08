@@ -205,11 +205,11 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <div className="icon-container shrink-0">{activityIcon(log.action)}</div>
         <div className="min-w-0">
           <p className="text-sm font-medium">{activityLabel(log.action)}</p>
-          <p className="text-xs text-gray-500">Hobbs: {log.hobbs} · Tach: {log.tach}</p>
+          <p className="text-xs text-muted-foreground">Hobbs: {log.hobbs} · Tach: {log.tach}</p>
           {log.reason && <p className="mt-1 break-words text-xs text-muted-foreground">{log.reason}</p>}
         </div>
       </div>
-      <p className="max-w-28 shrink-0 text-right text-xs text-gray-600 sm:max-w-none sm:text-sm">{formatDateTime(log.ts)}</p>
+      <p className="max-w-28 shrink-0 text-right text-xs text-muted-foreground sm:max-w-none sm:text-sm">{formatDateTime(log.ts)}</p>
     </div>
   );
 
@@ -324,7 +324,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   if (!aircraft) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">No aircraft selected</p>
+        <p className="text-muted-foreground">No aircraft selected</p>
       </div>
     );
   }
@@ -378,7 +378,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
             <h2 className="text-2xl font-bold text-golden">
               {aircraft.tail_number}
             </h2>
-            <p className="text-sm text-gray-500">Aircraft Details</p>
+            <p className="text-sm text-muted-foreground">Aircraft Details</p>
           </div>
         </div>
         
@@ -475,7 +475,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-500">Maintenance Indicator</label>
+              <label className="text-sm font-medium text-muted-foreground">Maintenance Indicator</label>
               <div className="mt-1">
                 <GoldenBadge variant={
                   aircraft.indicator === 'RED' ? "error" : 
@@ -488,7 +488,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Open Squawks</label>
+              <label className="text-sm font-medium text-muted-foreground">Open Squawks</label>
               <div className="mt-1">
                 <GoldenBadge variant={aircraft.open_squawks > 0 ? "error" : "success"}>
                   {aircraft.open_squawks || 0} open
@@ -509,12 +509,12 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
                     className="flex flex-col gap-1 rounded-md border bg-background p-3 text-sm"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.title}</span>
+                      <span className="font-medium text-foreground">{item.title}</span>
                       <GoldenBadge variant={item.status === 'DUE' ? 'error' : item.status === 'NEARING' ? 'warning' : 'default'}>
                         {item.status === 'DUE' ? 'Due' : item.status === 'NEARING' ? 'Nearing' : 'Scheduled'}
                       </GoldenBadge>
                     </div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">{formatMaintDue(item)}</span>
+                    <span className="text-xs text-muted-foreground">{formatMaintDue(item)}</span>
                   </li>
                 ))}
               </ul>
@@ -525,7 +525,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
           
           {aircraft.notes && (
             <div>
-              <label className="text-sm font-medium text-gray-500">Notes</label>
+              <label className="text-sm font-medium text-muted-foreground">Notes</label>
               <p className="mt-1 text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                 {aircraft.notes}
               </p>
@@ -601,20 +601,20 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
           {weightBalance ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Basic Empty Weight</label>
+                <label className="text-sm font-medium text-muted-foreground">Basic Empty Weight</label>
                 <p className="text-lg font-mono">{weightBalance.basic_empty_weight} lbs</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Moment</label>
+                <label className="text-sm font-medium text-muted-foreground">Moment</label>
                 <p className="text-lg font-mono">{weightBalance.moment} lb-in</p>
               </div>
               <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-500">As-of Timestamp</label>
-                <p className="text-sm text-gray-600">{formatDateTime(weightBalance.as_of_ts)}</p>
+                <label className="text-sm font-medium text-muted-foreground">As-of Timestamp</label>
+                <p className="text-sm text-muted-foreground">{formatDateTime(weightBalance.as_of_ts)}</p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-4 text-muted-foreground">
               <Scale className="icon-xl mx-auto mb-2 icon-black" />
               <p>No weight & balance data available</p>
             </div>
@@ -769,7 +769,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
 
             {latestLog && (
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                <label className="text-sm font-medium text-gray-500">Latest Reading</label>
+                <label className="text-sm font-medium text-muted-foreground">Latest Reading</label>
                 <div className="mt-1 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Action:</span> {latestLog.action}
@@ -781,7 +781,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
                     <span className="font-medium">Tach:</span> {latestLog.tach}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {formatDateTime(latestLog.ts)}
                 </p>
               </div>
@@ -847,7 +847,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
               {openSquawks.map((squawk) => (
                 <div key={squawk.id} className="flex items-start justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <div className="flex items-start space-x-3">
-                    <AlertTriangle className="icon-lg text-red-500 mt-0.5" />
+                    <AlertTriangle className="icon-lg text-red-600 dark:text-red-400 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-red-800 dark:text-red-200">
                         {squawk.description}
@@ -882,8 +882,8 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              <CheckCircle className="icon-xl mx-auto mb-2 text-green-500" />
+            <div className="text-center py-4 text-muted-foreground">
+              <CheckCircle className="icon-xl mx-auto mb-2 text-emerald-600 dark:text-emerald-400" />
               <p>No open squawks - Aircraft is clear</p>
             </div>
           )}
