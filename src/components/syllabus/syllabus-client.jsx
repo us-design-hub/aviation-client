@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   BookOpen, Plus, Trash2, Edit, ChevronDown, ChevronRight,
-  GraduationCap, Plane, FileText, ArrowUp, ArrowDown, Layers
+  GraduationCap, Plane, FileText, ArrowUp, ArrowDown, Layers, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -102,6 +102,20 @@ export function SyllabusClient() {
       if (selectedProgram) loadProgramDetail(selectedProgram);
     } catch {
       toast.error('Failed to save program');
+    }
+  };
+
+  /**
+   * Exactly one program is active at a time; the rest of the app reads it via
+   * GET /syllabus/active. The flag was previously unreachable from the UI.
+   */
+  const handleActivate = async (id) => {
+    try {
+      await syllabusAPI.activate(id);
+      toast.success('Program set as active');
+      loadPrograms();
+    } catch {
+      toast.error('Failed to activate program');
     }
   };
 
@@ -222,24 +236,33 @@ export function SyllabusClient() {
     );
   }
 
+  const activeProgram = programs.find((p) => p.active);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Syllabus Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Syllabus Management</h1>
+          <p className="mt-1 text-muted-foreground">
             {canManage
-              ? "Manage training programs, phases, and lessons"
-              : "Training programs and lesson lists (view only — only administrators can edit)"}
+              ? "Training programs, phases, and the lessons inside them."
+              : "Training programs and lesson lists. Only administrators can edit these."}
           </p>
         </div>
-        {canManage && (
-          <Button onClick={() => setProgramDialog({ open: true, editing: null })}>
-            <Plus className="mr-2 h-4 w-4" /> New Program
-          </Button>
-        )}
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {activeProgram && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5" />
+              Active: {activeProgram.name}
+            </span>
+          )}
+          {canManage && (
+            <Button onClick={() => setProgramDialog({ open: true, editing: null })}>
+              <Plus className="mr-2 h-4 w-4" /> New Program
+            </Button>
+          )}
+        </div>
+      </header>
 
       {/* Program list */}
       {programs.length === 0 ? (
@@ -260,23 +283,46 @@ export function SyllabusClient() {
               <Card
                 key={p.id}
                 className={cn(
-                  "cursor-pointer transition-all hover:shadow-md",
-                  isSelected && "ring-2 ring-blue-500"
+                  "cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md",
+                  isSelected && "border-golden ring-1 ring-golden/40",
                 )}
                 onClick={() => setSelectedProgram(isSelected ? null : p.id)}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-lg">{p.name}</CardTitle>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-golden/12">
+                        <GraduationCap className="size-4.5 text-golden" />
+                      </span>
+                      <div className="min-w-0">
+                        <CardTitle className="truncate text-lg">{p.name}</CardTitle>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Version {p.version}</p>
+                      </div>
                     </div>
-                    <Badge variant="outline">{p.version}</Badge>
+                    {p.active ? (
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <CheckCircle2 className="size-3.5" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        Inactive
+                      </span>
+                    )}
                   </div>
                 </CardHeader>
                 {canManage && (
                   <CardContent className="pt-0">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {!p.active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => { e.stopPropagation(); handleActivate(p.id); }}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Set active
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -406,8 +452,8 @@ export function SyllabusClient() {
                                   <div key={lesson.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
                                     <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                                       {lesson.kind === 'FLIGHT'
-                                        ? <Plane className="h-4 w-4 text-purple-600" />
-                                        : <FileText className="h-4 w-4 text-orange-600" />
+                                        ? <Plane className="h-4 w-4 text-golden" />
+                                        : <FileText className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                                       }
                                     </div>
                                     <div className="flex-1 min-w-0">
