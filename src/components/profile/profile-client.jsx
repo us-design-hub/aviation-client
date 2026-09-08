@@ -84,7 +84,7 @@ function ProfileHero({ user, profile }) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div
-              className="-mt-10 flex size-20 shrink-0 items-center justify-center rounded-2xl border-4 border-card bg-card text-2xl font-bold shadow-sm sm:-mt-12 sm:size-24 sm:text-3xl"
+              className="relative z-10 -mt-10 flex size-20 shrink-0 items-center justify-center rounded-2xl border-4 border-card bg-card text-2xl font-bold shadow-sm sm:-mt-12 sm:size-24 sm:text-3xl"
               aria-hidden="true"
             >
               <span className="text-golden">{initialsOf(profile.name || user?.name)}</span>

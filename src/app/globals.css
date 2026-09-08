@@ -192,7 +192,9 @@
   
   /* Specific button variant hover fixes */
   .bg-primary:hover,
-  .bg-golden-gradient:hover {
+  button.bg-golden-gradient:hover,
+  a.bg-golden-gradient:hover,
+  [role="button"].bg-golden-gradient:hover {
     color: var(--primary-foreground) !important;
   }
   
@@ -271,12 +273,21 @@
     opacity: 0.9;
   }
   
-  /* Golden button specific fixes */
-  .bg-golden-gradient {
+  /* Golden button specific fixes.
+     Scoped to interactive elements on purpose: .bg-golden-gradient is also used for
+     decorative bands and badges (profile header, "best rate" ribbon). Applying
+     opacity to those on hover would give them their own stacking context, painting
+     them over content that deliberately overlaps them, and the forced color would
+     flip decorative text to black in dark mode. */
+  button.bg-golden-gradient,
+  a.bg-golden-gradient,
+  [role="button"].bg-golden-gradient {
     color: var(--primary-foreground) !important;
   }
-  
-  .bg-golden-gradient:hover {
+
+  button.bg-golden-gradient:hover,
+  a.bg-golden-gradient:hover,
+  [role="button"].bg-golden-gradient:hover {
     color: var(--primary-foreground) !important;
     opacity: 0.9;
   }
