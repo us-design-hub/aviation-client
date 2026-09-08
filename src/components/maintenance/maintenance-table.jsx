@@ -5,7 +5,6 @@ import { formatDistanceToNow, isBefore } from "date-fns";
 import { formatET } from "@/lib/format-tz";
 import { MoreHorizontal, Edit, Trash2, CheckCircle, Plane, Clock, AlertTriangle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -23,23 +22,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
+import { Pill } from "@/components/ui/panels";
+
+/**
+ * Status tones. Previously NEARING used the neutral grey `secondary` variant (losing the
+ * warning) and COMPLETED used `default`, i.e. brand gold — the loudest colour on the page
+ * for the state that needs the least attention.
+ */
+const STATUS_CONFIG = {
+  DUE: { tone: 'danger', icon: AlertTriangle, text: 'Due Now' },
+  NEARING: { tone: 'warning', icon: Clock, text: 'Nearing' },
+  POSTED: { tone: 'info', icon: Calendar, text: 'Posted' },
+  COMPLETED: { tone: 'success', icon: CheckCircle, text: 'Completed' },
+};
 
 const getStatusBadge = (status) => {
-  const variants = {
-    'DUE': { variant: 'destructive', icon: AlertTriangle, text: 'Due Now' },
-    'NEARING': { variant: 'secondary', icon: Clock, text: 'Nearing' },
-    'POSTED': { variant: 'outline', icon: Calendar, text: 'Posted' },
-    'COMPLETED': { variant: 'default', icon: CheckCircle, text: 'Completed' },
-  };
-
-  const config = variants[status] || variants['POSTED'];
-  const Icon = config.icon;
-
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.POSTED;
   return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
-      <Icon className="h-3 w-3" />
+    <Pill tone={config.tone} icon={config.icon}>
       {config.text}
-    </Badge>
+    </Pill>
   );
 };
 
@@ -264,7 +266,7 @@ export function MaintenanceTable({
                   </dl>
 
                   {dueDateInfo?.text && (
-                    <p className={`mt-3 border-t pt-3 text-xs ${dueDateInfo.isOverdue ? 'font-medium text-red-600' : 'text-muted-foreground'}`}>
+                    <p className={`mt-3 border-t pt-3 text-xs ${dueDateInfo.isOverdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                       {dueDateInfo.text}
                     </p>
                   )}
@@ -364,7 +366,7 @@ export function MaintenanceTable({
                             {formatET(item.due_date, 'MMM d, yyyy')}
                           </div>
                           {dueDateInfo && (
-                            <div className={`text-sm ${dueDateInfo.isOverdue ? 'text-red-600' : 'text-muted-foreground'}`}>
+                            <div className={`text-sm ${dueDateInfo.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                               {dueDateInfo.text}
                             </div>
                           )}

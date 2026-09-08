@@ -14,6 +14,8 @@ import { MaintenanceTable } from "./maintenance-table";
 import { MaintenanceForm } from "./maintenance-form";
 import { MaintenanceDetails } from "./maintenance-details";
 import { usePermission } from "@/components/rbac/role-gate";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/panels";
 
 export function MaintenanceClient() {
   // State
@@ -228,46 +230,63 @@ export function MaintenanceClient() {
     completed: maintenance.filter(item => item.status === 'COMPLETED').length,
   };
 
+  const activeFilterCount = [
+    filters.search,
+    filters.status !== 'all' ? filters.status : '',
+    filters.aircraft !== 'all' ? filters.aircraft : '',
+    filters.dateRange !== 'all' ? filters.dateRange : '',
+  ].filter(Boolean).length;
+
+  const setFilter = (patch) => setFilters((prev) => ({ ...prev, ...patch }));
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading maintenance items...</p>
-          </div>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-72" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={fetchAllData}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-7xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load maintenance</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchAllData} className="mt-2">Try again</Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Maintenance Management</h1>
-          <p className="text-muted-foreground">
-            Track and manage aircraft maintenance items
+          <h1 className="text-3xl font-bold tracking-tight">
+            {canPostMaintenance ? 'Maintenance Management' : 'Aircraft Maintenance'}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {canPostMaintenance
+              ? 'Track, schedule, and sign off aircraft maintenance items.'
+              : 'Inspections and maintenance items affecting the fleet you fly.'}
           </p>
         </div>
-        
         {canPostMaintenance && (
           <Sheet open={isFormOpen} onOpenChange={(open) => {
             setIsFormOpen(open);
@@ -312,71 +331,45 @@ export function MaintenanceClient() {
           </SheetContent>
         </Sheet>
         )}
-      </div>
+      </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{maintenanceStats.total}</p>
-              </div>
-              <Wrench className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Due Now</p>
-                <p className="text-2xl font-bold text-red-600">{maintenanceStats.due}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Nearing</p>
-                <p className="text-2xl font-bold text-yellow-600">{maintenanceStats.nearing}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Posted</p>
-                <p className="text-2xl font-bold text-blue-600">{maintenanceStats.posted}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{maintenanceStats.completed}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatTile
+          label="Total Items"
+          value={maintenanceStats.total}
+          icon={Wrench}
+          tone="gold"
+          hint="All maintenance records"
+        />
+        <StatTile
+          label="Due Now"
+          value={maintenanceStats.due}
+          icon={AlertTriangle}
+          tone={maintenanceStats.due > 0 ? "danger" : "success"}
+          hint={maintenanceStats.due > 0 ? "Grounding risk" : "Nothing overdue"}
+        />
+        <StatTile
+          label="Nearing"
+          value={maintenanceStats.nearing}
+          icon={Clock}
+          tone={maintenanceStats.nearing > 0 ? "warning" : "neutral"}
+          hint={maintenanceStats.nearing > 0 ? "Approaching limits" : "Nothing approaching"}
+        />
+        <StatTile
+          label="Posted"
+          value={maintenanceStats.posted}
+          icon={Calendar}
+          tone="info"
+          hint="Scheduled, not yet due"
+        />
+        <StatTile
+          label="Completed"
+          value={maintenanceStats.completed}
+          icon={CheckCircle}
+          tone="success"
+          hint="Signed off to date"
+        />
       </div>
-
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
@@ -430,10 +423,16 @@ export function MaintenanceClient() {
                 <SelectItem value="upcoming">Upcoming (30 days)</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Button variant="outline" onClick={resetFilters} size="sm">
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground tabular-nums">{filteredMaintenance.length}</span>
+              {' of '}<span className="tabular-nums">{maintenance.length}</span> items
+              {activeFilterCount > 0 && ` · ${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active`}
+            </p>
+            <Button variant="outline" onClick={resetFilters} size="sm" disabled={activeFilterCount === 0}>
               <Filter className="h-4 w-4 mr-2" />
-              Reset
+              Reset filters
             </Button>
           </div>
         </CardContent>
