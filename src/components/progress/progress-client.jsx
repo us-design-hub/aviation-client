@@ -9,16 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Label } from '@/components/ui/label';
+import { MiniStat } from '@/components/ui/panels';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   GraduationCap, CheckCircle2, Circle, Award, 
-  Clock, TrendingUp, BookOpen, User, RotateCcw
+  Clock, TrendingUp, BookOpen, User, RotateCcw, AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatET } from '@/lib/format-tz';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StageCheckModal } from '@/components/progress/stage-check-modal';
+import { cn } from '@/lib/utils';
 
 export function ProgressClient() {
   const { user } = useAuth();
@@ -151,69 +154,98 @@ export function ProgressClient() {
   const selectedStudent = getSelectedStudent();
   const canCreditLessons = user?.role === 'ADMIN' || user?.isLeadInstructor;
 
+  const isStaff = user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN';
+  const viewingSelf = user?.role === 'STUDENT';
+
   if (loading && !progressData) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-12 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-56" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-44 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={fetchInitialData}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-6xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load progress</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchInitialData} className="mt-2">Try again</Button>
+          </div>
         </Card>
+      </div>
+    );
+  }
+
+  // A staff member with no students is a different situation from a missing syllabus.
+  if (isStaff && students.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-6xl">
+        <EmptyState
+          icon={User}
+          title="No students to show"
+          description={user?.role === 'INSTRUCTOR'
+            ? "No students are assigned to you yet. An administrator can assign students to your roster."
+            : "No student accounts exist yet. Create one from the Users page to track training progress."}
+        />
       </div>
     );
   }
 
   if (!progressData) {
     return (
-      <div className="p-6">
+      <div className="mx-auto w-full max-w-6xl">
         <EmptyState
           icon={GraduationCap}
-          title="No Progress Data"
-          description="No active syllabus found. Please contact your administrator."
+          title="No active syllabus"
+          description="No active training program is set. An administrator can activate one from the Syllabus page."
         />
       </div>
     );
   }
-
   const { syllabus, stages, overallProgress, totalLessons, totalCompleted } = progressData;
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <GraduationCap className="h-8 w-8" />
-            Student Progress
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track training progress and stage completions
-          </p>
-        </div>
-      </div>
+  const stagesComplete = stages.filter((s) => s.progress === 100).length;
+  const stageChecksPassed = stages.filter((s) => s.stageCheck?.status === 'APPROVED').length;
 
-      {/* Student Selector (for instructors/admins) */}
-      {(user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN') && students.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <User className="h-5 w-5 text-muted-foreground" />
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {viewingSelf ? 'My Training Progress' : 'Student Progress'}
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          {viewingSelf
+            ? 'Your syllabus completion, stage checks, and lesson history.'
+            : 'Track syllabus completion and record stage checks for your students.'}
+        </p>
+      </header>
+
+      {isStaff && (
+        <Card className="gap-0 py-0">
+          <div className="flex flex-wrap items-center gap-3 p-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <User className="size-4 text-muted-foreground" />
+            </span>
+            <div className="min-w-56 flex-1">
+              <Label htmlFor="progress-student" className="text-xs text-muted-foreground">
+                Viewing progress for
+              </Label>
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                <SelectTrigger className="w-[300px]">
+                <SelectTrigger id="progress-student" className="mt-1 w-full max-w-sm">
                   <SelectValue placeholder="Select a student" />
                 </SelectTrigger>
                 <SelectContent>
@@ -225,67 +257,72 @@ export function ProgressClient() {
                 </SelectContent>
               </Select>
             </div>
-          </CardContent>
+            <p className="text-sm text-muted-foreground">
+              {students.length} student{students.length === 1 ? '' : 's'}
+            </p>
+          </div>
         </Card>
       )}
 
-      {/* Overall Progress Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Overall Progress
-          </CardTitle>
-          <CardDescription>
-            {selectedStudent?.name} • {syllabus.name} {syllabus.version}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="border-b px-5 py-4">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <TrendingUp className="size-4 text-muted-foreground" />
+            Overall progress
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {selectedStudent?.name} · {syllabus.name} {syllabus.version}
+          </p>
+        </div>
+        <div className="space-y-5 px-5 py-5">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Training Completion</span>
-              <span className="text-2xl font-bold">{overallProgress}%</span>
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <span className="text-sm font-medium">Training completion</span>
+              <span className="text-3xl font-bold tabular-nums">{overallProgress}%</span>
             </div>
             <Progress value={overallProgress} className="h-3" />
           </div>
-          <div className="grid grid-cols-3 gap-4 pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{totalCompleted}</div>
-              <div className="text-xs text-muted-foreground">Completed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{totalLessons - totalCompleted}</div>
-              <div className="text-xs text-muted-foreground">Remaining</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{stages.length}</div>
-              <div className="text-xs text-muted-foreground">Stages</div>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MiniStat label="Lessons completed" value={totalCompleted} tone="success" />
+            <MiniStat label="Lessons remaining" value={totalLessons - totalCompleted} />
+            <MiniStat label="Stages complete" value={`${stagesComplete} of ${stages.length}`} />
+            <MiniStat label="Stage checks passed" value={`${stageChecksPassed} of ${stages.length}`} tone={stageChecksPassed > 0 ? 'gold' : 'neutral'} />
           </div>
-        </CardContent>
+        </div>
       </Card>
-
       {/* Stages */}
       <div className="space-y-4">
-        {stages.map((stage, index) => (
-          <Card key={stage.id}>
+        {stages.map((stage, index) => {
+          const stageDone = stage.progress === 100;
+          const approved = stage.stageCheck?.status === 'APPROVED';
+          return (
+          <Card key={stage.id} className={cn(approved && "border-emerald-500/40")}>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Badge variant="outline">Stage {index + 1}</Badge>
-                    {stage.title}
-                  </CardTitle>
-                  <CardDescription className="mt-2">{stage.description}</CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold tabular-nums",
+                    stageDone
+                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                      : "bg-muted text-muted-foreground",
+                  )}>
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <CardTitle>{stage.title}</CardTitle>
+                    <CardDescription className="mt-1">{stage.description}</CardDescription>
+                  </div>
                 </div>
                 {stage.stageCheck && (
-                  <Badge 
-                    variant={stage.stageCheck.status === 'APPROVED' ? 'default' : 'secondary'}
-                    className="flex items-center gap-1"
-                  >
-                    <Award className="h-3 w-3" />
+                  <span className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                    approved
+                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                      : "bg-amber-500/12 text-amber-700 dark:text-amber-400",
+                  )}>
+                    <Award className="size-3.5" />
                     {stage.stageCheck.status}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </CardHeader>
@@ -307,11 +344,14 @@ export function ProgressClient() {
                 {stage.lessons.map(lesson => (
                   <div 
                     key={lesson.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card"
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors",
+                      lesson.completed ? "border-emerald-500/30 bg-emerald-500/5" : "bg-card",
+                    )}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {lesson.completed ? (
-                        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                       ) : (
                         <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
                       )}
@@ -321,17 +361,17 @@ export function ProgressClient() {
                           <BookOpen className="h-3 w-3" />
                           {lesson.kind}
                           {lesson.scheduledCompletedCount > 0 && (
-                            <span className="text-green-600">
+                            <span className="text-emerald-600 dark:text-emerald-400">
                               • Completed {lesson.completedCount}x
                             </span>
                           )}
                           {lesson.completionSource === 'CREDIT' && (
-                            <span className="text-green-600">
+                            <span className="text-emerald-600 dark:text-emerald-400">
                               Prior experience credit
                             </span>
                           )}
                           {lesson.completionSource === 'MIXED' && (
-                            <span className="text-green-600">
+                            <span className="text-emerald-600 dark:text-emerald-400">
                               Includes prior experience credit
                             </span>
                           )}
@@ -390,7 +430,7 @@ export function ProgressClient() {
                 </div>
               ) : (
                 <>
-                  {stage.progress === 100 && (user?.role === 'ADMIN' || user?.isLeadInstructor) && (
+                  {stageDone && (user?.role === 'ADMIN' || user?.isLeadInstructor) && (
                     <Button 
                       onClick={() => handleStageCheck(stage)}
                       className="w-full"
@@ -400,7 +440,7 @@ export function ProgressClient() {
                       Perform Stage Check
                     </Button>
                   )}
-                  {stage.progress === 100 && user?.role === 'STUDENT' && (
+                  {stageDone && user?.role === 'STUDENT' && (
                     <div className="text-center text-sm text-muted-foreground p-4 bg-muted rounded-lg">
                       <Clock className="h-5 w-5 mx-auto mb-2" />
                       Stage complete! Awaiting lead instructor stage check.
@@ -410,7 +450,8 @@ export function ProgressClient() {
               )}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Stage Check Modal */}

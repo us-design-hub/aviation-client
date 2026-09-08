@@ -200,3 +200,13 @@ export function EmptyRow({ icon: Icon, title, description }) {
     </div>
   );
 }
+
+/** Small label/value pair for breakdown grids. */
+export function MiniStat({ label, value, tone = "neutral" }) {
+  return (
+    <div className="rounded-lg bg-muted/50 px-3 py-2.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-lg font-semibold tabular-nums", TONES[tone]?.value)}>{value}</p>
+    </div>
+  );
+}
