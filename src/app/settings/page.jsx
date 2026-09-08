@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RoleGate } from "@/components/rbac/role-gate";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -240,48 +242,47 @@ function SettingsClient() {
       setTestingSms(false);
     }
   };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading settings...</p>
+      <div className="mx-auto w-full max-w-4xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <Skeleton className="h-10 w-72 max-w-full rounded-lg" />
+        <Skeleton className="h-44 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Configure system settings for Wings CRM
+          Email, SMS, and payment integrations for Wings of Angel Aviation.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            QuickBooks Payments
-          </CardTitle>
-          <CardDescription>Connect QuickBooks Payments to collect customer payments for flight-hour and training packages.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">Successful payments update customer package balances; voids and refunds reverse those credits.</p>
-          <Button variant="outline" asChild>
-            <Link href="/settings/integrations/quickbooks">
-              Manage QuickBooks connection
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="email" className="space-y-5">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 p-1 sm:w-auto">
+          <TabsTrigger value="email" className="gap-1.5 px-3 py-1.5">
+            <Mail className="size-4" />
+            Email
+          </TabsTrigger>
+          <TabsTrigger value="sms" className="gap-1.5 px-3 py-1.5">
+            <MessageSquare className="size-4" />
+            SMS
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="gap-1.5 px-3 py-1.5">
+            <CreditCard className="size-4" />
+            Integrations
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Current Status Card */}
+        <TabsContent value="email" className="space-y-5">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -309,7 +310,7 @@ function SettingsClient() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Provider:</span>
-                  <Badge variant="outline" className={resendConfig?.configured ? "border-green-500 text-green-700" : ""}>
+                  <Badge variant="outline" className={resendConfig?.configured ? "border-emerald-500 text-emerald-700 dark:text-emerald-400" : ""}>
                     {activeConfig.provider === "resend" ? "Resend (API)" : "SMTP"}
                   </Badge>
                 </div>
@@ -351,8 +352,6 @@ function SettingsClient() {
           )}
         </CardContent>
       </Card>
-
-      {/* SMTP Configuration Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -624,15 +623,47 @@ function SettingsClient() {
         </CardContent>
       </Card>
 
-      {/* Security Note */}
+          <Card>
+            <CardContent className="pt-6">
+            <div className="flex gap-3">
+              <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Security Note</p>
+                <p>
+                  SMTP passwords are encrypted before storage. The password is never
+                  sent back to the browser after being saved. If environment variables
+                  are configured, they will be used as a fallback when custom settings
+                  are disabled.
+                </p>
+              </div>
+            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sms" className="space-y-5">
+          <Card>
+            <CardContent className="flex gap-3 pt-6">
+              <Info className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+              <div className="text-sm text-muted-foreground">
+                <p className="mb-1 font-medium text-foreground">Twilio is configured on the server</p>
+                <p>
+                  SMS credentials come from the <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_ACCOUNT_SID</code>,{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_AUTH_TOKEN</code>, and{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_PHONE_NUMBER</code> environment
+                  variables, not from this page. Recipients must also opt in to SMS on their own profile.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Temporary SMS Test
+            Send a test message
           </CardTitle>
           <CardDescription>
-            Use this to verify Twilio SMS, then remove after confirmation.
+            Verify Twilio delivery by sending a message to your own number.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -665,21 +696,32 @@ function SettingsClient() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Security Note</p>
-                <p>
-                  SMTP passwords are encrypted before storage. The password is never
-                  sent back to the browser after being saved. If environment variables
-                  are configured, they will be used as a fallback when custom settings
-                  are disabled.
-                </p>
-              </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            QuickBooks Payments
+          </CardTitle>
+          <CardDescription>Connect QuickBooks Payments to collect customer payments for flight-hour and training packages.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">Successful payments update customer package balances; voids and refunds reverse those credits.</p>
+          <Button variant="outline" asChild>
+            <Link href="/settings/integrations/quickbooks">
+              Manage QuickBooks connection
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
