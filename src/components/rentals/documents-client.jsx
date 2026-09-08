@@ -56,7 +56,7 @@ function getDocumentStatusBadgeClass(status) {
   return "";
 }
 
-export function DocumentsClient() {
+export function DocumentsClient({ embedded = false }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [renters, setRenters] = useState([]);
@@ -200,12 +200,14 @@ export function DocumentsClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Compliance Documents</h1>
-          <p className="text-muted-foreground">
-            Review renter and student documents and upcoming renewals.
-          </p>
-        </div>
+        {!embedded && (
+          <div>
+            <h1 className="text-3xl font-bold">Compliance Documents</h1>
+            <p className="text-muted-foreground">
+              Review renter and student documents and upcoming renewals.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAdmin && (
             <Select
