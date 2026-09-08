@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import { Plus, Calendar, List, Search, Filter, Plane, User, Clock } from "lucide-react";
+import { Plus, Calendar, List, Search, Filter, Plane, User, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,8 @@ import { AvailabilityForm } from "./availability-form";
 import { AvailabilityDetails } from "./availability-details";
 import { useConfirmDialog, confirmPresets } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/panels";
 import { formatET, isDateInCurrentWeekET, isSameDateET, isSameMonthET, nowET, scheduleRangeParams } from "@/lib/format-tz";
 
 function normalizeAvailabilityTimes(item) {
@@ -307,43 +309,60 @@ export function AvailabilityClient() {
     });
   };
 
+  const activeFilterCount = [
+    filters.search,
+    filters.type !== 'all' ? filters.type : '',
+    filters.dateRange !== 'all' ? filters.dateRange : '',
+  ].filter(Boolean).length;
+
+  const isAdmin = user?.role === 'ADMIN';
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading availability...</p>
-          </div>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-72" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={fetchAllData}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-7xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load availability</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchAllData} className="mt-2">Try again</Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <h1 className="text-3xl font-bold">Availability Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage personal availability and aircraft blocks for scheduling control
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isAdmin ? 'Availability Management' : 'My Availability'}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {isAdmin
+              ? 'Personal availability and aircraft blocks across the school.'
+              : 'Mark when you are unavailable so lessons are not booked over it.'}
           </p>
         </div>
         
@@ -402,69 +421,43 @@ export function AvailabilityClient() {
             </div>
           </SheetContent>
         </Sheet>
-      </div>
+      </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{availabilityCounts.total}</p>
-              </div>
-              <Clock className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Personal</p>
-                <p className="text-2xl font-bold text-blue-600">{availabilityCounts.personal}</p>
-              </div>
-              <User className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Aircraft Holds</p>
-                <p className="text-2xl font-bold text-purple-600">{availabilityCounts.aircraftHolds}</p>
-              </div>
-              <Plane className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Upcoming</p>
-                <p className="text-2xl font-bold text-green-600">{availabilityCounts.upcoming}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Now</p>
-                <p className="text-2xl font-bold text-orange-600">{availabilityCounts.active}</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatTile
+          label="Active Now"
+          value={availabilityCounts.active}
+          icon={Clock}
+          tone={availabilityCounts.active > 0 ? "warning" : "neutral"}
+          hint={availabilityCounts.active > 0 ? "In effect right now" : "Nothing blocking now"}
+        />
+        <StatTile
+          label="Upcoming"
+          value={availabilityCounts.upcoming}
+          icon={Calendar}
+          tone={availabilityCounts.upcoming > 0 ? "info" : "neutral"}
+          hint="Starts in the future"
+        />
+        <StatTile
+          label="Personal"
+          value={availabilityCounts.personal}
+          icon={User}
+          tone="gold"
+          hint="People marked unavailable"
+        />
+        <StatTile
+          label="Aircraft Holds"
+          value={availabilityCounts.aircraftHolds}
+          icon={Plane}
+          tone={availabilityCounts.aircraftHolds > 0 ? "danger" : "neutral"}
+          hint={availabilityCounts.aircraftHolds > 0 ? "Blocking bookings" : "No aircraft blocked"}
+        />
+        <StatTile
+          label="Total Items"
+          value={availabilityCounts.total}
+          icon={Clock}
+          hint="All availability records"
+        />
       </div>
 
       {/* Filters */}
@@ -509,9 +502,16 @@ export function AvailabilityClient() {
               </SelectContent>
             </Select>
             
-            <Button variant="outline" onClick={resetFilters} size="sm">
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground tabular-nums">{filteredAvailability.length}</span>
+              {' of '}<span className="tabular-nums">{availabilityCounts.total}</span> items
+              {activeFilterCount > 0 && ` · ${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active`}
+            </p>
+            <Button variant="outline" onClick={resetFilters} size="sm" disabled={activeFilterCount === 0}>
               <Filter className="h-4 w-4 mr-2" />
-              Reset
+              Reset filters
             </Button>
           </div>
         </CardContent>
@@ -519,12 +519,12 @@ export function AvailabilityClient() {
 
       {/* View Toggle & Content */}
       <Tabs value={viewMode} onValueChange={setViewMode}>
-        <TabsList>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 p-1 sm:w-auto">
+          <TabsTrigger value="calendar" className="gap-1.5 px-3 py-1.5">
             <Calendar className="h-4 w-4" />
             Calendar
           </TabsTrigger>
-          <TabsTrigger value="list" className="flex items-center gap-2">
+          <TabsTrigger value="list" className="gap-1.5 px-3 py-1.5">
             <List className="h-4 w-4" />
             List
           </TabsTrigger>
