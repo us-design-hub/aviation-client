@@ -194,15 +194,15 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
   };
 
   const activityIcon = (action) => {
-    if (action === 'CHECKOUT') return <LogOut className="icon-lg icon-black dark:icon-black-dark" />;
-    if (action === 'MAINTENANCE_UPDATE') return <Wrench className="icon-lg icon-black dark:icon-black-dark" />;
-    return <LogIn className="icon-lg icon-black dark:icon-black-dark" />;
+    if (action === 'CHECKOUT') return <LogOut className="icon-lg icon-black" />;
+    if (action === 'MAINTENANCE_UPDATE') return <Wrench className="icon-lg icon-black" />;
+    return <LogIn className="icon-lg icon-black" />;
   };
 
   const activityRow = (log) => (
     <div key={log.id} className="flex items-start justify-between gap-3 border-b py-3 last:border-b-0">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="icon-container dark:icon-container-dark shrink-0">{activityIcon(log.action)}</div>
+        <div className="icon-container shrink-0">{activityIcon(log.action)}</div>
         <div className="min-w-0">
           <p className="text-sm font-medium">{activityLabel(log.action)}</p>
           <p className="text-xs text-gray-500">Hobbs: {log.hobbs} · Tach: {log.tach}</p>
@@ -371,11 +371,11 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="icon-container dark:icon-container-dark">
-            <Plane className="icon-xl icon-black dark:icon-black-dark" />
+          <div className="icon-container">
+            <Plane className="icon-xl icon-black" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-golden dark:text-golden-dark">
+            <h2 className="text-2xl font-bold text-golden">
               {aircraft.tail_number}
             </h2>
             <p className="text-sm text-gray-500">Aircraft Details</p>
@@ -386,13 +386,13 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
           {getStatusBadge(aircraft.status)}
           {canEditAircraft() && (
             <GoldenButton variant="outline" size="sm" onClick={onEdit}>
-              <Edit className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+              <Edit className="icon-lg mr-2 icon-black" />
               Edit
             </GoldenButton>
           )}
           {user?.role === 'ADMIN' && onDelete && (
             <Button variant="outline" size="sm" onClick={handleDeleteAircraft}>
-              <Trash2 className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+              <Trash2 className="icon-lg mr-2 icon-black" />
               Delete
             </Button>
           )}
@@ -406,7 +406,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Gauge className="icon-lg icon-black dark:icon-black-dark" />
+                <Gauge className="icon-lg icon-black" />
                 <span>Monthly Flight Time</span>
               </CardTitle>
               <CardDescription>Completed aircraft operations in Eastern Time</CardDescription>
@@ -465,7 +465,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Settings className="icon-lg icon-black dark:icon-black-dark" />
+            <Settings className="icon-lg icon-black" />
             <span>Aircraft Status & Maintenance Alerts</span>
           </CardTitle>
           <CardDescription>
@@ -539,14 +539,14 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Scale className="icon-lg icon-black dark:icon-black-dark" />
+              <Scale className="icon-lg icon-black" />
               <span>Weight & Balance</span>
             </div>
             {canPerformMaintenanceActions() && (
               <Dialog open={showWBDialog} onOpenChange={setShowWBDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Edit className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+                    <Edit className="icon-lg mr-2 icon-black" />
                     Update
                   </Button>
                 </DialogTrigger>
@@ -615,7 +615,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
             </div>
           ) : (
             <div className="text-center py-4 text-gray-500">
-              <Scale className="icon-xl mx-auto mb-2 icon-black dark:icon-black-dark" />
+              <Scale className="icon-xl mx-auto mb-2 icon-black" />
               <p>No weight & balance data available</p>
             </div>
           )}
@@ -627,7 +627,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Activity className="icon-lg icon-black dark:icon-black-dark" />
+              <Activity className="icon-lg icon-black" />
               <span>Aircraft Operations</span>
             </CardTitle>
             <CardDescription>
@@ -653,7 +653,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
                 <Dialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
                   <DialogTrigger asChild>
                     <GoldenButton variant="outline">
-                      <LogOut className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+                      <LogOut className="icon-lg mr-2 icon-black" />
                       Check Out
                     </GoldenButton>
                   </DialogTrigger>
@@ -712,7 +712,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
                 <Dialog open={showCheckinDialog} onOpenChange={setShowCheckinDialog}>
                   <DialogTrigger asChild>
                     <GoldenButton variant="outline">
-                      <LogIn className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+                      <LogIn className="icon-lg mr-2 icon-black" />
                       Check In
                     </GoldenButton>
                   </DialogTrigger>
@@ -795,14 +795,14 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="icon-lg icon-black dark:icon-black-dark" />
+              <AlertTriangle className="icon-lg icon-black" />
               <span>Current Squawks/Issues</span>
             </div>
             {canPerformInstructorActions() && (
               <Dialog open={showSquawkDialog} onOpenChange={setShowSquawkDialog}>
                 <DialogTrigger asChild>
                   <GoldenButton variant="outline" size="sm">
-                    <Plus className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+                    <Plus className="icon-lg mr-2 icon-black" />
                     Submit Squawk
                   </GoldenButton>
                 </DialogTrigger>
@@ -874,7 +874,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
                         });
                       }}
                     >
-                      <CheckCircle className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+                      <CheckCircle className="icon-lg mr-2 icon-black" />
                       Resolve
                     </Button>
                   )}
@@ -895,7 +895,7 @@ export function AircraftDetails({ aircraft, onEdit, onDelete }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Clock className="icon-lg icon-black dark:icon-black-dark" />
+              <Clock className="icon-lg icon-black" />
               <span>Recent Activity</span>
             </CardTitle>
             <CardDescription>Latest meter activity for this aircraft</CardDescription>

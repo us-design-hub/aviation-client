@@ -25,10 +25,10 @@ export const TONES = {
     bar: "bg-muted-foreground/50",
   },
   gold: {
-    icon: "text-[oklch(0.65_0.15_85)] dark:text-[oklch(0.78_0.19_85)]",
-    chip: "bg-[oklch(0.65_0.15_85)]/12 dark:bg-[oklch(0.7_0.18_85)]/18",
+    icon: "text-golden",
+    chip: "bg-golden/12",
     value: "text-foreground",
-    bar: "bg-[oklch(0.65_0.15_85)] dark:bg-[oklch(0.7_0.18_85)]",
+    bar: "bg-golden",
   },
   success: {
     icon: "text-emerald-600 dark:text-emerald-400",
@@ -129,7 +129,7 @@ const CALLOUT_RING = {
   danger: "border-red-500/40",
   success: "border-emerald-500/30",
   neutral: "border-border",
-  gold: "border-[oklch(0.65_0.15_85)]/40",
+  gold: "border-golden/40",
 };
 
 /** Inline banner. Replaces the default Alert so warning/blocked states read at a glance. */

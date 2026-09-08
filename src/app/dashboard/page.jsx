@@ -196,7 +196,7 @@ export default function DashboardPage() {
       value: stats.aircraft,
       icon: Plane,
       description: 'Fleet size',
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
       bgColor: 'bg-amber-100 dark:bg-amber-900/20',
     },
     {
@@ -204,7 +204,7 @@ export default function DashboardPage() {
       value: stats.lessons,
       icon: Calendar,
       description: 'All time lessons',
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
       bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
     },
     {
@@ -212,7 +212,7 @@ export default function DashboardPage() {
       value: stats.activeMaintenance,
       icon: Wrench,
       description: 'Items in progress',
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
       bgColor: 'bg-orange-100 dark:bg-orange-900/20',
     },
     {
@@ -220,7 +220,7 @@ export default function DashboardPage() {
       value: stats.squawks,
       icon: AlertTriangle,
       description: 'Issues to resolve',
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
       bgColor: 'bg-red-100 dark:bg-red-900/20',
     },
   ];
@@ -231,13 +231,13 @@ export default function DashboardPage() {
       title: 'Today\'s Lessons',
       value: stats.todayLessons,
       icon: Clock,
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
     },
     {
       title: 'Completed Lessons',
       value: stats.completedLessons,
       icon: CheckCircle,
-      color: 'text-golden dark:text-golden-dark',
+      color: 'text-golden',
     },
   ];
   
@@ -248,7 +248,7 @@ export default function DashboardPage() {
           title: 'Total Users',
           value: stats.users,
           icon: Users,
-          color: 'text-golden dark:text-golden-dark',
+          color: 'text-golden',
         },
       ]
     : baseQuickStats;
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <GoldenBadge variant="default" className="text-sm">
-                <TrendingUp className="w-4 h-4 mr-1 icon-black dark:icon-black-dark" />
+                <TrendingUp className="w-4 h-4 mr-1 icon-black" />
                 Active Student
               </GoldenBadge>
             </div>
@@ -292,7 +292,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    <TrendingUp className="w-5 h-5 icon-black" />
                     Progress Summary
                   </CardTitle>
                 </CardHeader>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div 
-                            className="bg-golden dark:bg-golden-dark h-2 rounded-full" 
+                            className="bg-golden h-2 rounded-full" 
                             style={{ width: `${studentData.progressSummary.overallProgress}%` }}
                           />
                         </div>
@@ -398,7 +398,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 icon-black dark:icon-black-dark" />
+                  <Calendar className="w-5 h-5 icon-black" />
                   Upcoming Lessons
                 </CardTitle>
                 <CardDescription>Your scheduled flight training</CardDescription>
@@ -412,8 +412,8 @@ export default function DashboardPage() {
                         className="flex items-center justify-between p-3 border dark:border-gray-700 rounded-lg"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="icon-container dark:icon-container-dark">
-                            <Plane className="w-4 h-4 icon-black dark:icon-black-dark" />
+                          <div className="icon-container">
+                            <Plane className="w-4 h-4 icon-black" />
                           </div>
                           <div>
                             <p className="font-medium">{lesson.lesson || 'Flight Lesson'}</p>
@@ -439,7 +439,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Plane className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    <Plane className="w-5 h-5 icon-black" />
                     Assigned Aircraft
                   </CardTitle>
                   <CardDescription>Aircraft you're scheduled to fly</CardDescription>
@@ -490,7 +490,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    <CheckCircle className="w-5 h-5 icon-black" />
                     Latest Instructor Notes
                   </CardTitle>
                   <CardDescription>Recent feedback from your instructors</CardDescription>
@@ -532,19 +532,19 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Link href="/lessons">
                     <Button variant="outline" className="w-full justify-start">
-                      <Calendar className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <Calendar className="w-4 h-4 mr-2 icon-black" />
                       View Schedule
                     </Button>
                   </Link>
                   <Link href="/progress">
                     <Button variant="outline" className="w-full justify-start">
-                      <TrendingUp className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <TrendingUp className="w-4 h-4 mr-2 icon-black" />
                       View Progress
                     </Button>
                   </Link>
                   <Link href="/squawks">
                     <Button variant="outline" className="w-full justify-start">
-                      <AlertTriangle className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <AlertTriangle className="w-4 h-4 mr-2 icon-black" />
                       Report Squawk
                     </Button>
                   </Link>
@@ -564,7 +564,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <GoldenBadge variant="default" className="text-sm">
-                <TrendingUp className="w-4 h-4 mr-1 icon-black dark:icon-black-dark" />
+                <TrendingUp className="w-4 h-4 mr-1 icon-black" />
                 Active Renter
               </GoldenBadge>
             </div>
@@ -611,7 +611,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    <Calendar className="w-5 h-5 icon-black" />
                     Upcoming Rentals
                   </CardTitle>
                 </CardHeader>
@@ -637,7 +637,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 icon-black dark:icon-black-dark" />
+                    <AlertTriangle className="w-5 h-5 icon-black" />
                     Compliance Status
                   </CardTitle>
                 </CardHeader>
@@ -672,19 +672,19 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Link href="/rentals">
                     <Button variant="outline" className="w-full justify-start">
-                      <Calendar className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <Calendar className="w-4 h-4 mr-2 icon-black" />
                       View Rentals
                     </Button>
                   </Link>
                   <Link href="/documents">
                     <Button variant="outline" className="w-full justify-start">
-                      <CheckCircle className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <CheckCircle className="w-4 h-4 mr-2 icon-black" />
                       Manage Documents
                     </Button>
                   </Link>
                   <Link href="/squawks">
                     <Button variant="outline" className="w-full justify-start">
-                      <AlertTriangle className="w-4 h-4 mr-2 icon-black dark:icon-black-dark" />
+                      <AlertTriangle className="w-4 h-4 mr-2 icon-black" />
                       Report Squawk
                     </Button>
                   </Link>
@@ -706,7 +706,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <GoldenBadge variant="default" className="text-sm">
-                <TrendingUp className="w-4 h-4 mr-1 icon-black dark:icon-black-dark" />
+                <TrendingUp className="w-4 h-4 mr-1 icon-black" />
                 System Online
               </GoldenBadge>
             </div>
@@ -719,7 +719,7 @@ export default function DashboardPage() {
                   <CardTitle className="text-sm font-medium">
                     {stat.title}
                   </CardTitle>
-                  <div className="icon-container dark:icon-container-dark">
+                  <div className="icon-container">
                     <stat.icon className={`icon-lg ${stat.color}`} />
                   </div>
                 </CardHeader>
@@ -739,7 +739,7 @@ export default function DashboardPage() {
               <Card key={index}>
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
-                    <div className="icon-container dark:icon-container-dark">
+                    <div className="icon-container">
                       <stat.icon className={`icon-xl ${stat.color}`} />
                     </div>
                     <div>
@@ -768,25 +768,25 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Link href="/lessons">
                   <Button variant="outline" className="h-20 flex flex-col w-full">
-                    <Calendar className="icon-xl mb-2 icon-black dark:icon-black-dark" />
+                    <Calendar className="icon-xl mb-2 icon-black" />
                     Schedule Lesson
                   </Button>
                 </Link>
                 <Link href="/aircraft">
                   <Button variant="outline" className="h-20 flex flex-col w-full">
-                    <Plane className="icon-xl mb-2 icon-black dark:icon-black-dark" />
+                    <Plane className="icon-xl mb-2 icon-black" />
                     Manage Aircraft
                   </Button>
                 </Link>
                 <Link href="/maintenance">
                   <Button variant="outline" className="h-20 flex flex-col w-full">
-                    <Wrench className="icon-xl mb-2 icon-black dark:icon-black-dark" />
+                    <Wrench className="icon-xl mb-2 icon-black" />
                     Log Maintenance
                   </Button>
                 </Link>
                 <Link href="/squawks">
                   <Button variant="outline" className="h-20 flex flex-col w-full">
-                    <AlertTriangle className="icon-xl mb-2 icon-black dark:icon-black-dark" />
+                    <AlertTriangle className="icon-xl mb-2 icon-black" />
                     Report Squawk
                   </Button>
                 </Link>

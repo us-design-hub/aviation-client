@@ -182,7 +182,7 @@ export function AircraftClient() {
         <CardContent className="p-6">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 icon-lg icon-black dark:icon-black-dark" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 icon-lg icon-black" />
               <Input
                 placeholder="Search aircraft by tail number or notes..."
                 value={searchTerm}
@@ -191,7 +191,7 @@ export function AircraftClient() {
               />
             </div>
             <Button variant="outline">
-              <Filter className="icon-lg mr-2 icon-black dark:icon-black-dark" />
+              <Filter className="icon-lg mr-2 icon-black" />
               Filters
             </Button>
           </div>
@@ -224,11 +224,11 @@ export function AircraftClient() {
                   <TableRow key={aircraft.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
                     <TableCell className="font-medium">
                       <div className="flex items-center space-x-2">
-                        <div className="icon-container dark:icon-container-dark">
-                          <Plane className="icon-lg icon-black dark:icon-black-dark" />
+                        <div className="icon-container">
+                          <Plane className="icon-lg icon-black" />
                         </div>
                         <span 
-                          className="font-bold text-golden dark:text-golden-dark hover:underline cursor-pointer"
+                          className="font-bold text-golden hover:underline cursor-pointer"
                           onClick={() => handleViewDetails(aircraft)}
                         >
                           {aircraft.tail_number}
@@ -258,7 +258,7 @@ export function AircraftClient() {
                           size="sm"
                           onClick={() => handleViewDetails(aircraft)}
                         >
-                          <Eye className="icon-lg icon-black dark:icon-black-dark" />
+                          <Eye className="icon-lg icon-black" />
                         </Button>
                         {canCreateAircraft && (
                           <>
@@ -267,14 +267,14 @@ export function AircraftClient() {
                               size="sm"
                               onClick={() => handleEditAircraft(aircraft)}
                             >
-                              <Edit className="icon-lg icon-black dark:icon-black-dark" />
+                              <Edit className="icon-lg icon-black" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteAircraft(aircraft)}
                             >
-                              <Trash2 className="icon-lg icon-black dark:icon-black-dark" />
+                              <Trash2 className="icon-lg icon-black" />
                             </Button>
                           </>
                         )}

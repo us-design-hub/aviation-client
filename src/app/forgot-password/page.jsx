@@ -107,11 +107,11 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="icon-container dark:icon-container-dark">
-              <Plane className="icon-xl icon-black dark:icon-black-dark" />
+            <div className="icon-container">
+              <Plane className="icon-xl icon-black" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-golden dark:text-golden-dark">
+          <CardTitle className="text-2xl font-bold text-golden">
             Forgot Password?
           </CardTitle>
           <CardDescription>

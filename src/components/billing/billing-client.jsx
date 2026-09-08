@@ -183,7 +183,7 @@ function WetRateCard({ item, baselineRateCents, isBestRate, disabled, busy, onCh
   return (
     <Card className={cn(
       "relative gap-0 overflow-hidden py-0 transition-all hover:-translate-y-0.5 hover:shadow-lg",
-      isBestRate && "border-[oklch(0.65_0.15_85)] shadow-md dark:border-[oklch(0.7_0.18_85)]",
+      isBestRate && "border-golden shadow-md",
     )}>
       {isBestRate && (
         <div className="bg-golden-gradient px-4 py-1.5 text-center text-xs font-semibold text-white">
@@ -235,8 +235,8 @@ function TrainingPackageCard({ item, disabled, busy, onCheckout }) {
             <p className="font-semibold">{item.name}</p>
             <p className="mt-0.5 text-sm text-muted-foreground">Complete training bundle</p>
           </div>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[oklch(0.65_0.15_85)]/12 dark:bg-[oklch(0.7_0.18_85)]/18">
-            <GraduationCap className="size-4.5 text-[oklch(0.65_0.15_85)] dark:text-[oklch(0.78_0.19_85)]" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-golden/12">
+            <GraduationCap className="size-4.5 text-golden" />
           </span>
         </div>
 

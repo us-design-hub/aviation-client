@@ -161,7 +161,7 @@ export function Sidebar() {
                   priority
                 />
               </div>
-              <span className="text-xl font-bold text-golden dark:text-golden-dark">
+              <span className="text-xl font-bold text-golden">
                 Wings CRM
               </span>
             </div>
@@ -183,7 +183,7 @@ export function Sidebar() {
                   )}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <item.icon className="mr-3 icon-lg icon-black dark:icon-black-dark" />
+                  <item.icon className="mr-3 icon-lg icon-black" />
                   {item.name}
                 </Link>
               );
@@ -214,21 +214,21 @@ export function Sidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
-                  <UserCircle className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                  <UserCircle className="mr-2 icon-lg icon-black" />
                   Account
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild>
                   <Link href="/profile" className="cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
-                    <UserCircle className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                    <UserCircle className="mr-2 icon-lg icon-black" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 {user?.role === 'ADMIN' && (
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Settings className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                      <Settings className="mr-2 icon-lg icon-black" />
                       App settings
                     </Link>
                   </DropdownMenuItem>
@@ -237,7 +237,7 @@ export function Sidebar() {
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleClearCache}>
-                      <RefreshCw className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+                      <RefreshCw className="mr-2 icon-lg icon-black" />
                       Clear All Caches
                     </DropdownMenuItem>
                   </>
@@ -250,7 +250,7 @@ export function Sidebar() {
               className="mt-3 w-full justify-start"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 icon-lg icon-black dark:icon-black-dark" />
+              <LogOut className="mr-2 icon-lg icon-black" />
               Sign out
             </Button>
           </div>

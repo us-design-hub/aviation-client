@@ -42,6 +42,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-golden: var(--golden);
 }
 
 :root {
@@ -81,6 +82,12 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.65 0.15 85);
+  /* Brand + icon tokens. Redefined under .dark so a single utility class works
+     in both themes; never pair these with a dark: variant. */
+  --golden: oklch(0.65 0.15 85);
+  --golden-gradient: linear-gradient(135deg, oklch(0.7 0.18 85) 0%, oklch(0.8 0.15 80) 50%, oklch(0.75 0.12 75) 100%);
+  --icon-color: oklch(0.145 0 0);
+  --icon-container-bg: oklch(0.95 0 0);
 }
 
 .dark {
@@ -119,6 +126,11 @@
   --sidebar-accent-foreground: oklch(0.145 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.7 0.18 85);
+  /* Dark counterparts of the brand + icon tokens declared in :root. */
+  --golden: oklch(0.7 0.18 85);
+  --golden-gradient: linear-gradient(135deg, oklch(0.75 0.2 85) 0%, oklch(0.85 0.18 80) 50%, oklch(0.8 0.15 75) 100%);
+  --icon-color: oklch(0.985 0 0);
+  --icon-container-bg: oklch(0.2 0 0);
 }
 
 @layer base {
@@ -131,63 +143,39 @@
 }
 
 @layer utilities {
-  /* Golden Gradient Utilities */
+  /*
+   * Theme-aware brand utilities. Each reads a token that flips under .dark, so one
+   * class covers both themes. Do NOT pair these with a dark: variant: these are
+   * plain CSS classes, not registered Tailwind utilities, so `dark:icon-black-dark`
+   * compiles to nothing at all.
+   *
+   * text-golden / bg-golden / border-golden are NOT defined here. They are generated
+   * by Tailwind from --color-golden in @theme inline, which also gives them variant
+   * and opacity support (hover:bg-golden, bg-golden/10).
+   */
   .bg-golden-gradient {
-    background: linear-gradient(135deg, oklch(0.7 0.18 85) 0%, oklch(0.8 0.15 80) 50%, oklch(0.75 0.12 75) 100%);
+    background: var(--golden-gradient);
   }
-  
-  .bg-golden-gradient-dark {
-    background: linear-gradient(135deg, oklch(0.75 0.2 85) 0%, oklch(0.85 0.18 80) 50%, oklch(0.8 0.15 75) 100%);
-  }
-  
-  .text-golden {
-    color: oklch(0.65 0.15 85);
-  }
-  
-  .text-golden-dark {
-    color: oklch(0.7 0.18 85);
-  }
-  
-  .border-golden {
-    border-color: oklch(0.65 0.15 85);
-  }
-  
-  .border-golden-dark {
-    border-color: oklch(0.7 0.18 85);
-  }
-  
-  /* Icon Simplification - Black Icons with Light Gray Background */
+
+  /* Icon Simplification - contrasting icon on a subtle container */
   .icon-black {
-    color: oklch(0.145 0 0);
+    color: var(--icon-color);
   }
-  
-  .icon-black-dark {
-    color: oklch(0.985 0 0);
-  }
-  
+
   .icon-container {
-    background: oklch(0.95 0 0);
+    background: var(--icon-container-bg);
     padding: 8px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
-  
-  .icon-container-dark {
-    background: oklch(0.2 0 0);
-    padding: 8px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
+
   .icon-lg {
     width: 24px;
     height: 24px;
   }
-  
+
   .icon-xl {
     width: 28px;
     height: 28px;
