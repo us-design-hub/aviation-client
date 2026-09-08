@@ -5,7 +5,6 @@ import { formatET } from "@/lib/format-tz";
 import { Plane, BookOpen, User, Clock, MoreHorizontal, Eye, Edit, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -39,33 +38,39 @@ export function LessonsTable({
     return formatET(dateTime, "h:mm a");
   };
 
+  /** Tone classes carry explicit dark variants; bare bg-*-50 is invisible in dark mode. */
   const getStatusBadge = (status) => {
-    const variants = {
-      SCHEDULED: "default",
-      COMPLETED: "secondary", 
-      CANCELED: "outline"
+    const tones = {
+      SCHEDULED: "bg-sky-500/12 text-sky-700 dark:text-sky-400",
+      COMPLETED: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+      CANCELED: "bg-muted text-muted-foreground",
     };
-
-    const colors = {
-      SCHEDULED: "text-blue-600 bg-blue-50 border-blue-200",
-      COMPLETED: "text-green-600 bg-green-50 border-green-200",
-      CANCELED: "text-gray-600 bg-gray-50 border-gray-200"
+    const dots = {
+      SCHEDULED: "bg-sky-500",
+      COMPLETED: "bg-emerald-500",
+      CANCELED: "bg-muted-foreground/50",
     };
 
     return (
-      <Badge variant={variants[status]} className={colors[status]}>
+      <span className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
+        tones[status] || tones.CANCELED,
+      )}>
+        <span className={cn("size-1.5 rounded-full", dots[status] || dots.CANCELED)} />
         {status}
-      </Badge>
+      </span>
     );
   };
 
-  const getKindIcon = (kind) => {
-    return kind === "FLIGHT" ? (
-      <Plane className="h-4 w-4 text-purple-600" />
-    ) : (
-      <BookOpen className="h-4 w-4 text-orange-600" />
-    );
-  };
+  const getKindIcon = (kind) => (kind === "FLIGHT" ? (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-golden/12">
+      <Plane className="size-4 text-golden" />
+    </span>
+  ) : (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/12">
+      <BookOpen className="size-4 text-sky-600 dark:text-sky-400" />
+    </span>
+  ));
 
   if (lessons.length === 0) {
     return (
@@ -110,8 +115,8 @@ export function LessonsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lessons
-                .sort((a, b) => new Date(b.start_at) - new Date(a.start_at)) // Most recent first
+              {[...lessons]
+                .sort((a, b) => new Date(b.start_at) - new Date(a.start_at)) // newest first; copy above because sort mutates
                 .map((lesson) => (
                   <TableRow 
                     key={lesson.id} 

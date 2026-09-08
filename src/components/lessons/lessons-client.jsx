@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import { Plus, Calendar, List, Filter, Search } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, CalendarClock, CheckCircle2, Plane, List, Filter, Search, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/panels";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -177,11 +179,12 @@ export function LessonsClient() {
 
   // Filter lessons based on current filters
   const filteredLessons = lessons.filter(lesson => {
-    const matchesSearch = !filters.search || 
-      lesson.lesson?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      lesson.program?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      lesson.stage?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      lesson.guest_name?.toLowerCase().includes(filters.search.toLowerCase());
+    // Search across everything visible in a row, so looking up a person by name works.
+    const haystack = [
+      lesson.lesson, lesson.program, lesson.stage, lesson.guest_name,
+      lesson.student_name, lesson.instructor_name, lesson.aircraft_tail,
+    ].filter(Boolean).join(" ").toLowerCase();
+    const matchesSearch = !filters.search || haystack.includes(filters.search.trim().toLowerCase());
     
     const matchesStatus = filters.status === "all" || lesson.status === filters.status;
     const matchesKind = filters.kind === "all" || lesson.kind === filters.kind;
@@ -391,48 +394,108 @@ export function LessonsClient() {
     });
   };
 
+  const canSchedule = user?.role === "ADMIN" || user?.role === "INSTRUCTOR";
+  const canFilterPeople = canSchedule && users.length > 0;
+
+  const counts = {
+    total: lessons.length,
+    scheduled: lessons.filter((l) => l.status === "SCHEDULED").length,
+    completed: lessons.filter((l) => l.status === "COMPLETED").length,
+    flight: lessons.filter((l) => l.kind === "FLIGHT").length,
+    ground: lessons.filter((l) => l.kind === "GROUND").length,
+    today: lessons.filter((l) => isSameDateET(l.start_at, nowET())).length,
+  };
+
+  const activeFilterCount = [
+    filters.search,
+    filters.status !== "all" ? filters.status : "",
+    filters.kind !== "all" ? filters.kind : "",
+    filters.dateRange !== "all" ? filters.dateRange : "",
+    filters.studentId,
+    filters.instructorId,
+    filters.aircraftId,
+  ].filter(Boolean).length;
+
+  const setFilter = (patch) => setFilters((prev) => ({ ...prev, ...patch }));
+
+  /** Stat tiles double as filters: clicking one narrows the list below. */
+  const statTiles = [
+    {
+      key: "today", label: "Today", value: counts.today, icon: CalendarClock,
+      tone: counts.today > 0 ? "gold" : "neutral",
+      hint: counts.today > 0 ? "Scheduled for today" : "Nothing today",
+      onClick: () => setFilter({ dateRange: "today", status: "all", kind: "all" }),
+    },
+    {
+      key: "scheduled", label: "Scheduled", value: counts.scheduled, icon: CalendarIcon,
+      tone: "info", hint: "Upcoming and unflown",
+      onClick: () => setFilter({ status: "SCHEDULED", dateRange: "all" }),
+    },
+    {
+      key: "completed", label: "Completed", value: counts.completed, icon: CheckCircle2,
+      tone: "success", hint: "Logged to date",
+      onClick: () => setFilter({ status: "COMPLETED", dateRange: "all" }),
+    },
+    {
+      key: "flight", label: "Flight / Ground", value: `${counts.flight} / ${counts.ground}`,
+      icon: Plane, tone: "neutral", hint: `${counts.total} lessons in total`,
+      onClick: () => setFilter({ kind: "FLIGHT", status: "all", dateRange: "all" }),
+    },
+  ];
+
   if (loading) {
     return (
-      <div className="mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading lessons...</p>
-          </div>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={fetchAllData}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-7xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load lessons</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchAllData} className="mt-2">
+              <RefreshCw className="size-4" />
+              Try again
+            </Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Lessons & Scheduling</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage flight and ground lessons
+          <h1 className="text-3xl font-bold tracking-tight">Lessons &amp; Scheduling</h1>
+          <p className="mt-1 text-muted-foreground">
+            {user?.role === "STUDENT"
+              ? "Your scheduled and completed flight training."
+              : user?.role === "INSTRUCTOR"
+                ? "Lessons you teach, and the students assigned to you."
+                : "Flight and ground lessons across the school."}
           </p>
         </div>
-        
-        {/* RBAC: Only ADMIN and INSTRUCTOR can schedule lessons */}
-        {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+
+        {canSchedule && (
           <Sheet open={isFormOpen} onOpenChange={(open) => {
             setIsFormOpen(open);
             if (!open) {
@@ -441,7 +504,7 @@ export function LessonsClient() {
             }
           }}>
             <SheetTrigger asChild>
-              <Button 
+              <Button
                 className="bg-golden-gradient hover:bg-golden-gradient/90"
                 onClick={() => {
                   setEditingLesson(null);
@@ -452,174 +515,168 @@ export function LessonsClient() {
                 Schedule Lesson
               </Button>
             </SheetTrigger>
-          <SheetContent className="w-full sm:w-[600px] lg:w-[700px] overflow-y-auto max-w-full">
-            <SheetHeader className="sticky top-0 bg-background pb-4 border-b">
-              <SheetTitle>
-                {editingLesson ? "Edit Lesson" : "Schedule New Lesson"}
-              </SheetTitle>
-              <SheetDescription>
-                {editingLesson 
-                  ? "Update the lesson details below."
-                  : "Fill in the details to schedule a new lesson."
-                }
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 pb-6">
-              <LessonForm
-                lesson={editingLesson}
-                initialValues={formInitialValues}
-                syllabi={syllabi}
-                syllabus={syllabus}
-                students={students}
-                instructors={instructors}
-                aircraft={aircraft}
-                canOverrideDebt={user?.role === 'ADMIN'}
-                onSubmit={editingLesson ? 
-                  (data) => handleUpdateLesson(editingLesson.id, data) : 
-                  handleCreateLesson
-                }
-                onCancel={() => {
-                  setIsFormOpen(false);
-                  setEditingLesson(null);
-                  setFormInitialValues(null);
-                }}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Lessons</p>
-                <p className="text-2xl font-bold">{lessons.length}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {lessons.filter(l => l.status === "SCHEDULED").length}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {lessons.filter(l => l.status === "COMPLETED").length}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Flight Lessons</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {lessons.filter(l => l.kind === "FLIGHT").length}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search lessons..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="pl-10"
+            <SheetContent className="w-full sm:w-[600px] lg:w-[700px] overflow-y-auto max-w-full">
+              <SheetHeader className="sticky top-0 bg-background pb-4 border-b">
+                <SheetTitle>{editingLesson ? "Edit Lesson" : "Schedule New Lesson"}</SheetTitle>
+                <SheetDescription>
+                  {editingLesson
+                    ? "Update the lesson details below."
+                    : "Fill in the details to schedule a new lesson."}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 pb-6">
+                <LessonForm
+                  lesson={editingLesson}
+                  initialValues={formInitialValues}
+                  syllabi={syllabi}
+                  syllabus={syllabus}
+                  students={students}
+                  instructors={instructors}
+                  aircraft={aircraft}
+                  canOverrideDebt={user?.role === 'ADMIN'}
+                  onSubmit={editingLesson
+                    ? (data) => handleUpdateLesson(editingLesson.id, data)
+                    : handleCreateLesson}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setEditingLesson(null);
+                    setFormInitialValues(null);
+                  }}
                 />
               </div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </header>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statTiles.map((tile) => (
+          <StatTile
+            key={tile.key}
+            label={tile.label}
+            value={tile.value}
+            icon={tile.icon}
+            tone={tile.tone}
+            hint={tile.hint}
+            onClick={tile.onClick}
+          />
+        ))}
+      </div>
+
+      <Card className="gap-0 py-0">
+        <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-56 flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by lesson, student, instructor, or tail number"
+                value={filters.search}
+                onChange={(e) => setFilter({ search: e.target.value })}
+                className="pl-9"
+              />
             </div>
-            
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
+
+            <Select value={filters.status} onValueChange={(value) => setFilter({ status: value })}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="SCHEDULED">Scheduled</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
                 <SelectItem value="CANCELED">Canceled</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Select value={filters.kind} onValueChange={(value) => setFilters(prev => ({ ...prev, kind: value }))}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
+
+            <Select value={filters.kind} onValueChange={(value) => setFilter({ kind: value })}>
+              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Type" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="FLIGHT">Flight</SelectItem>
                 <SelectItem value="GROUND">Ground</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value }))}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
+
+            <Select value={filters.dateRange} onValueChange={(value) => setFilter({ dateRange: value })}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Date range" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="week">This week</SelectItem>
+                <SelectItem value="month">This month</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Button variant="outline" onClick={resetFilters} size="sm">
+          </div>
+
+          {canFilterPeople && (
+            <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+              <Select
+                value={filters.studentId || "all"}
+                onValueChange={(value) => setFilter({ studentId: value === "all" ? "" : value })}
+              >
+                <SelectTrigger className="w-[190px]"><SelectValue placeholder="Student" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All students</SelectItem>
+                  {allStudents.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.instructorId || "all"}
+                onValueChange={(value) => setFilter({ instructorId: value === "all" ? "" : value })}
+              >
+                <SelectTrigger className="w-[190px]"><SelectValue placeholder="Instructor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All instructors</SelectItem>
+                  {instructors.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.aircraftId || "all"}
+                onValueChange={(value) => setFilter({ aircraftId: value === "all" ? "" : value })}
+              >
+                <SelectTrigger className="w-[170px]"><SelectValue placeholder="Aircraft" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All aircraft</SelectItem>
+                  {aircraft.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>{item.tail_number}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground tabular-nums">{filteredLessons.length}</span>
+              {" of "}
+              <span className="tabular-nums">{lessons.length}</span> lessons
+              {activeFilterCount > 0 && ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active`}
+            </p>
+            <Button variant="outline" size="sm" onClick={resetFilters} disabled={activeFilterCount === 0}>
               <Filter className="h-4 w-4 mr-2" />
-              Reset
+              Reset filters
             </Button>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
-      {/* View Toggle & Content */}
-      <Tabs value={viewMode} onValueChange={setViewMode}>
-        <TabsList>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+      <Tabs value={viewMode} onValueChange={setViewMode} className="space-y-5">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 p-1 sm:w-auto">
+          <TabsTrigger value="calendar" className="gap-1.5 px-3 py-1.5">
+            <CalendarIcon className="size-4" />
             Calendar
           </TabsTrigger>
-          <TabsTrigger value="list" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
+          <TabsTrigger value="list" className="gap-1.5 px-3 py-1.5">
+            <List className="size-4" />
             List
           </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="calendar" className="mt-6">
+
+        <TabsContent value="calendar">
           <LessonsCalendar
             lessons={filteredLessons}
             users={users}
@@ -633,8 +690,8 @@ export function LessonsClient() {
             onTimeSlotClick={handleTimeSlotClick}
           />
         </TabsContent>
-        
-        <TabsContent value="list" className="mt-6">
+
+        <TabsContent value="list">
           <LessonsTable
             lessons={filteredLessons}
             users={users}
@@ -646,7 +703,6 @@ export function LessonsClient() {
           />
         </TabsContent>
       </Tabs>
-
       {/* Lesson Details Sheet */}
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <SheetContent className="w-full sm:w-[600px] lg:w-[800px] overflow-y-auto max-w-full">
