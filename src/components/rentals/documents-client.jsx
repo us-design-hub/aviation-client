@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FileText, Plus, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Download, FileText, Plus, Upload } from "lucide-react";
 import { rentalsAPI, usersAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StatTile, Pill, EmptyRow } from "@/components/ui/panels";
 
 const documentTypes = [
   { value: "PILOT_LICENSE", label: "Pilot License" },
@@ -43,18 +43,15 @@ function formatDate(value) {
     : "No expiry set";
 }
 
-function getDocumentStatusBadgeClass(status) {
-  if (status === "EXPIRED") {
-    return "border-red-200 bg-red-50 text-red-700";
-  }
-  if (status === "VALID") {
-    return "border-green-200 bg-green-50 text-green-700";
-  }
-  if (status === "EXPIRING_SOON") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
-  }
-  return "";
-}
+/** Dark-safe status tones. The previous bg-*-50 fills were invisible in dark mode. */
+const DOCUMENT_STATUS_TONE = {
+  EXPIRED: "danger",
+  EXPIRING_SOON: "warning",
+  VALID: "success",
+};
+
+/** Sort order for the list: problems first, so nothing urgent hides below the fold. */
+const DOCUMENT_STATUS_RANK = { EXPIRED: 0, EXPIRING_SOON: 1, VALID: 2 };
 
 export function DocumentsClient({ embedded = false }) {
   const { user } = useAuth();
@@ -199,47 +196,57 @@ export function DocumentsClient({ embedded = false }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         {!embedded && (
           <div>
-            <h1 className="text-3xl font-bold">Compliance Documents</h1>
-            <p className="text-muted-foreground">
-              Review renter and student documents and upcoming renewals.
+            <h1 className="text-3xl font-bold tracking-tight">Compliance Documents</h1>
+            <p className="mt-1 text-muted-foreground">
+              {isAdmin
+                ? "Review renter and student documents and upcoming renewals."
+                : "Your pilot licence, medical certificate, and insurance."}
             </p>
           </div>
         )}
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-wrap items-end gap-3">
           {isAdmin && (
-            <Select
-              value={documentAudience}
-              onValueChange={(value) => {
-                setDocumentAudience(value);
-                setSelectedRenterId("");
-                setCompliance(null);
-              }}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="RENTER">Renters</SelectItem>
-                <SelectItem value="STUDENT">Students</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-1.5">
+              <Label htmlFor="document-audience" className="text-xs text-muted-foreground">Audience</Label>
+              <Select
+                value={documentAudience}
+                onValueChange={(value) => {
+                  setDocumentAudience(value);
+                  setSelectedRenterId("");
+                  setCompliance(null);
+                }}
+              >
+                <SelectTrigger id="document-audience" className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RENTER">Renters</SelectItem>
+                  <SelectItem value="STUDENT">Students</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           )}
           {isAdmin && (
-            <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder={documentAudience === "STUDENT" ? "Select student" : "Select renter"} />
-              </SelectTrigger>
-              <SelectContent>
-                {safeRenters.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.name || person.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1.5">
+              <Label htmlFor="document-person" className="text-xs text-muted-foreground">
+                {documentAudience === "STUDENT" ? "Student" : "Renter"}
+              </Label>
+              <Select value={selectedRenterId} onValueChange={setSelectedRenterId}>
+                <SelectTrigger id="document-person" className="w-[260px]">
+                  <SelectValue placeholder={documentAudience === "STUDENT" ? "Select student" : "Select renter"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {safeRenters.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name || person.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
           <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
@@ -248,68 +255,69 @@ export function DocumentsClient({ embedded = false }) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Missing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {safeCompliance.missingTypes.length
-                ? safeCompliance.missingTypes.map(getDocumentLabel).join(", ")
-                : "None"}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Expired</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {safeCompliance.expired.length
-                ? safeCompliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                : "None"}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Expiring Soon</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {safeCompliance.expiringSoon.length
-                ? safeCompliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                : "None"}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile
+          label="Missing"
+          value={safeCompliance.missingTypes.length}
+          icon={AlertTriangle}
+          tone={safeCompliance.missingTypes.length > 0 ? "danger" : "success"}
+          hint={safeCompliance.missingTypes.length
+            ? safeCompliance.missingTypes.map(getDocumentLabel).join(", ")
+            : "Nothing missing"}
+        />
+        <StatTile
+          label="Expired"
+          value={safeCompliance.expired.length}
+          icon={Clock}
+          tone={safeCompliance.expired.length > 0 ? "danger" : "success"}
+          hint={safeCompliance.expired.length
+            ? safeCompliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+            : "Nothing expired"}
+        />
+        <StatTile
+          label="Expiring Soon"
+          value={safeCompliance.expiringSoon.length}
+          icon={Clock}
+          tone={safeCompliance.expiringSoon.length > 0 ? "warning" : "success"}
+          hint={safeCompliance.expiringSoon.length
+            ? safeCompliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
+            : "Nothing due soon"}
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Documents
-          </CardTitle>
-          <CardDescription>Current document set for the selected user.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Card className="gap-0 py-0">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <FileText className="size-4 text-muted-foreground" />
+            </span>
+            <div>
+              <h2 className="font-semibold leading-tight">Documents</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {isAdmin
+                  ? "Current document set for the selected user."
+                  : "Keep these current so you can keep booking aircraft."}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="px-5 py-2">
           {safeCompliance.documents.length ? (
-            safeCompliance.documents.map((document) => (
-              <div key={document.id} className="rounded-lg border p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">
-                        {getDocumentLabel(document.document_type)}
-                      </span>
-                      <Badge variant="outline" className={getDocumentStatusBadgeClass(document.status)}>
-                        {document.status}
-                      </Badge>
+            [...safeCompliance.documents]
+              .sort((a, b) => (DOCUMENT_STATUS_RANK[a.status] ?? 3) - (DOCUMENT_STATUS_RANK[b.status] ?? 3))
+              .map((document) => (
+                <div
+                  key={document.id}
+                  className="flex flex-col gap-3 border-b py-4 last:border-b-0 lg:flex-row lg:items-start lg:justify-between"
+                >
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{getDocumentLabel(document.document_type)}</span>
+                      <Pill tone={DOCUMENT_STATUS_TONE[document.status] || "neutral"}>
+                        {String(document.status || "").replaceAll("_", " ")}
+                      </Pill>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="space-y-0.5 text-sm text-muted-foreground">
                       <div>Expires: {formatDate(document.expires_at)}</div>
                       <div>File: {document.file_name || "Not attached"}</div>
                     </div>
@@ -318,13 +326,14 @@ export function DocumentsClient({ embedded = false }) {
                       <a
                         href={document.file_data}
                         download={document.file_name || "document"}
-                        className="inline-flex text-sm text-blue-600 underline"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-golden hover:underline"
                       >
+                        <Download className="size-4" />
                         Download attachment
                       </a>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(document)}>
                       Edit
                     </Button>
@@ -333,12 +342,17 @@ export function DocumentsClient({ embedded = false }) {
                     </Button>
                   </div>
                 </div>
-              </div>
-            ))
+              ))
           ) : (
-            <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+            <EmptyRow
+              icon={FileText}
+              title="No documents uploaded yet"
+              description={isAdmin
+                ? "This user has not uploaded any compliance documents."
+                : "Add your pilot licence, medical certificate, and renters insurance to stay compliant."}
+            />
           )}
-        </CardContent>
+        </div>
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
