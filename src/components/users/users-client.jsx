@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users, Search, Filter, UserCheck, UserPlus, GraduationCap } from "lucide-react";
+import { Plus, Users, Search, Filter, UserCheck, GraduationCap, Plane, Wrench, ShieldCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/panels";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -177,37 +179,49 @@ export function UsersClient() {
     });
   };
 
+  const activeFilterCount = [
+    filters.search,
+    filters.role !== 'all' ? filters.role : '',
+    filters.status !== 'all' ? filters.status : '',
+  ].filter(Boolean).length;
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading users...</p>
-          </div>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+          {[0, 1, 2, 3, 4, 5].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={fetchUsers}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-7xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load users</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchUsers} className="mt-2">Try again</Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -259,79 +273,51 @@ export function UsersClient() {
         </Sheet>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{userCounts.total}</p>
-              </div>
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Students</p>
-                <p className="text-2xl font-bold text-blue-600">{userCounts.students}</p>
-              </div>
-              <GraduationCap className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Instructors</p>
-                <p className="text-2xl font-bold text-purple-600">{userCounts.instructors}</p>
-              </div>
-              <UserCheck className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold text-green-600">{userCounts.admins}</p>
-              </div>
-              <UserPlus className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">{userCounts.active}</p>
-              </div>
-              <UserCheck className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Inactive</p>
-                <p className="text-2xl font-bold text-red-600">{userCounts.inactive}</p>
-              </div>
-              <Users className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* One tile per role: renters and maintenance were counted but never shown. */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <StatTile
+          label="Total Users"
+          value={userCounts.total}
+          icon={Users}
+          tone="gold"
+          hint={`${userCounts.active} active · ${userCounts.inactive} inactive`}
+          progress={userCounts.total > 0 ? (userCounts.active / userCounts.total) * 100 : 0}
+        />
+        <StatTile
+          label="Students"
+          value={userCounts.students}
+          icon={GraduationCap}
+          tone="info"
+          hint="In training"
+        />
+        <StatTile
+          label="Renters"
+          value={userCounts.renters}
+          icon={Plane}
+          tone="warning"
+          hint="Rental-only pilots"
+        />
+        <StatTile
+          label="Instructors"
+          value={userCounts.instructors}
+          icon={UserCheck}
+          tone="neutral"
+          hint="Teaching staff"
+        />
+        <StatTile
+          label="Maintenance"
+          value={userCounts.maintenance}
+          icon={Wrench}
+          tone="neutral"
+          hint="Airworthiness staff"
+        />
+        <StatTile
+          label="Admins"
+          value={userCounts.admins}
+          icon={ShieldCheck}
+          tone="success"
+          hint="Full portal access"
+        />
       </div>
 
       {/* Filters */}
@@ -375,9 +361,16 @@ export function UsersClient() {
               </SelectContent>
             </Select>
             
-            <Button variant="outline" onClick={resetFilters} size="sm">
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground tabular-nums">{filteredUsers.length}</span>
+              {' of '}<span className="tabular-nums">{userCounts.total}</span> users
+              {activeFilterCount > 0 && ` · ${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active`}
+            </p>
+            <Button variant="outline" onClick={resetFilters} size="sm" disabled={activeFilterCount === 0}>
               <Filter className="h-4 w-4 mr-2" />
-              Reset
+              Reset filters
             </Button>
           </div>
         </CardContent>

@@ -16,55 +16,58 @@ export function UsersTable({
   onDeleteUser, 
   onManageAssignments 
 }) {
+  /** Dark-safe role tones. The previous bg-*-50 fills were invisible in dark mode. */
   const getRoleBadge = (role, isLeadInstructor) => {
-    const variants = {
-      STUDENT: "bg-blue-50 text-blue-700 border-blue-200",
-      RENTER: "bg-amber-50 text-amber-700 border-amber-200",
-      INSTRUCTOR: "bg-purple-50 text-purple-700 border-purple-200",
-      ADMIN: "bg-green-50 text-green-700 border-green-200",
-      MAINT: "bg-orange-50 text-orange-700 border-orange-200"
+    const tones = {
+      STUDENT: "bg-sky-500/12 text-sky-700 dark:text-sky-400",
+      RENTER: "bg-amber-500/12 text-amber-700 dark:text-amber-400",
+      INSTRUCTOR: "bg-purple-500/12 text-purple-700 dark:text-purple-400",
+      ADMIN: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+      MAINT: "bg-orange-500/12 text-orange-700 dark:text-orange-400",
     };
+    const labels = { MAINT: "Maintenance", RENTER: "Renter" };
 
     return (
       <div className="flex items-center gap-2">
-        <Badge className={variants[role]}>
-          {role === "MAINT" ? "Maintenance" : role === "RENTER" ? "Renter" : role}
-        </Badge>
+        <span className={cn(
+          "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
+          tones[role] || "bg-muted text-muted-foreground",
+        )}>
+          {labels[role] || role}
+        </span>
         {isLeadInstructor && (
-          <Badge variant="outline" className="text-xs">
+          <span className="inline-flex items-center rounded-full bg-golden/12 px-2 py-0.5 text-xs font-semibold text-golden">
             Lead
-          </Badge>
+          </span>
         )}
       </div>
     );
   };
 
-  const getStatusBadge = (isActive) => {
-    return (
-      <Badge 
-        variant={isActive ? "secondary" : "outline"}
-        className={isActive 
-          ? "bg-green-50 text-green-700 border-green-200" 
-          : "bg-red-50 text-red-700 border-red-200"
-        }
-      >
-        {isActive ? "Active" : "Inactive"}
-      </Badge>
-    );
-  };
+  const getStatusBadge = (isActive) => (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
+      isActive
+        ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+        : "bg-muted text-muted-foreground",
+    )}>
+      <span className={cn("size-1.5 rounded-full", isActive ? "bg-emerald-500" : "bg-muted-foreground/50")} />
+      {isActive ? "Active" : "Inactive"}
+    </span>
+  );
 
   const getRoleIcon = (role) => {
     switch (role) {
       case "STUDENT":
-        return <User className="h-4 w-4 text-blue-600" />;
+        return <User className="h-4 w-4 text-sky-600 dark:text-sky-400" />;
       case "INSTRUCTOR":
-        return <UserCheck className="h-4 w-4 text-purple-600" />;
+        return <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
       case "RENTER":
-        return <User className="h-4 w-4 text-amber-600" />;
+        return <User className="h-4 w-4 text-amber-600 dark:text-amber-400" />;
       case "ADMIN":
-        return <Shield className="h-4 w-4 text-green-600" />;
+        return <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
       case "MAINT":
-        return <Key className="h-4 w-4 text-orange-600" />;
+        return <Key className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
       default:
         return <User className="h-4 w-4" />;
     }
