@@ -24,6 +24,31 @@ function isFlightCheckedOut(lesson) {
   );
 }
 
+
+/** The calendar encodes six event types by colour; without this they are unreadable. */
+const LEGEND_ITEMS = [
+  { label: "Flight lesson", swatch: "bg-purple-500/15 border-purple-500/40" },
+  { label: "Ground lesson", swatch: "bg-orange-500/15 border-orange-500/40" },
+  { label: "Checked out", swatch: "bg-amber-500/25 border-amber-500" },
+  { label: "Solo flight", swatch: "bg-sky-500/15 border-sky-500/40" },
+  { label: "Rental", swatch: "bg-emerald-500/15 border-emerald-500/40" },
+  { label: "Aircraft hold", swatch: "bg-fuchsia-500/15 border-fuchsia-500/40" },
+  { label: "Completed", swatch: "bg-muted border-border" },
+];
+
+function EventLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-4 py-2.5">
+      <span className="text-xs font-semibold text-muted-foreground">Legend</span>
+      {LEGEND_ITEMS.map((item) => (
+        <span key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className={cn("size-3 shrink-0 rounded-sm border", item.swatch)} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
 export function LessonsCalendar({ 
   lessons, 
   users, 
@@ -178,17 +203,17 @@ export function LessonsCalendar({
         className={cn(
           "h-full p-2 rounded border text-xs overflow-hidden",
           "hover:shadow-md transition-shadow cursor-pointer group",
-          isRentalBooking && "bg-emerald-100 border-emerald-300 text-emerald-950",
-          isAircraftFlight && "bg-sky-100 border-sky-300 text-sky-950",
-          isAircraftHold && "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-950",
+          isRentalBooking && "bg-emerald-500/15 border-emerald-500/40 text-emerald-950 dark:text-emerald-100",
+          isAircraftFlight && "bg-sky-500/15 border-sky-500/40 text-sky-950 dark:text-sky-100",
+          isAircraftHold && "bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-950 dark:text-fuchsia-100",
           lesson.kind === "FLIGHT" &&
             !isFlightCheckedOut(lesson) &&
             !isAircraftFlight &&
-            "bg-purple-100 border-purple-300 text-purple-900",
-          lesson.kind === "GROUND" && "bg-orange-100 border-orange-300 text-orange-900",
+            "bg-purple-500/15 border-purple-500/40 text-purple-950 dark:text-purple-100",
+          lesson.kind === "GROUND" && "bg-orange-500/15 border-orange-500/40 text-orange-950 dark:text-orange-100",
           isFlightCheckedOut(lesson) &&
-            "bg-amber-100 border-amber-500 text-amber-950 ring-1 ring-amber-400/60",
-          lesson.status === "COMPLETED" && "opacity-70 bg-gray-100 border-gray-300 text-gray-600",
+            "bg-amber-500/20 border-amber-500 text-amber-950 dark:text-amber-100 ring-1 ring-amber-500/50",
+          lesson.status === "COMPLETED" && "opacity-70 bg-muted border-border text-muted-foreground",
           lesson.status === "CANCELED" && "opacity-50"
         )}
       >
@@ -276,7 +301,7 @@ export function LessonsCalendar({
           variant="outline"
           className={cn(
             "text-[9px] h-4 mt-1",
-            isFlightCheckedOut(lesson) && "border-amber-600 bg-amber-200/80 text-amber-950"
+            isFlightCheckedOut(lesson) && "border-amber-500 bg-amber-500/25 text-amber-950 dark:text-amber-100"
           )}
         >
           {isAircraftHold ? "Aircraft hold" : isRentalBooking ? "Rental" : isRelocationFlight ? "Relocation" : isAircraftFlight ? "Solo flight" : isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
@@ -301,39 +326,45 @@ export function LessonsCalendar({
   // Render different views
   if (view === 'schedule') {
     return (
-      <WeekScheduleView
-        currentDate={currentDate}
-        events={scheduleEvents}
-        onEventClick={(event) => {
-          if (!event.event_type) onLessonClick(event);
-        }}
-        onTimeSlotClick={handleTimeSlotClickInternal}
-        onDateChange={setCurrentDate}
-        view="day"
-        onViewChange={setView}
-        renderEvent={renderLessonEvent}
-        startHour={0}
-        endHour={23}
-        resources={scheduleResources}
-        showResourceColumns={true}
-      />
+      <div className="space-y-4">
+        <EventLegend />
+        <WeekScheduleView
+          currentDate={currentDate}
+          events={scheduleEvents}
+          onEventClick={(event) => {
+            if (!event.event_type) onLessonClick(event);
+          }}
+          onTimeSlotClick={handleTimeSlotClickInternal}
+          onDateChange={setCurrentDate}
+          view="day"
+          onViewChange={setView}
+          renderEvent={renderLessonEvent}
+          startHour={0}
+          endHour={23}
+          resources={scheduleResources}
+          showResourceColumns={true}
+        />
+      </div>
     );
   } else if (view === 'day' || view === 'week') {
     return (
-      <WeekScheduleView
-        currentDate={currentDate}
-        events={scheduleEvents}
-        onEventClick={(event) => {
-          if (!event.event_type) onLessonClick(event);
-        }}
-        onTimeSlotClick={handleTimeSlotClickInternal}
-        onDateChange={setCurrentDate}
-        view={view}
-        onViewChange={setView}
-        renderEvent={renderLessonEvent}
-        startHour={0}
-        endHour={23}
-      />
+      <div className="space-y-4">
+        <EventLegend />
+        <WeekScheduleView
+          currentDate={currentDate}
+          events={scheduleEvents}
+          onEventClick={(event) => {
+            if (!event.event_type) onLessonClick(event);
+          }}
+          onTimeSlotClick={handleTimeSlotClickInternal}
+          onDateChange={setCurrentDate}
+          view={view}
+          onViewChange={setView}
+          renderEvent={renderLessonEvent}
+          startHour={0}
+          endHour={23}
+        />
+      </div>
     );
   }
 
@@ -374,6 +405,8 @@ export function LessonsCalendar({
           </Select>
         </div>
       </div>
+
+      <EventLegend />
 
       {/* Calendar */}
       <Card>
@@ -438,14 +471,14 @@ function CalendarDay({
         "min-h-[120px] p-2 border-r last:border-r-0 cursor-pointer hover:bg-muted/50 transition-colors",
         !isCurrentMonth && "text-muted-foreground bg-muted/20",
         isSelected && "bg-primary/10",
-        isToday && "bg-blue-50 border-blue-200"
+        isToday && "bg-sky-500/10 border-sky-500/30"
       )}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
         <span className={cn(
           "text-sm font-medium",
-          isToday && "text-blue-600 font-bold"
+          isToday && "text-sky-600 dark:text-sky-400 font-bold"
         )}>
           {formattedDate}
         </span>
@@ -519,12 +552,12 @@ function LessonItem({
     <div
       className={cn(
         "text-xs p-2 rounded border cursor-pointer hover:shadow-sm transition-shadow",
-        lesson.status === "COMPLETED" && "bg-green-50 border-green-200",
+        lesson.status === "COMPLETED" && "bg-emerald-500/10 border-emerald-500/30",
         lesson.status === "SCHEDULED" &&
           !isFlightCheckedOut(lesson) &&
-          "bg-blue-50 border-blue-200",
-        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-50 border-amber-400",
-        lesson.status === "CANCELED" && "bg-gray-50 border-gray-200",
+          "bg-sky-500/10 border-sky-500/30",
+        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-500/12 border-amber-500/50",
+        lesson.status === "CANCELED" && "bg-muted border-border",
         lesson.kind === "FLIGHT" && !isFlightCheckedOut(lesson) && "border-l-4 border-l-purple-500",
         lesson.kind === "FLIGHT" && isFlightCheckedOut(lesson) && "border-l-4 border-l-amber-500",
         lesson.kind === "GROUND" && "border-l-4 border-l-orange-500"
@@ -616,7 +649,7 @@ function LessonItem({
           variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}
           className={cn(
             "text-xs",
-            isFlightCheckedOut(lesson) && "border-amber-500 bg-amber-100 text-amber-950"
+            isFlightCheckedOut(lesson) && "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400"
           )}
         >
           {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
@@ -717,12 +750,12 @@ function LessonCard({
     <div
       className={cn(
         "p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow",
-        lesson.status === "COMPLETED" && "bg-green-50 border-green-200",
+        lesson.status === "COMPLETED" && "bg-emerald-500/10 border-emerald-500/30",
         lesson.status === "SCHEDULED" &&
           !isFlightCheckedOut(lesson) &&
-          "bg-blue-50 border-blue-200",
-        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-50 border-amber-300",
-        lesson.status === "CANCELED" && "bg-gray-50 border-gray-200"
+          "bg-sky-500/10 border-sky-500/30",
+        lesson.status === "SCHEDULED" && isFlightCheckedOut(lesson) && "bg-amber-500/12 border-amber-500/50",
+        lesson.status === "CANCELED" && "bg-muted border-border"
       )}
       onClick={() => onLessonClick(lesson)}
     >
@@ -730,9 +763,9 @@ function LessonCard({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             {lesson.kind === "FLIGHT" ? (
-              <Plane className="h-4 w-4 text-purple-600" />
+              <Plane className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             ) : (
-              <BookOpen className="h-4 w-4 text-orange-600" />
+              <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             )}
             <span className="font-medium">
               {lesson.flight_type === "RELOCATION"
@@ -741,7 +774,7 @@ function LessonCard({
             </span>
             <Badge
               variant={lesson.status === "COMPLETED" ? "secondary" : "outline"}
-              className={cn(isFlightCheckedOut(lesson) && "border-amber-500 bg-amber-100 text-amber-950")}
+              className={cn(isFlightCheckedOut(lesson) && "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400")}
             >
               {isFlightCheckedOut(lesson) ? "Checked out" : lesson.status}
             </Badge>

@@ -163,12 +163,12 @@ export function LessonDetails({
     }
     return `${diffMinutes}m`;
   };
-
+  /** Dark-safe status tones: bare bg-*-50 stays white against a dark sheet. */
   const getStatusColor = (status) => {
     const colors = {
-      SCHEDULED: "text-blue-600 bg-blue-50 border-blue-200",
-      COMPLETED: "text-green-600 bg-green-50 border-green-200",
-      CANCELED: "text-gray-600 bg-gray-50 border-gray-200"
+      SCHEDULED: "border-transparent bg-sky-500/12 text-sky-700 dark:text-sky-400",
+      COMPLETED: "border-transparent bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+      CANCELED: "border-transparent bg-muted text-muted-foreground",
     };
     return colors[status] || colors.SCHEDULED;
   };
@@ -290,9 +290,9 @@ export function LessonDetails({
       <SheetHeader className="sticky top-0 bg-background pb-4 border-b z-10">
         <SheetTitle className="flex items-center gap-2">
           {lesson.kind === "FLIGHT" ? (
-            <Plane className="h-5 w-5 text-purple-600" />
+            <Plane className="h-5 w-5 text-golden" />
           ) : (
-            <BookOpen className="h-5 w-5 text-orange-600" />
+            <BookOpen className="h-5 w-5 text-sky-600 dark:text-sky-400" />
           )}
           {lesson.flight_type === "RELOCATION"
             ? "Relocation Flight"
@@ -313,7 +313,7 @@ export function LessonDetails({
             lesson.aircraft_id &&
             lesson.status === "SCHEDULED" &&
             isCheckedOut && (
-              <Badge className="border-amber-400 bg-amber-100 text-amber-950 px-3 py-1">
+              <Badge className="border-transparent bg-amber-500/15 px-3 py-1 text-amber-700 dark:text-amber-400">
                 Checked out
               </Badge>
             )}
@@ -368,7 +368,7 @@ export function LessonDetails({
           <Card
             className={cn(
               "border-2",
-              isCheckedOut ? "border-amber-400 bg-amber-50/40" : "border-primary/25"
+              isCheckedOut ? "border-amber-500/40 bg-amber-500/8" : "border-primary/25"
             )}
           >
             <CardHeader>

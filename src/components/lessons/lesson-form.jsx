@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Clock, User, Plane, BookOpen } from "lucide-react";
+import { CalendarIcon, Clock, User, Plane, BookOpen, AlertTriangle, Ban } from "lucide-react";
 import { format } from "date-fns";
 import { formatET, etToISO } from "@/lib/format-tz";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TimeSelect } from "@/components/ui/time-select";
 import { Switch } from "@/components/ui/switch";
 import { lessonsAPI, usersAPI } from "@/lib/api";
@@ -294,15 +294,30 @@ export function LessonForm({
     }
   };
 
+  /**
+   * Same conditions that previously disabled the submit button, but named so the
+   * form can say why it is disabled instead of just going grey.
+   */
+  const debtBlocksFlight = watchedValues.kind === "FLIGHT"
+    && instructionBilling?.status === "BLOCKED"
+    && !(canOverrideDebt && watchedValues.overrideInstructionDebt);
+
+  const submitBlockedReason = conflicts.length > 0
+    ? "Resolve the scheduling conflicts above to continue."
+    : debtBlocksFlight
+      ? "This student's unpaid instructor time blocks new flight lessons."
+      : "";
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         {/* Conflict Warnings */}
         {conflicts.length > 0 && (
-          <Alert className="border-destructive">
+          <Alert className="border-destructive/50 bg-destructive/10">
+            <AlertTriangle className="text-destructive" />
+            <AlertTitle>Scheduling conflicts detected</AlertTitle>
             <AlertDescription>
-              <div className="font-medium mb-2">Scheduling conflicts detected:</div>
-              <ul className="list-disc list-inside space-y-1">
+              <ul className="list-inside list-disc space-y-1">
                 {conflicts.map((conflict, index) => (
                   <li key={index} className="text-sm">
                     {getConflictDescription(conflict)}
@@ -313,14 +328,18 @@ export function LessonForm({
           </Alert>
         )}
         {instructionBilling?.status === "WARNING" && (
-          <Alert>
+          <Alert className="border-amber-500/40 bg-amber-500/10">
+            <AlertTriangle className="text-amber-600 dark:text-amber-400" />
+            <AlertTitle>Unpaid instructor time</AlertTitle>
             <AlertDescription>
               This student has {instructionBilling.outstandingHours.toFixed(1)} unpaid instructor hours. The warning threshold has been reached.
             </AlertDescription>
           </Alert>
         )}
         {instructionBilling?.status === "BLOCKED" && (
-          <Alert className="border-destructive">
+          <Alert className="border-destructive/50 bg-destructive/10">
+            <Ban className="text-destructive" />
+            <AlertTitle>Scheduling blocked</AlertTitle>
             <AlertDescription>
               <div className="space-y-3">
                 <p>
@@ -750,17 +769,16 @@ export function LessonForm({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
+          {submitBlockedReason && (
+            <p className="mr-auto text-sm text-muted-foreground">{submitBlockedReason}</p>
+          )}
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            disabled={loading || conflicts.length > 0 || (
-              watchedValues.kind === "FLIGHT" &&
-              instructionBilling?.status === "BLOCKED" &&
-              !(canOverrideDebt && watchedValues.overrideInstructionDebt)
-            )}
+          <Button
+            type="submit"
+            disabled={loading || Boolean(submitBlockedReason)}
             className="bg-golden-gradient hover:bg-golden-gradient/90"
           >
             {loading ? "Scheduling..." : lesson ? "Update Lesson" : "Schedule Lesson"}
