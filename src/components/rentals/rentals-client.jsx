@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Calendar, Clock3, Plane, Plus, Wallet } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Clock3, FileWarning, Plane, Plus, TrendingUp, Wallet } from "lucide-react";
 import { rentalsAPI, usersAPI, aircraftAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { WeekScheduleView } from "@/components/ui/schedule-view";
@@ -17,12 +17,42 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CheckoutModal } from "@/components/aircraft/checkout-modal";
 import { etToISO, scheduleRangeParams } from "@/lib/format-tz";
 import { TimeSelect } from "@/components/ui/time-select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile, Pill, EmptyRow } from "@/components/ui/panels";
+import { cn } from "@/lib/utils";
 
 const documentLabels = {
   PILOT_LICENSE: "Pilot License",
   MEDICAL_CERTIFICATE: "Medical Certificate",
   RENTERS_INSURANCE: "Renters Insurance",
 };
+
+
+/** Booking and flight lifecycle states, coloured so they are distinguishable at a glance. */
+const BOOKING_TONE = {
+  SCHEDULED: "info",
+  CHECKED_OUT: "warning",
+  COMPLETED: "success",
+  CANCELED: "neutral",
+};
+
+/** Each compliance line is either clear or it lists exactly what is wrong. */
+function ComplianceRow({ label, items, tone }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b py-3 last:border-b-0">
+      <p className="text-sm font-medium">{label}</p>
+      {items.length === 0 ? (
+        <Pill tone="success" icon={CheckCircle2}>None</Pill>
+      ) : (
+        <div className="flex flex-wrap justify-end gap-2">
+          {items.map((item) => (
+            <Pill key={item} tone={tone} icon={AlertTriangle}>{item}</Pill>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function dateAndTimeToETISO(dateValue, timeValue) {
   if (!dateValue || !timeValue) return null;
@@ -148,10 +178,15 @@ export function RentalsClient() {
   const isStudentWorkflow = isAdmin && selectedWorkflow === "STUDENT";
   const selectedPeople = isStudentWorkflow ? students : renters;
   const selectedPersonLabel = isStudentWorkflow ? "student" : "renter";
-  const scheduleHeading = isStudentWorkflow ? "Student Flight Hours" : "Flight Operations";
+  const scheduleHeading = isStudentWorkflow
+    ? "Student Flight Hours"
+    : isAdmin ? "Flight Operations" : "My Schedule";
+  // Renters previously got a bare "Flight Operations" title with no description at all.
   const scheduleDescription = isStudentWorkflow
     ? "Track student flight hours and manage hour balances."
-    : "";
+    : isAdmin
+      ? "Rental bookings, solo flights, and aircraft availability."
+      : "Book an aircraft, manage your rental hours, and keep documents current.";
 
   const filteredBookings = useMemo(() => {
     const activeBookings = bookings.filter((booking) =>
@@ -496,8 +531,18 @@ export function RentalsClient() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <Skeleton className="h-80 rounded-xl" />
+          <Skeleton className="h-80 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -529,7 +574,7 @@ export function RentalsClient() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">{scheduleHeading}</h1>
@@ -598,42 +643,40 @@ export function RentalsClient() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Total Hours Purchased</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{summary.totalPurchased.toFixed(1)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Hours Flown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{summary.hoursFlown.toFixed(1)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Manual Adjustments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {summary.manualAdjustments > 0 ? "+" : ""}
-              {summary.manualAdjustments.toFixed(1)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Hours Remaining</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{summary.hoursRemaining.toFixed(1)}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Hours Remaining"
+          value={summary.hoursRemaining.toFixed(1)}
+          unit="hrs"
+          icon={Plane}
+          tone="gold"
+          progress={summary.totalPurchased > 0
+            ? 100 - (summary.hoursFlown / summary.totalPurchased) * 100
+            : 0}
+          progressLabel={`${summary.hoursFlown.toFixed(1)} of ${summary.totalPurchased.toFixed(1)} hrs flown`}
+        />
+        <StatTile
+          label="Total Hours Purchased"
+          value={summary.totalPurchased.toFixed(1)}
+          unit="hrs"
+          icon={Wallet}
+          hint="Across all hour blocks"
+        />
+        <StatTile
+          label="Hours Flown"
+          value={summary.hoursFlown.toFixed(1)}
+          unit="hrs"
+          icon={TrendingUp}
+          hint="Logged from completed flights"
+        />
+        <StatTile
+          label="Manual Adjustments"
+          value={`${summary.manualAdjustments > 0 ? "+" : ""}${summary.manualAdjustments.toFixed(1)}`}
+          unit="hrs"
+          icon={Clock3}
+          tone={summary.manualAdjustments !== 0 ? "info" : "neutral"}
+          hint={summary.manualAdjustments !== 0 ? "Applied by an administrator" : "None applied"}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -649,7 +692,7 @@ export function RentalsClient() {
           <CardContent className="space-y-4">
             {isStudentWorkflow ? (
               summary.transactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No student hour entries yet.</p>
+                <EmptyRow icon={Wallet} title="No hour entries yet" description="Purchases and lesson debits will appear here." />
               ) : (
                 summary.transactions.map((transaction) => (
                   <div key={transaction.id} className="rounded-lg border p-4">
@@ -673,7 +716,7 @@ export function RentalsClient() {
                 ))
               )
             ) : safeBookings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No rental bookings yet.</p>
+              <EmptyRow icon={Calendar} title="No rental bookings" description="Schedule a rental to see it listed here." />
             ) : (
               safeBookings.map((booking) => (
                 <div key={booking.id} className="rounded-lg border p-4">
@@ -682,7 +725,7 @@ export function RentalsClient() {
                       <div className="flex items-center gap-2">
                         <Plane className="h-4 w-4" />
                         <span className="font-semibold">{booking.tail_number}</span>
-                        <Badge variant="outline">{booking.status}</Badge>
+                        <Pill tone={BOOKING_TONE[booking.status] || "neutral"}>{booking.status.replace("_", " ")}</Pill>
                       </div>
                       {isAdmin && (
                         <p className="text-sm text-muted-foreground">Renter: {booking.renter_name || booking.renter_email}</p>
@@ -730,7 +773,7 @@ export function RentalsClient() {
                   <p className="text-sm text-muted-foreground">Aircraft usage logged without a student or renter booking.</p>
                 </div>
                 {safeAircraftFlights.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No solo flights scheduled.</p>
+                  <EmptyRow icon={Plane} title="No solo flights scheduled" description="Internal aircraft usage logged without a booking appears here." />
                 ) : (
                   safeAircraftFlights.map((flight) => (
                     <div key={flight.id} className="rounded-lg border p-4">
@@ -739,7 +782,7 @@ export function RentalsClient() {
                           <div className="flex items-center gap-2">
                             <Plane className="h-4 w-4" />
                             <span className="font-semibold">{flight.tail_number}</span>
-                            <Badge variant="outline">{flight.status}</Badge>
+                            <Pill tone={BOOKING_TONE[flight.status] || "neutral"}>{flight.status.replace("_", " ")}</Pill>
                           </div>
                           <p className="text-sm text-muted-foreground">Pilot: {flight.pilot_name || flight.pilot_email}</p>
                           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -840,31 +883,33 @@ export function RentalsClient() {
           )}
 
           {!isStudentWorkflow && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance Snapshot</CardTitle>
-                <CardDescription>Document issues that can block rentals.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div>
-                  <span className="font-medium">Missing:</span>{" "}
-                  {compliance.missingTypes?.length
-                    ? compliance.missingTypes.map(getDocumentLabel).join(", ")
-                    : "None"}
-                </div>
-                <div>
-                  <span className="font-medium">Expired:</span>{" "}
-                  {compliance.expired?.length
-                    ? compliance.expired.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                    : "None"}
-                </div>
-                <div>
-                  <span className="font-medium">Expiring Soon:</span>{" "}
-                  {compliance.expiringSoon?.length
-                    ? compliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type)).join(", ")
-                    : "None"}
-                </div>
-              </CardContent>
+            <Card className="gap-0 py-0">
+              <div className="border-b px-5 py-4">
+                <h2 className="flex items-center gap-2 font-semibold">
+                  <FileWarning className="size-4 text-muted-foreground" />
+                  Compliance snapshot
+                </h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Document issues that can block rentals.
+                </p>
+              </div>
+              <div className="px-5 py-2">
+                <ComplianceRow
+                  label="Missing"
+                  items={compliance.missingTypes.map(getDocumentLabel)}
+                  tone="danger"
+                />
+                <ComplianceRow
+                  label="Expired"
+                  items={compliance.expired.map((doc) => getDocumentLabel(doc.document_type))}
+                  tone="danger"
+                />
+                <ComplianceRow
+                  label="Expiring soon"
+                  items={compliance.expiringSoon.map((doc) => getDocumentLabel(doc.document_type))}
+                  tone="warning"
+                />
+              </div>
             </Card>
           )}
         </div>
