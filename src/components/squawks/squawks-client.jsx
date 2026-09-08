@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { Plus, Search, Filter, AlertTriangle, CheckCircle, Clock, Plane, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { squawksAPI, aircraftAPI } from "@/lib/api";
 import { SquawksTable } from "./squawks-table";
@@ -16,6 +15,8 @@ import { SquawksForm } from "./squawks-form";
 import { SquawksDetails } from "./squawks-details";
 import { useConfirmDialog, confirmPresets } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/panels";
 
 export function SquawksClient() {
   // State
@@ -179,43 +180,59 @@ export function SquawksClient() {
   const canReportSquawk = user?.role === 'STUDENT' || user?.role === 'INSTRUCTOR' || user?.role === 'ADMIN' || user?.role === 'RENTER';
   const canResolveSquawk = user?.role === 'MAINT' || user?.role === 'ADMIN';
 
+  const activeFilterCount = [
+    filters.search,
+    filters.status !== 'all' ? filters.status : '',
+    filters.aircraft !== 'all' ? filters.aircraft : '',
+    filters.dateRange !== 'all' ? filters.dateRange : '',
+  ].filter(Boolean).length;
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading squawks...</p>
-          </div>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((key) => <Skeleton key={key} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={fetchAllData}>Try Again</Button>
-          </CardContent>
+      <div className="mx-auto w-full max-w-7xl">
+        <Card className="gap-0 py-0">
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-red-500/12">
+              <AlertTriangle className="size-6 text-red-600 dark:text-red-400" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold">Could not load squawks</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button onClick={fetchAllData} className="mt-2">Try again</Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Squawks Management</h1>
-          <p className="text-muted-foreground">
-            Track and manage aircraft issues and defects
+          <h1 className="text-3xl font-bold tracking-tight">
+            {canResolveSquawk ? 'Squawks Management' : 'Aircraft Squawks'}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {canResolveSquawk
+              ? 'Review and resolve reported aircraft issues and defects.'
+              : 'Known issues across the fleet, and anything you have reported.'}
           </p>
         </div>
         
@@ -245,57 +262,37 @@ export function SquawksClient() {
             </SheetContent>
           </Sheet>
         )}
-      </div>
+      </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Squawks</p>
-                <p className="text-2xl font-bold">{squawkStats.total}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Open Issues</p>
-                <p className="text-2xl font-bold text-red-600">{squawkStats.open}</p>
-              </div>
-              <Clock className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Resolved</p>
-                <p className="text-2xl font-bold text-green-600">{squawkStats.resolved}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold text-blue-600">{squawkStats.today}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Open Issues"
+          value={squawkStats.open}
+          icon={AlertTriangle}
+          tone={squawkStats.open > 0 ? "danger" : "success"}
+          hint={squawkStats.open > 0 ? "Awaiting resolution" : "Fleet is clear"}
+        />
+        <StatTile
+          label="Reported Today"
+          value={squawkStats.today}
+          icon={Calendar}
+          tone={squawkStats.today > 0 ? "warning" : "neutral"}
+          hint={squawkStats.today > 0 ? "New since midnight" : "Nothing new today"}
+        />
+        <StatTile
+          label="Resolved"
+          value={squawkStats.resolved}
+          icon={CheckCircle}
+          tone="success"
+          hint="Signed off to date"
+        />
+        <StatTile
+          label="Total Squawks"
+          value={squawkStats.total}
+          icon={Clock}
+          tone="gold"
+          hint="All reports on record"
+        />
       </div>
 
       {/* Filters */}
@@ -350,10 +347,16 @@ export function SquawksClient() {
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Button variant="outline" onClick={resetFilters} size="sm">
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground tabular-nums">{filteredSquawks.length}</span>
+              {' of '}<span className="tabular-nums">{squawks.length}</span> squawks
+              {activeFilterCount > 0 && ` · ${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active`}
+            </p>
+            <Button variant="outline" onClick={resetFilters} size="sm" disabled={activeFilterCount === 0}>
               <Filter className="h-4 w-4 mr-2" />
-              Reset
+              Reset filters
             </Button>
           </div>
         </CardContent>

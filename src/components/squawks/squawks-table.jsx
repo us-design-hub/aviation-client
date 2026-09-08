@@ -5,11 +5,11 @@ import { format, formatDistanceToNow } from "date-fns";
 import { formatET } from "@/lib/format-tz";
 import { MoreHorizontal, AlertTriangle, CheckCircle, Clock, Plane, User, Calendar, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
+import { Pill } from "@/components/ui/panels";
 
 export function SquawksTable({ 
   squawks, 
@@ -60,20 +60,17 @@ export function SquawksTable({
   const canEdit = user?.role === 'MAINT' || user?.role === 'ADMIN';
   const canResolve = user?.role === 'MAINT' || user?.role === 'ADMIN';
 
+  /** RESOLVED previously used the `default` variant, i.e. brand gold — the loudest
+   *  colour on the page for the state that needs no attention. Green reads correctly. */
   const getStatusBadge = (status) => {
-    const variants = {
-      'OPEN': { variant: 'destructive', icon: AlertTriangle, text: 'Open' },
-      'RESOLVED': { variant: 'default', icon: CheckCircle, text: 'Resolved' },
-    };
-
-    const config = variants[status] || variants['OPEN'];
-    const Icon = config.icon;
+    const config = status === 'RESOLVED'
+      ? { tone: 'success', icon: CheckCircle, text: 'Resolved' }
+      : { tone: 'danger', icon: AlertTriangle, text: 'Open' };
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
+      <Pill tone={config.tone} icon={config.icon}>
         {config.text}
-      </Badge>
+      </Pill>
     );
   };
 
