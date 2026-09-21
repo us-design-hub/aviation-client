@@ -747,23 +747,18 @@ export function LessonsClient() {
               onComplete={() => {
                 handleCompleteLesson(selectedLesson);
               }}
-              onNotesChanged={(note) => {
+              onNotesChanged={(notes) => {
+                // Receives the full list, so this is correct for both adds and deletes.
+                // Notes arrive newest-first, so notes[0] is the latest.
+                const summary = {
+                  note_count: notes.length,
+                  latest_note: notes[0]?.content || null,
+                };
                 setLessons((current) => current.map((item) =>
-                  item.id === selectedLesson.id
-                    ? {
-                        ...item,
-                        note_count: Number(item.note_count || 0) + 1,
-                        latest_note: note.content,
-                      }
-                    : item
+                  item.id === selectedLesson.id ? { ...item, ...summary } : item
                 ));
-                setSelectedLesson((current) => current
-                  ? {
-                      ...current,
-                      note_count: Number(current.note_count || 0) + 1,
-                      latest_note: note.content,
-                    }
-                  : current
+                setSelectedLesson((current) =>
+                  current ? { ...current, ...summary } : current
                 );
               }}
             />

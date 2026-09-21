@@ -156,6 +156,7 @@ export const lessonsAPI = {
   // Notes
   getNotes: (id) => api.get(`/lessons/${id}/notes`),
   addNote: (id, noteData) => api.post(`/lessons/${id}/notes`, noteData),
+  deleteNote: (id, noteId) => api.delete(`/lessons/${id}/notes/${noteId}`),
 };
 
 // Syllabus API

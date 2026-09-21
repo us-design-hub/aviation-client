@@ -35,7 +35,8 @@ export function LessonDetails({
   syllabus,
   onEdit, 
   onDelete, 
-  onComplete 
+  onComplete,
+  onNotesChanged,
 }) {
   const [latestMeterLog, setLatestMeterLog] = useState(null);
   /** Last post-flight / ground readings (CHECKIN or maintenance) — used to pre-fill checkout */
@@ -52,6 +53,7 @@ export function LessonDetails({
   const [lessonNotes, setLessonNotes] = useState([]);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState(null);
   const [savingMeters, setSavingMeters] = useState(false);
   const meterSectionRef = useRef(null);
   
@@ -117,14 +119,37 @@ export function LessonDetails({
     try {
       setSavingNote(true);
       const response = await lessonsAPI.addNote(lesson.id, { content });
-      setLessonNotes((current) => [response.data, ...current]);
-      onNotesChanged?.(response.data);
+      // Notes come back newest-first, so a new note goes on the front.
+      const next = [response.data, ...lessonNotes];
+      setLessonNotes(next);
       setNoteDraft("");
+      onNotesChanged?.(next);
       toast.success("Lesson note added");
     } catch (error) {
+      console.error("Error adding lesson note:", error);
       toast.error(error?.response?.data?.message || error?.response?.data?.error || "Could not add lesson note");
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  /** Admins may remove any note; everyone else only their own (enforced server-side too). */
+  const canDeleteNote = (note) => user?.role === "ADMIN" || note.author_id === user?.id;
+
+  const handleDeleteNote = async (note) => {
+    if (!window.confirm("Delete this note? This cannot be undone.")) return;
+    try {
+      setDeletingNoteId(note.id);
+      await lessonsAPI.deleteNote(lesson.id, note.id);
+      const next = lessonNotes.filter((item) => item.id !== note.id);
+      setLessonNotes(next);
+      onNotesChanged?.(next);
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting lesson note:", error);
+      toast.error(error?.response?.data?.message || error?.response?.data?.error || "Could not delete note");
+    } finally {
+      setDeletingNoteId(null);
     }
   };
 
@@ -728,7 +753,22 @@ export function LessonDetails({
               <div key={note.id} className="rounded-lg border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium">{note.author_name || "Unknown User"}</p>
-                  <p className="text-xs text-muted-foreground">{formatET(note.created_at, "PPp")}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">{formatET(note.created_at, "PPp")}</p>
+                    {canDeleteNote(note) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteNote(note)}
+                        disabled={deletingNoteId === note.id}
+                        aria-label="Delete note"
+                        title="Delete note"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{note.content}</p>
               </div>
