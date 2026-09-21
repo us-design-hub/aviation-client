@@ -164,6 +164,30 @@ export function LessonsClient() {
     }
   };
 
+  /**
+   * Refresh only the lessons list.
+   *
+   * Completing or deleting a lesson cannot change students, instructors, aircraft or
+   * the syllabus, so calling fetchAllData() for it cost four sequential round trips
+   * (plus one request per syllabus program) to reflect a single status change.
+   */
+  const refreshLessons = useCallback(async () => {
+    try {
+      const response = await lessonsAPI.getAll();
+      const rows = response.data || [];
+      setLessons(rows);
+      // Keep the open details sheet in step with the refreshed row.
+      setSelectedLesson((current) =>
+        current ? rows.find((item) => item.id === current.id) || current : current
+      );
+      return rows;
+    } catch (error) {
+      console.error("Error refreshing lessons:", error);
+      toast.error("Failed to refresh lessons");
+      return null;
+    }
+  }, []);
+
 
   const fetchSchedule = useCallback(async ({ date, view }) => {
     try {
@@ -273,7 +297,7 @@ export function LessonsClient() {
     try {
       await lessonsAPI.delete(lesson.id);
       toast.success("Lesson deleted successfully");
-      fetchAllData();
+      await refreshLessons();
     } catch (error) {
       console.error("Error deleting lesson:", error);
       toast.error("Failed to delete lesson");
@@ -300,7 +324,7 @@ export function LessonsClient() {
     try {
       await lessonsAPI.complete(lesson.id);
       toast.success("Lesson marked as completed");
-      fetchAllData();
+      await refreshLessons();
     } catch (error) {
       console.error("Error completing lesson:", error);
       toast.error(error.response?.data?.message || "Failed to complete lesson");
@@ -328,7 +352,7 @@ export function LessonsClient() {
       toast.success("Ground lesson marked as completed");
       setGroundCompleteDialog({ open: false, lesson: null });
       setGroundCompleteForm({ groundInstructionTime: "", instructorNote: "" });
-      fetchAllData();
+      await refreshLessons();
     } catch (error) {
       console.error("Error completing ground lesson:", error);
       toast.error(error.response?.data?.message || "Failed to complete ground lesson");
