@@ -87,6 +87,7 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const setField = (field, value) => setCard((current) => ({ ...current, [field]: value }));
   const amountCents = purchase?.amount_cents ?? selection?.amountCents ?? 0;
   const description = purchase?.package_name ?? selection?.name ?? "Package purchase";
+  const isInstructionPayment = (purchase?.payment_kind || selection?.paymentKind) === "INSTRUCTION_DEBT";
 
   const submit = async () => {
     if (busyRef.current) return;
@@ -96,11 +97,13 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     try {
       let target = purchase || pendingPurchaseRef.current;
       if (!target) {
-        const created = await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours, checkout: true });
+        const created = isInstructionPayment
+          ? await billingAPI.createInstructionPayment({ instructionType: selection.instructionType, hours: selection.hours })
+          : await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours, checkout: true });
         target = created.data;
         pendingPurchaseRef.current = target;
       }
-      const response = await billingAPI.payPurchase(target.id, {
+      const paymentData = {
         recaptchaToken: captchaToken,
         deviceId: paymentDeviceId(),
         card: {
@@ -111,7 +114,10 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
           cvc: card.cvc,
           address: { streetAddress: card.streetAddress, city: card.city, region: card.region, postalCode: card.postalCode },
         },
-      });
+      };
+      const response = isInstructionPayment
+        ? await billingAPI.payInstructionPayment(target.id, paymentData)
+        : await billingAPI.payPurchase(target.id, paymentData);
       setReceipt(response.data.receipt);
       setCard({ name: "", number: "", expMonth: "", expYear: "", cvc: "", streetAddress: "", city: "", region: "", postalCode: "" });
       await onSuccess?.();
@@ -132,7 +138,10 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     setError("");
     try {
       const target = purchase || pendingPurchaseRef.current;
-      if (target) await billingAPI.cancelPurchase(target.id);
+      if (target) {
+        if (isInstructionPayment) await billingAPI.cancelInstructionPayment(target.id);
+        else await billingAPI.cancelPurchase(target.id);
+      }
       pendingPurchaseRef.current = null;
       setCard({ name: "", number: "", expMonth: "", expYear: "", cvc: "", streetAddress: "", city: "", region: "", postalCode: "" });
       onOpenChange(false);
@@ -188,7 +197,7 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <p className="text-xs text-muted-foreground">Card details are sent for this transaction only and are not saved by Wings CRM.</p>
       </div>}
       <DialogFooter>
-        {!receipt && <Button variant="outline" onClick={cancelCheckout} disabled={submitting || canceling}>{canceling ? "Canceling..." : "Cancel purchase"}</Button>}
+        {!receipt && <Button variant="outline" onClick={cancelCheckout} disabled={submitting || canceling}>{canceling ? "Canceling..." : isInstructionPayment ? "Cancel payment" : "Cancel purchase"}</Button>}
         {receipt ? <Button onClick={() => onOpenChange(false)}>Done</Button> : <Button onClick={submit} disabled={submitting || canceling || !captchaToken}><CreditCard className="h-4 w-4" />{submitting ? "Processing..." : `Pay ${money.format(Number(amountCents) / 100)}`}</Button>}
       </DialogFooter>
     </DialogContent>

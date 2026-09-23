@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PackageManager } from "@/components/billing/package-manager";
 import { PaymentDialog } from "@/components/billing/payment-dialog";
@@ -60,7 +60,7 @@ function Tab({ value, icon: Icon, children }) {
  * Student / renter
  * ------------------------------------------------------------------ */
 
-function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPending }) {
+function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPending, onPayDebt }) {
   const debtTone = debt.status === "BLOCKED" ? "danger" : debt.status === "WARNING" ? "warning" : "success";
   const usedPct = ratio(flight.hoursFlown, flight.totalPurchased);
 
@@ -80,16 +80,16 @@ function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPend
       )}
 
       {debt.status === "WARNING" && (
-        <Callout tone="warning" icon={AlertTriangle} title="Instructor balance is getting high">
+        <Callout tone="warning" icon={AlertTriangle} title="Instruction balance is getting high" action={onPayDebt && <Button size="sm" onClick={onPayDebt}>Pay balance</Button>}>
           You have {formatHours(debt.outstandingHours)} unpaid instructor hours. Scheduling is blocked
           at {debt.blockThreshold} hours.
         </Callout>
       )}
 
       {debt.status === "BLOCKED" && (
-        <Callout tone="danger" icon={Ban} title="Flight scheduling is paused">
-          You have reached {debt.blockThreshold} unpaid instructor hours. Settle part of the balance
-          with your school to resume booking.
+        <Callout tone="danger" icon={Ban} title="Flight scheduling is paused" action={onPayDebt && <Button size="sm" onClick={onPayDebt}>Pay balance</Button>}>
+          You have reached {debt.blockThreshold} unpaid instructor hours. Pay part of the balance
+          to resume booking.
         </Callout>
       )}
 
@@ -161,8 +161,11 @@ function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPend
       {isStudent && (debt.outstandingHours > 0 || debt.totalPaid > 0) && (
         <SectionCard
           title="Instructor account"
-          description="Instruction is invoiced by the hour and settled directly with the school."
+          description="Instruction is invoiced by the hour. Pay an open balance securely online."
           icon={GraduationCap}
+          action={debt.outstandingHours > 0 && onPayDebt && (
+            <Button size="sm" onClick={onPayDebt}><CreditCard className="size-4" />Pay balance</Button>
+          )}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MiniStat label="Flight instruction due" value={`${formatHours(debt.flight?.outstandingHours)} hrs · ${formatMoney(debt.flight?.outstandingAmountCents)}`} tone={debt.flight?.outstandingHours > 0 ? "warning" : "neutral"} />
@@ -173,6 +176,74 @@ function CustomerBalances({ isStudent, flight, credits, debt, pending, onPayPend
         </SectionCard>
       )}
     </div>
+  );
+}
+
+function InstructionPaymentPicker({ open, onOpenChange, debt, submitting, onContinue }) {
+  const defaultType = Number(debt?.flight?.outstandingHours || 0) > 0 ? "FLIGHT" : "GROUND";
+  const [instructionType, setInstructionType] = useState(defaultType);
+  const defaultBalance = defaultType === "GROUND" ? debt?.ground : debt?.flight;
+  const [hours, setHours] = useState(formatHours(defaultBalance?.outstandingHours));
+
+  const balance = instructionType === "GROUND" ? debt?.ground : debt?.flight;
+  const numericHours = Number(hours);
+  const amountCents = Number.isFinite(numericHours) ? Math.round(numericHours * Number(balance?.rateCents || 0)) : 0;
+  const valid = numericHours > 0
+    && numericHours <= Number(balance?.outstandingHours || 0)
+    && Math.abs(numericHours - Number(numericHours.toFixed(1))) < 0.0001;
+
+  const changeType = (value) => {
+    const nextBalance = value === "GROUND" ? debt?.ground : debt?.flight;
+    setInstructionType(value);
+    setHours(formatHours(nextBalance?.outstandingHours));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Pay instruction balance</DialogTitle>
+          <DialogDescription>Choose the balance and number of hours you want to pay.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="instruction-payment-type">Instruction type</Label>
+            <Select value={instructionType} onValueChange={changeType}>
+              <SelectTrigger id="instruction-payment-type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FLIGHT" disabled={!Number(debt?.flight?.outstandingHours)}>Flight instruction</SelectItem>
+                <SelectItem value="GROUND" disabled={!Number(debt?.ground?.outstandingHours)}>Ground instruction</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="instruction-payment-hours">Hours to pay</Label>
+            <Input
+              id="instruction-payment-hours"
+              type="number"
+              min="0.1"
+              max={balance?.outstandingHours || 0}
+              step="0.1"
+              value={hours}
+              onChange={(event) => setHours(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formatHours(balance?.outstandingHours)} hours outstanding at {formatMoney(balance?.rateCents)}/hour
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+            <span className="text-sm font-medium">Payment total</span>
+            <span className="text-lg font-bold tabular-nums">{formatMoney(amountCents)}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button onClick={() => onContinue({ instructionType, hours: numericHours })} disabled={!valid || submitting}>
+            {submitting ? "Preparing..." : "Continue to payment"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -376,8 +447,9 @@ const deltaTone = (value) => (Number(value) > 0
   ? "text-emerald-700 dark:text-emerald-400"
   : Number(value) < 0 ? "text-foreground" : "text-muted-foreground");
 
-function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, onPay, onCancel, onReceipts }) {
+function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, onPay, onCancel, onReceipts, onPayInstruction, onCancelInstruction }) {
   const purchases = summary?.purchases || [];
+  const instructionPayments = summary?.instructionPayments || [];
 
   return (
     <div className="space-y-5">
@@ -398,7 +470,7 @@ function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, o
             actions={(
               <>
                 {item.gateway === "QUICKBOOKS_PAYMENTS" && ["PAID", "REFUNDED", "VOIDED"].includes(paymentOutcome(item)) && (
-                  <Button size="sm" variant="outline" onClick={() => onReceipts(item.id)}>
+                  <Button size="sm" variant="outline" onClick={() => onReceipts(item)}>
                     <ReceiptText className="size-4" />
                     Receipts
                   </Button>
@@ -416,6 +488,41 @@ function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, o
           />
         ))}
       </SectionCard>
+
+      {isStudent && instructionPayments.length > 0 && (
+        <SectionCard
+          title="Instruction Balance Payments"
+          description="Online payments made toward flight and ground instruction balances."
+          icon={GraduationCap}
+        >
+          {instructionPayments.map((item) => (
+            <ListRow
+              key={item.id}
+              title={item.package_name}
+              badge={<StatusPill status={paymentOutcome(item)} />}
+              meta={`${formatDate(item.latest_payment_at || item.created_at)} · ${formatMoney(item.amount_cents)} · ${formatHours(item.hours)} hrs`}
+              note={paymentOutcome(item) === "PAYMENT_FAILED" ? item.latest_payment_error : null}
+              actions={(
+                <>
+                  {["PAID", "REFUNDED", "VOIDED"].includes(paymentOutcome(item)) && (
+                    <Button size="sm" variant="outline" onClick={() => onReceipts(item)}>
+                      <ReceiptText className="size-4" />Receipts
+                    </Button>
+                  )}
+                  {item.status === "PENDING" && catalog.paymentGatewayConfigured && (
+                    <Button size="sm" onClick={() => onPayInstruction(item)}>
+                      {paymentOutcome(item) === "PAYMENT_FAILED" ? "Retry payment" : "Pay now"}
+                    </Button>
+                  )}
+                  {item.status === "PENDING" && (
+                    <Button size="sm" variant="ghost" onClick={() => onCancelInstruction(item.id)}>Cancel</Button>
+                  )}
+                </>
+              )}
+            />
+          ))}
+        </SectionCard>
+      )}
 
       <SectionCard
         title="Aircraft Hour Ledger"
@@ -532,6 +639,8 @@ function CustomerBilling({ catalog, summary, refresh }) {
   const [customHours, setCustomHours] = useState("");
   const [submitting, setSubmitting] = useState(null);
   const [checkout, setCheckout] = useState(null);
+  const [instructionPickerOpen, setInstructionPickerOpen] = useState(false);
+  const [preparingInstructionPayment, setPreparingInstructionPayment] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [tab, setTab] = useState("balances");
 
@@ -547,6 +656,16 @@ function CustomerBilling({ catalog, summary, refresh }) {
       await refresh();
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not cancel purchase");
+    }
+  };
+
+  const cancelInstructionPayment = async (id) => {
+    try {
+      await billingAPI.cancelInstructionPayment(id);
+      toast.success("Pending instruction payment canceled");
+      await refresh();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not cancel instruction payment");
     }
   };
 
@@ -566,9 +685,24 @@ function CustomerBilling({ catalog, summary, refresh }) {
     }
   };
 
-  const viewReceipts = async (id) => {
+  const startInstructionPayment = async ({ instructionType, hours }) => {
     try {
-      const response = await billingAPI.getReceipts(id);
+      setPreparingInstructionPayment(true);
+      const response = await billingAPI.quoteInstructionPayment({ instructionType, hours });
+      setInstructionPickerOpen(false);
+      setCheckout({ selection: response.data });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not prepare instruction payment");
+    } finally {
+      setPreparingInstructionPayment(false);
+    }
+  };
+
+  const viewReceipts = async (item) => {
+    try {
+      const response = item.payment_kind === "INSTRUCTION_DEBT"
+        ? await billingAPI.getInstructionPaymentReceipts(item.id)
+        : await billingAPI.getReceipts(item.id);
       const availableReceipts = response.data || [];
       setReceipts(availableReceipts);
       if (availableReceipts.length === 0) toast.info("No receipts are available for this purchase.");
@@ -595,6 +729,9 @@ function CustomerBilling({ catalog, summary, refresh }) {
           onPayPending={catalog.paymentGatewayConfigured && pending.length > 0
             ? () => setCheckout({ purchase: pending[0] })
             : null}
+          onPayDebt={catalog.paymentGatewayConfigured && debt.outstandingHours > 0
+            ? () => setInstructionPickerOpen(true)
+            : null}
         />
       </TabsContent>
 
@@ -620,8 +757,20 @@ function CustomerBilling({ catalog, summary, refresh }) {
           onPay={(item) => setCheckout({ purchase: item })}
           onCancel={cancelPurchase}
           onReceipts={viewReceipts}
+          onPayInstruction={(item) => setCheckout({ purchase: item })}
+          onCancelInstruction={cancelInstructionPayment}
         />
       </TabsContent>
+
+      {instructionPickerOpen && (
+        <InstructionPaymentPicker
+          open={instructionPickerOpen}
+          onOpenChange={setInstructionPickerOpen}
+          debt={debt}
+          submitting={preparingInstructionPayment}
+          onContinue={startInstructionPayment}
+        />
+      )}
 
       <PaymentDialog
         open={Boolean(checkout)}
@@ -901,11 +1050,15 @@ function AdminBilling({ overview, catalog, refresh }) {
     () => (overview?.purchases || []).filter((item) => item.status === "PENDING" && item.gateway !== "QUICKBOOKS_PAYMENTS"),
     [overview],
   );
-  const onlinePurchases = useMemo(() => (overview?.purchases || []).filter((item) => (
-    item.gateway === "QUICKBOOKS_PAYMENTS"
-    && paymentOutcome(item) !== "CANCELED"
+  const onlinePurchases = useMemo(() => [
+    ...(overview?.purchases || [])
+      .filter((item) => item.gateway === "QUICKBOOKS_PAYMENTS")
+      .map((item) => ({ ...item, payment_kind: "PACKAGE" })),
+    ...(overview?.instructionPayments || []),
+  ].filter((item) => (
+    paymentOutcome(item) !== "CANCELED"
     && !(item.status === "PENDING" && !item.latest_payment_status)
-  )), [overview]);
+  )).sort((a, b) => new Date(b.latest_payment_at || b.created_at) - new Date(a.latest_payment_at || a.created_at)), [overview]);
   const debtStudents = useMemo(
     () => (overview?.customers || []).filter((item) => item.instructionBilling?.outstandingHours > 0),
     [overview],
@@ -938,18 +1091,25 @@ function AdminBilling({ overview, catalog, refresh }) {
     }
   };
 
-  const reversePayment = (id, action) => {
+  const reversePayment = (item, action) => {
     const isVoid = action === "void";
+    const isInstructionPayment = item.payment_kind === "INSTRUCTION_DEBT";
     showConfirm({
       title: isVoid ? "Void this payment?" : "Refund this payment?",
-      description: `This reverses the charge and removes all package credits allocated by it. This cannot be undone.`,
+      description: isInstructionPayment
+        ? "This reverses the charge and restores the student's instruction balance. This cannot be undone."
+        : "This reverses the charge and removes all package credits allocated by it. This cannot be undone.",
       confirmText: isVoid ? "Void payment" : "Refund payment",
       type: "warning",
       destructive: true,
       onConfirm: async () => {
         try {
-          setSaving(`${action}-${id}`);
-          await (isVoid ? billingAPI.voidPurchase(id) : billingAPI.refundPurchase(id));
+          setSaving(`${action}-${item.id}`);
+          if (isInstructionPayment) {
+            await (isVoid ? billingAPI.voidInstructionPayment(item.id) : billingAPI.refundInstructionPayment(item.id));
+          } else {
+            await (isVoid ? billingAPI.voidPurchase(item.id) : billingAPI.refundPurchase(item.id));
+          }
           toast.success(isVoid ? "Payment voided and balances reversed" : "Payment refunded and balances reversed");
           await refresh();
         } catch (error) {
@@ -1134,11 +1294,11 @@ function AdminBilling({ overview, catalog, refresh }) {
                 note={paymentOutcome(item) === "PAYMENT_FAILED" ? item.latest_payment_error : null}
                 actions={item.status === "PAID" && (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => reversePayment(item.id, "void")} disabled={Boolean(saving)}>
+                    <Button size="sm" variant="outline" onClick={() => reversePayment(item, "void")} disabled={Boolean(saving)}>
                       <Ban className="size-4" />
                       Void
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => reversePayment(item.id, "refund")} disabled={Boolean(saving)}>
+                    <Button size="sm" variant="destructive" onClick={() => reversePayment(item, "refund")} disabled={Boolean(saving)}>
                       <RotateCcw className="size-4" />
                       Refund
                     </Button>
