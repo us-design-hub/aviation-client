@@ -257,10 +257,8 @@ export function LessonDetails({
   useEffect(() => {
     if (!isCheckedOut) return;
     setInstructionForm((current) => {
-      const currentDual = Number(current.dualGivenTime);
-      const hasValue = Number.isFinite(currentDual) && currentDual > 0;
       const desired = current.instructionGiven
-        ? String(Number(Math.min(hasValue ? currentDual : maxDualTime, maxDualTime).toFixed(1)))
+        ? String(Number(maxDualTime.toFixed(1)))
         : "0";
       if (current.dualGivenTime === desired) return current;
       return { ...current, dualGivenTime: desired };
