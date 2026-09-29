@@ -52,23 +52,51 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const busyRef = useRef(false);
   const [canceling, setCanceling] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaStatus, setCaptchaStatus] = useState("idle");
+  const [captchaError, setCaptchaError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState(null);
   const [card, setCard] = useState({ name: "", number: "", expMonth: "", expYear: "", cvc: "", streetAddress: "", city: "", region: "", postalCode: "" });
 
   useEffect(() => {
-    if (!open || !catalog?.recaptchaSiteKey || !captchaRef.current || widgetRef.current !== null) return;
+    if (!open || !captchaRef.current || widgetRef.current !== null) return;
+    if (!catalog?.recaptchaSiteKey) {
+      setCaptchaStatus("error");
+      setCaptchaError("Payment verification is not configured.");
+      return;
+    }
     let active = true;
+    setCaptchaStatus("loading");
+    setCaptchaError("");
     loadRecaptcha().then((grecaptcha) => grecaptcha.ready(() => {
       if (!active || !captchaRef.current || widgetRef.current !== null) return;
-      widgetRef.current = grecaptcha.render(captchaRef.current, {
-        sitekey: catalog.recaptchaSiteKey,
-        callback: setCaptchaToken,
-        "expired-callback": () => setCaptchaToken(""),
-        "error-callback": () => setError("Verification could not load."),
-      });
-    })).catch((loadError) => setError(loadError.message));
+      try {
+        widgetRef.current = grecaptcha.render(captchaRef.current, {
+          sitekey: catalog.recaptchaSiteKey,
+          callback: (token) => {
+            setCaptchaToken(token);
+            setCaptchaStatus("verified");
+          },
+          "expired-callback": () => {
+            setCaptchaToken("");
+            setCaptchaStatus("ready");
+          },
+          "error-callback": () => {
+            setCaptchaToken("");
+            setCaptchaStatus("error");
+            setCaptchaError("Payment verification could not load. Refresh the page and try again.");
+          },
+        });
+        setCaptchaStatus("ready");
+      } catch (renderError) {
+        setCaptchaStatus("error");
+        setCaptchaError(renderError?.message || "Payment verification could not load.");
+      }
+    })).catch((loadError) => {
+      setCaptchaStatus("error");
+      setCaptchaError(loadError.message);
+    });
     return () => { active = false; };
   }, [open, catalog?.recaptchaSiteKey]);
 
@@ -81,7 +109,12 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     setError("");
     setReceipt(null);
     setCaptchaToken("");
-    if (window.grecaptcha && widgetRef.current !== null) window.grecaptcha.reset(widgetRef.current);
+    setCaptchaStatus("idle");
+    setCaptchaError("");
+    if (window.grecaptcha && widgetRef.current !== null) {
+      try { window.grecaptcha.reset(widgetRef.current); } catch {}
+    }
+    widgetRef.current = null;
   }, [open, purchase]);
 
   const setField = (field, value) => setCard((current) => ({ ...current, [field]: value }));
@@ -124,7 +157,10 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Payment could not be processed.");
       setCaptchaToken("");
-      if (window.grecaptcha && widgetRef.current !== null) window.grecaptcha.reset(widgetRef.current);
+      setCaptchaStatus("ready");
+      if (window.grecaptcha && widgetRef.current !== null) {
+        try { window.grecaptcha.reset(widgetRef.current); } catch {}
+      }
     } finally {
       busyRef.current = false;
       setSubmitting(false);
@@ -193,7 +229,12 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
           <div className="space-y-2"><Label htmlFor="card-state">State</Label><Input id="card-state" autoComplete="billing address-level1" maxLength={2} value={card.region} onChange={(event) => setField("region", event.target.value.toUpperCase())} /></div>
           <div className="space-y-2"><Label htmlFor="card-zip">ZIP code</Label><Input id="card-zip" autoComplete="billing postal-code" value={card.postalCode} onChange={(event) => setField("postalCode", event.target.value)} /></div>
         </div>
-        <div ref={captchaRef} className="min-h-[78px]" />
+        <div className="space-y-2">
+          <div ref={captchaRef} className="min-h-[78px]" />
+          {captchaStatus === "loading" && <p className="text-sm text-muted-foreground">Loading secure payment verification...</p>}
+          {captchaStatus === "ready" && !captchaToken && <p className="text-sm text-muted-foreground">Complete the verification above to enable payment.</p>}
+          {captchaError && <Alert variant="destructive"><AlertDescription>{captchaError}</AlertDescription></Alert>}
+        </div>
         <p className="text-xs text-muted-foreground">Card details are sent for this transaction only and are not saved by Wings CRM.</p>
       </div>}
       <DialogFooter>
