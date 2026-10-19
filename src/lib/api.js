@@ -283,4 +283,10 @@ export const notificationsAPI = {
   getUnreadCount: () => api.get('/notifications/unread-count'),
 };
 
+// Public, token-authenticated responses from lesson and rental reminders.
+export const bookingResponsesAPI = {
+  get: (token) => api.get(`/booking-responses/${encodeURIComponent(token)}`),
+  submit: (token, data) => api.post(`/booking-responses/${encodeURIComponent(token)}`, data),
+};
+
 export default api;
