@@ -120,7 +120,7 @@ export function UsersClient() {
       toast.success("User updated successfully");
       setIsFormOpen(false);
       setEditingUser(null);
-      await fetchUsers();
+      fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
       toast.error(

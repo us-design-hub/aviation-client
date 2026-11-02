@@ -56,6 +56,16 @@ export function UserForm({ user, onSubmit, onCancel }) {
   const watchedRole = form.watch("role");
   const watchedRoles = assignedRoles;
 
+  const updateAssignedRoles = (nextRoles) => {
+    const normalizedRoles = [...new Set(nextRoles)];
+    setAssignedRoles(normalizedRoles);
+    form.setValue("roles", normalizedRoles, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
+
   const handleSubmit = async (data) => {
     try {
       setLoading(true);
@@ -258,7 +268,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                   <Select
                     onValueChange={(role) => {
                       field.onChange(role);
-                      setAssignedRoles((current) => [...new Set([...current, role])]);
+                      updateAssignedRoles([...assignedRoles, role]);
                     }}
                     value={field.value}
                   >
@@ -324,9 +334,9 @@ export function UserForm({ user, onSubmit, onCancel }) {
                             checked={checked}
                             disabled={role === watchedRole}
                             onChange={(event) => {
-                              setAssignedRoles((current) => event.target.checked
-                                ? [...new Set([...current, role])]
-                                : current.filter((item) => item !== role));
+                              updateAssignedRoles(event.target.checked
+                                ? [...assignedRoles, role]
+                                : assignedRoles.filter((item) => item !== role));
                             }}
                           />
                           <span>
