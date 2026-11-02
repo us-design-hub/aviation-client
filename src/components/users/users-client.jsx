@@ -113,7 +113,11 @@ export function UsersClient() {
       fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Failed to update user");
+      toast.error(
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "Failed to update user",
+      );
       throw error;
     }
   };

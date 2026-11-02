@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Mail, Shield, Key, UserCheck, GraduationCap, Phone } from "lucide-react";
+import { AlertCircle, User, Mail, Shield, Key, UserCheck, GraduationCap, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ const userSchema = z.object({
 
 export function UserForm({ user, onSubmit, onCancel }) {
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const isEditing = !!user;
 
   const form = useForm({
@@ -55,6 +56,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
   const handleSubmit = async (data) => {
     try {
       setLoading(true);
+      setSubmitError("");
       
       const userData = {
         email: data.email,
@@ -75,6 +77,11 @@ export function UserForm({ user, onSubmit, onCancel }) {
       await onSubmit(userData);
     } catch (error) {
       console.error("Error submitting user:", error);
+      setSubmitError(
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "The user could not be updated. Review the fields and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -434,6 +441,12 @@ export function UserForm({ user, onSubmit, onCancel }) {
         )}
 
         {/* Actions */}
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
