@@ -29,6 +29,9 @@ export function AuthProvider({ children }) {
 
       try {
         const response = await authAPI.getMe();
+        if (response.data.access) {
+          localStorage.setItem('token', response.data.access);
+        }
         const userData = {
           id: response.data.id,
           name: response.data.name,

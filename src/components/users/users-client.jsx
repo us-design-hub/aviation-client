@@ -112,6 +112,11 @@ export function UsersClient() {
       if (JSON.stringify(expectedRoles) !== JSON.stringify(savedRoles)) {
         throw new Error(`Assigned roles were not saved. Expected ${expectedRoles.join(", ")}; received ${savedRoles.join(", ") || "none"}.`);
       }
+      const expectedActiveRoles = [...new Set(userData.activeRoles || [])].sort();
+      const savedActiveRoles = [...(response.data?.user?.activeRoles || [])].sort();
+      if (JSON.stringify(expectedActiveRoles) !== JSON.stringify(savedActiveRoles)) {
+        throw new Error(`Active roles were not saved. Expected ${expectedActiveRoles.join(", ") || "none"}; received ${savedActiveRoles.join(", ") || "none"}.`);
+      }
       if (response.data?.user) {
         setUsers((current) => current.map((user) =>
           user.id === id ? response.data.user : user

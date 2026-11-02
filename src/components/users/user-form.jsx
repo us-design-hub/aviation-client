@@ -36,6 +36,9 @@ export function UserForm({ user, onSubmit, onCancel }) {
   const [assignedRoles, setAssignedRoles] = useState(
     () => [...new Set([user?.role || "STUDENT", ...(user?.roles || [])])],
   );
+  const [activeRoles, setActiveRoles] = useState(
+    () => [...new Set(user?.activeRoles || user?.roles || [user?.role || "STUDENT"])],
+  );
   const isEditing = !!user;
 
   const form = useForm({
@@ -58,7 +61,12 @@ export function UserForm({ user, onSubmit, onCancel }) {
 
   const updateAssignedRoles = (nextRoles) => {
     const normalizedRoles = [...new Set(nextRoles)];
+    const newlyAssigned = normalizedRoles.filter((role) => !assignedRoles.includes(role));
     setAssignedRoles(normalizedRoles);
+    setActiveRoles((current) => [...new Set([
+      ...current.filter((role) => normalizedRoles.includes(role)),
+      ...newlyAssigned,
+    ])]);
     form.setValue("roles", normalizedRoles, {
       shouldDirty: true,
       shouldTouch: true,
@@ -66,16 +74,27 @@ export function UserForm({ user, onSubmit, onCancel }) {
     });
   };
 
+  const updateRoleActive = (role, isActive) => {
+    setActiveRoles((current) => isActive
+      ? [...new Set([...current, role])]
+      : current.filter((item) => item !== role));
+    form.setValue("roles", assignedRoles, { shouldDirty: true, shouldTouch: true });
+  };
+
   const handleSubmit = async (data) => {
     try {
       setLoading(true);
       setSubmitError("");
+      if (data.is_active && !activeRoles.length) {
+        throw new Error("An active account must have at least one active role.");
+      }
       
       const userData = {
         email: data.email,
         name: data.name,
         role: data.role,
         roles: [...new Set([data.role, ...assignedRoles])],
+        activeRoles,
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
         category: [data.role, ...assignedRoles].includes("STUDENT") ? (data.category || null) : null,
@@ -93,6 +112,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
       setSubmitError(
         error?.response?.data?.detail ||
         error?.response?.data?.error ||
+        error?.message ||
         "The user could not be updated. Review the fields and try again.",
       );
     } finally {
@@ -311,7 +331,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    The profile used immediately after sign-in. {getRoleDescription(watchedRole)}
+                    The preferred profile after sign-in when that role is active. {getRoleDescription(watchedRole)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -321,13 +341,13 @@ export function UserForm({ user, onSubmit, onCancel }) {
             <FormItem>
                   <FormLabel>Assigned Roles</FormLabel>
                   <FormDescription>
-                    Users with multiple roles can switch profiles from the Account menu.
+                    Assign access with the checkbox, then enable or pause each profile independently.
                   </FormDescription>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"].map((role) => {
                       const checked = role === watchedRole || watchedRoles.includes(role);
                       return (
-                        <label key={role} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                        <div key={role} className="flex items-start gap-3 rounded-md border p-3">
                           <input
                             type="checkbox"
                             className="mt-1 h-4 w-4 accent-current"
@@ -348,7 +368,18 @@ export function UserForm({ user, onSubmit, onCancel }) {
                               {getRoleDescription(role)}
                             </span>
                           </span>
-                        </label>
+                          <div className="ml-auto flex flex-col items-end gap-1 pl-2">
+                            <Switch
+                              checked={checked && activeRoles.includes(role)}
+                              disabled={!checked}
+                              onCheckedChange={(isActive) => updateRoleActive(role, isActive)}
+                              aria-label={`${role} profile active`}
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {checked && activeRoles.includes(role) ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -421,10 +452,10 @@ export function UserForm({ user, onSubmit, onCancel }) {
                     <div className="space-y-0.5">
                       <FormLabel className="text-base flex items-center gap-2">
                         <UserCheck className="h-4 w-4" />
-                        Active Status
+                        Account Active
                       </FormLabel>
                       <FormDescription>
-                        Inactive users cannot log in or access the system
+                        When off, the user cannot log in under any role
                       </FormDescription>
                     </div>
                     <FormControl>

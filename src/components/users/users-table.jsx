@@ -17,7 +17,7 @@ export function UsersTable({
   onManageAssignments 
 }) {
   /** Dark-safe role tones. The previous bg-*-50 fills were invisible in dark mode. */
-  const getRoleBadge = (role, isLeadInstructor) => {
+  const getRoleBadge = (role, isLeadInstructor, isRoleActive = true) => {
     const tones = {
       STUDENT: "bg-sky-500/12 text-sky-700 dark:text-sky-400",
       RENTER: "bg-amber-500/12 text-amber-700 dark:text-amber-400",
@@ -31,9 +31,9 @@ export function UsersTable({
       <div className="flex items-center gap-2">
         <span className={cn(
           "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
-          tones[role] || "bg-muted text-muted-foreground",
+          isRoleActive ? (tones[role] || "bg-muted text-muted-foreground") : "bg-muted text-muted-foreground",
         )}>
-          {labels[role] || role}
+          {labels[role] || role}{isRoleActive ? "" : " (Inactive)"}
         </span>
         {isLeadInstructor && (
           <span className="inline-flex items-center rounded-full bg-golden/12 px-2 py-0.5 text-xs font-semibold text-golden">
@@ -144,7 +144,11 @@ export function UsersTable({
                   <TableCell>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {(user.roles || [user.role]).map((role) => (
-                        <div key={role}>{getRoleBadge(role, role === 'INSTRUCTOR' && user.is_lead_instructor)}</div>
+                        <div key={role}>{getRoleBadge(
+                          role,
+                          role === 'INSTRUCTOR' && user.is_lead_instructor,
+                          (user.activeRoles || user.roles || [user.role]).includes(role),
+                        )}</div>
                       ))}
                       {user.category && (
                         <Badge variant="outline" className="text-xs">
