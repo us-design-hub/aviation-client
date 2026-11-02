@@ -20,6 +20,7 @@ const userSchema = z.object({
     required_error: "Role is required",
   }),
   roles: z.array(z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"])).optional(),
+  activeRoles: z.array(z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"])).optional(),
   password: z.string().refine(
     (value) => value === "" || value.length >= 6,
     "Password must be at least 6 characters",
@@ -33,12 +34,6 @@ const userSchema = z.object({
 export function UserForm({ user, onSubmit, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [assignedRoles, setAssignedRoles] = useState(
-    () => [...new Set([user?.role || "STUDENT", ...(user?.roles || [])])],
-  );
-  const [activeRoles, setActiveRoles] = useState(
-    () => [...new Set(user?.activeRoles || user?.roles || [user?.role || "STUDENT"])],
-  );
   const isEditing = !!user;
 
   const form = useForm({
@@ -48,6 +43,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
       name: user?.name || "",
       role: user?.role || "STUDENT",
       roles: user?.roles || [user?.role || "STUDENT"],
+      activeRoles: user?.activeRoles || user?.roles || [user?.role || "STUDENT"],
       password: "",
       isLeadInstructor: user?.is_lead_instructor || false,
       is_active: user?.is_active !== undefined ? user.is_active : true,
@@ -57,17 +53,24 @@ export function UserForm({ user, onSubmit, onCancel }) {
   });
 
   const watchedRole = form.watch("role");
-  const watchedRoles = assignedRoles;
+  const watchedRoles = form.watch("roles") || [];
+  const activeRoles = form.watch("activeRoles") || [];
 
   const updateAssignedRoles = (nextRoles) => {
     const normalizedRoles = [...new Set(nextRoles)];
-    const newlyAssigned = normalizedRoles.filter((role) => !assignedRoles.includes(role));
-    setAssignedRoles(normalizedRoles);
-    setActiveRoles((current) => [...new Set([
-      ...current.filter((role) => normalizedRoles.includes(role)),
+    const currentRoles = form.getValues("roles") || [];
+    const currentActiveRoles = form.getValues("activeRoles") || [];
+    const newlyAssigned = normalizedRoles.filter((role) => !currentRoles.includes(role));
+    const nextActiveRoles = [...new Set([
+      ...currentActiveRoles.filter((role) => normalizedRoles.includes(role)),
       ...newlyAssigned,
-    ])]);
+    ])];
     form.setValue("roles", normalizedRoles, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    form.setValue("activeRoles", nextActiveRoles, {
       shouldDirty: true,
       shouldTouch: true,
       shouldValidate: true,
@@ -75,17 +78,22 @@ export function UserForm({ user, onSubmit, onCancel }) {
   };
 
   const updateRoleActive = (role, isActive) => {
-    setActiveRoles((current) => isActive
+    const current = form.getValues("activeRoles") || [];
+    const nextActiveRoles = isActive
       ? [...new Set([...current, role])]
-      : current.filter((item) => item !== role));
-    form.setValue("roles", assignedRoles, { shouldDirty: true, shouldTouch: true });
+      : current.filter((item) => item !== role);
+    form.setValue("activeRoles", nextActiveRoles, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
   };
 
   const handleSubmit = async (data) => {
     try {
       setLoading(true);
       setSubmitError("");
-      if (data.is_active && !activeRoles.length) {
+      if (data.is_active && !(data.activeRoles || []).length) {
         throw new Error("An active account must have at least one active role.");
       }
       
@@ -93,11 +101,11 @@ export function UserForm({ user, onSubmit, onCancel }) {
         email: data.email,
         name: data.name,
         role: data.role,
-        roles: [...new Set([data.role, ...assignedRoles])],
-        activeRoles,
+        roles: [...new Set([data.role, ...(data.roles || [])])],
+        activeRoles: data.activeRoles || [],
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
-        category: [data.role, ...assignedRoles].includes("STUDENT") ? (data.category || null) : null,
+        category: [data.role, ...(data.roles || [])].includes("STUDENT") ? (data.category || null) : null,
         phone: data.phone || null,
       };
 
@@ -288,7 +296,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                   <Select
                     onValueChange={(role) => {
                       field.onChange(role);
-                      updateAssignedRoles([...assignedRoles, role]);
+                      updateAssignedRoles([...watchedRoles, role]);
                     }}
                     value={field.value}
                   >
@@ -355,8 +363,8 @@ export function UserForm({ user, onSubmit, onCancel }) {
                             disabled={role === watchedRole}
                             onChange={(event) => {
                               updateAssignedRoles(event.target.checked
-                                ? [...assignedRoles, role]
-                                : assignedRoles.filter((item) => item !== role));
+                                ? [...watchedRoles, role]
+                                : watchedRoles.filter((item) => item !== role));
                             }}
                           />
                           <span>
@@ -370,6 +378,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                           </span>
                           <div className="ml-auto flex flex-col items-end gap-1 pl-2">
                             <Switch
+                              type="button"
                               checked={checked && activeRoles.includes(role)}
                               disabled={!checked}
                               onCheckedChange={(isActive) => updateRoleActive(role, isActive)}
