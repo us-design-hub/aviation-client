@@ -92,7 +92,7 @@ export const authAPI = {
 
 // Users API
 export const usersAPI = {
-  getAll: () => api.get('/users'),
+  getAll: () => api.get('/users', { params: { _t: Date.now() } }),
   getStudents: () => api.get('/users/students'),
   getInstructors: () => api.get('/users/instructors'),
   getRenters: () => api.get('/users/renters'),

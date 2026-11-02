@@ -106,11 +106,16 @@ export function UsersClient() {
 
   const handleUpdateUser = async (id, userData) => {
     try {
-      await usersAPI.update(id, userData);
+      const response = await usersAPI.update(id, userData);
+      if (response.data?.user) {
+        setUsers((current) => current.map((user) =>
+          user.id === id ? response.data.user : user
+        ));
+      }
       toast.success("User updated successfully");
       setIsFormOpen(false);
       setEditingUser(null);
-      fetchUsers();
+      await fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
       toast.error(

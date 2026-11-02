@@ -319,10 +319,15 @@ export function UserForm({ user, onSubmit, onCancel }) {
                             checked={checked}
                             disabled={role === watchedRole}
                             onChange={(event) => {
-                              const current = field.value || [];
-                              field.onChange(event.target.checked
+                              const current = form.getValues("roles") || [];
+                              const nextRoles = event.target.checked
                                 ? [...new Set([...current, role])]
-                                : current.filter((item) => item !== role));
+                                : current.filter((item) => item !== role);
+                              form.setValue("roles", nextRoles, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
                             }}
                           />
                           <span>
