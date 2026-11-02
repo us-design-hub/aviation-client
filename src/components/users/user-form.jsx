@@ -33,6 +33,9 @@ const userSchema = z.object({
 export function UserForm({ user, onSubmit, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [assignedRoles, setAssignedRoles] = useState(
+    () => [...new Set([user?.role || "STUDENT", ...(user?.roles || [])])],
+  );
   const isEditing = !!user;
 
   const form = useForm({
@@ -51,7 +54,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
   });
 
   const watchedRole = form.watch("role");
-  const watchedRoles = form.watch("roles") || [];
+  const watchedRoles = assignedRoles;
 
   const handleSubmit = async (data) => {
     try {
@@ -62,10 +65,10 @@ export function UserForm({ user, onSubmit, onCancel }) {
         email: data.email,
         name: data.name,
         role: data.role,
-        roles: [...new Set([data.role, ...(data.roles || [])])],
+        roles: [...new Set([data.role, ...assignedRoles])],
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
-        category: [data.role, ...(data.roles || [])].includes("STUDENT") ? (data.category || null) : null,
+        category: [data.role, ...assignedRoles].includes("STUDENT") ? (data.category || null) : null,
         phone: data.phone || null,
       };
 
@@ -252,7 +255,13 @@ export function UserForm({ user, onSubmit, onCancel }) {
                     <Shield className="h-4 w-4" />
                     Primary Role
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={(role) => {
+                      field.onChange(role);
+                      setAssignedRoles((current) => [...new Set([...current, role])]);
+                    }}
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -299,11 +308,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="roles"
-              render={({ field }) => (
-                <FormItem>
+            <FormItem>
                   <FormLabel>Assigned Roles</FormLabel>
                   <FormDescription>
                     Users with multiple roles can switch profiles from the Account menu.
@@ -319,15 +324,9 @@ export function UserForm({ user, onSubmit, onCancel }) {
                             checked={checked}
                             disabled={role === watchedRole}
                             onChange={(event) => {
-                              const current = form.getValues("roles") || [];
-                              const nextRoles = event.target.checked
+                              setAssignedRoles((current) => event.target.checked
                                 ? [...new Set([...current, role])]
-                                : current.filter((item) => item !== role);
-                              form.setValue("roles", nextRoles, {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                                shouldValidate: true,
-                              });
+                                : current.filter((item) => item !== role));
                             }}
                           />
                           <span>
@@ -344,9 +343,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                     })}
                   </div>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
+            </FormItem>
 
             {(watchedRole === "INSTRUCTOR" || watchedRoles.includes("INSTRUCTOR")) && (
               <FormField

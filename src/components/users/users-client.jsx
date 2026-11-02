@@ -107,6 +107,11 @@ export function UsersClient() {
   const handleUpdateUser = async (id, userData) => {
     try {
       const response = await usersAPI.update(id, userData);
+      const expectedRoles = [...new Set(userData.roles || [userData.role])].sort();
+      const savedRoles = [...(response.data?.user?.roles || [])].sort();
+      if (JSON.stringify(expectedRoles) !== JSON.stringify(savedRoles)) {
+        throw new Error(`Assigned roles were not saved. Expected ${expectedRoles.join(", ")}; received ${savedRoles.join(", ") || "none"}.`);
+      }
       if (response.data?.user) {
         setUsers((current) => current.map((user) =>
           user.id === id ? response.data.user : user
@@ -121,6 +126,7 @@ export function UsersClient() {
       toast.error(
         error?.response?.data?.detail ||
         error?.response?.data?.error ||
+        error?.message ||
         "Failed to update user",
       );
       throw error;
@@ -267,6 +273,7 @@ export function UsersClient() {
             </SheetHeader>
             <div className="mt-6 pb-6">
               <UserForm
+                key={editingUser?.id || "new-user"}
                 user={editingUser}
                 onSubmit={editingUser ? 
                   (data) => handleUpdateUser(editingUser.id, data) : 
