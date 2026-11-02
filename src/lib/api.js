@@ -87,6 +87,7 @@ export const authAPI = {
   updateMe: (data) => api.patch('/auth/me', data),
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
+  switchRole: (role) => api.post('/auth/switch-role', { role }),
 };
 
 // Users API

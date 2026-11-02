@@ -465,7 +465,7 @@ function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, o
             key={item.id}
             title={item.package_name}
             badge={<StatusPill status={paymentOutcome(item)} />}
-            meta={`${formatDate(item.latest_payment_at || item.created_at)} · ${formatMoney(item.amount_cents)}`}
+            meta={`${item.payment_plan_id ? `Installment ${item.installment_number} of ${item.installment_count} · due ${formatDate(item.due_at)} · ` : ""}${formatMoney(item.amount_cents)}`}
             note={paymentOutcome(item) === "PAYMENT_FAILED" ? item.latest_payment_error : null}
             actions={(
               <>
@@ -475,12 +475,15 @@ function TransactionsTab({ isStudent, summary, flight, credits, debt, catalog, o
                     Receipts
                   </Button>
                 )}
-                {item.status === "PENDING" && catalog.paymentGatewayConfigured && (
+                {item.status === "PENDING" && catalog.paymentGatewayConfigured && (!item.payment_plan_id || item.installment_payable) && (
                   <Button size="sm" onClick={() => onPay(item)}>
                     {paymentOutcome(item) === "PAYMENT_FAILED" ? "Retry payment" : "Pay now"}
                   </Button>
                 )}
-                {item.status === "PENDING" && (
+                {item.status === "PENDING" && item.payment_plan_id && !item.installment_payable && (
+                  <span className="text-xs text-muted-foreground">Previous installment required</span>
+                )}
+                {item.status === "PENDING" && !item.payment_plan_id && (
                   <Button size="sm" variant="ghost" onClick={() => onCancel(item.id)}>Cancel</Button>
                 )}
               </>
@@ -647,7 +650,19 @@ function CustomerBilling({ catalog, summary, refresh }) {
   const flight = summary?.flightHours || {};
   const credits = summary?.instructionCredits || {};
   const debt = summary?.instructionBilling || {};
-  const pending = (summary?.purchases || []).filter((item) => item.status === "PENDING");
+  const pending = useMemo(() => {
+    const result = [];
+    const seenPlans = new Set();
+    for (const item of summary?.purchases || []) {
+      if (item.status !== "PENDING") continue;
+      if (!item.payment_plan_id) result.push(item);
+      else if (!seenPlans.has(item.payment_plan_id)) {
+        seenPlans.add(item.payment_plan_id);
+        result.push(item);
+      }
+    }
+    return result;
+  }, [summary?.purchases]);
 
   const cancelPurchase = async (id) => {
     try {
@@ -1078,6 +1093,16 @@ function AdminBilling({ overview, catalog, refresh }) {
     }
   };
 
+  const updatePaymentPlans = async (enabled) => {
+    try {
+      await billingAPI.updateConfig({ paymentPlansEnabled: enabled });
+      toast.success(`Payment plans ${enabled ? "enabled" : "disabled"}`);
+      await refresh();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not update payment plan settings");
+    }
+  };
+
   const confirmPurchase = async (id) => {
     try {
       setSaving(id);
@@ -1197,8 +1222,8 @@ function AdminBilling({ overview, catalog, refresh }) {
         />
       </div>
 
-      <SectionCard title="Purchase settings" icon={Wallet}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <SectionCard title="Purchase settings" icon={Wallet} bodyClassName="divide-y px-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 py-4">
           <div>
             <p className="font-medium">Custom hour purchases</p>
             <p className="text-sm text-muted-foreground">
@@ -1206,6 +1231,15 @@ function AdminBilling({ overview, catalog, refresh }) {
             </p>
           </div>
           <Switch checked={Boolean(catalog?.customHoursEnabled)} onCheckedChange={updateCustomHours} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+          <div>
+            <p className="font-medium">Customer payment plans</p>
+            <p className="text-sm text-muted-foreground">
+              Allow qualifying bulk packages to be paid in monthly installments.
+            </p>
+          </div>
+          <Switch checked={Boolean(catalog?.paymentPlansEnabled)} onCheckedChange={updatePaymentPlans} />
         </div>
       </SectionCard>
 
@@ -1258,7 +1292,7 @@ function AdminBilling({ overview, catalog, refresh }) {
             ) : pendingPurchases.map((item) => (
               <ListRow
                 key={item.id}
-                title={`${item.user_name} · ${item.package_name}`}
+                title={`${item.user_name} · ${item.package_name}${item.payment_plan_id ? ` · Installment ${item.installment_number}/${item.installment_count}` : ""}`}
                 meta={`${formatDate(item.created_at)} · ${formatMoney(item.amount_cents)}`}
                 actions={(
                   <Button onClick={() => confirmPurchase(item.id)} disabled={saving === item.id}>
@@ -1281,7 +1315,7 @@ function AdminBilling({ overview, catalog, refresh }) {
             ) : onlinePurchases.map((item) => (
               <ListRow
                 key={item.id}
-                title={`${item.user_name} · ${item.package_name}`}
+                title={`${item.user_name} · ${item.package_name}${item.payment_plan_id ? ` · Installment ${item.installment_number}/${item.installment_count}` : ""}`}
                 badge={<StatusPill status={paymentOutcome(item)} />}
                 meta={(
                   <>

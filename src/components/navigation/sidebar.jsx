@@ -37,7 +37,16 @@ import {
   FileText,
   WalletCards,
   LifeBuoy,
+  Check,
 } from "lucide-react";
+
+const roleLabels = {
+  STUDENT: "Student",
+  INSTRUCTOR: "Instructor",
+  ADMIN: "Administrator",
+  MAINT: "Maintenance",
+  RENTER: "Renter",
+};
 
 const allNavigation = [
   { name: "Profile", href: "/profile", icon: UserCircle, roles: ["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"] },
@@ -61,7 +70,7 @@ export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
 
   // Filter navigation based on user role
   const navigation = allNavigation.filter(item => 
@@ -102,6 +111,19 @@ export function Sidebar() {
     } catch (error) {
       console.error("Failed to clear cache:", error);
       toast.error("Failed to clear cache. Please try again.");
+    }
+  };
+
+  const handleRoleSwitch = async (role) => {
+    if (role === user?.role) return;
+    try {
+      await switchRole(role);
+      setIsMobileMenuOpen(false);
+      router.push('/dashboard');
+      router.refresh();
+      toast.success(`Switched to ${roleLabels[role] || role}`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not switch profile');
     }
   };
 
@@ -204,7 +226,7 @@ export function Sidebar() {
                     {user?.name}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {user?.role}
+                    {roleLabels[user?.role] || user?.role}
                   </p>
                 </div>
               </div>
@@ -225,6 +247,20 @@ export function Sidebar() {
                     Profile
                   </Link>
                 </DropdownMenuItem>
+                {user?.roles?.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Switch profile
+                    </div>
+                    {user.roles.map((role) => (
+                      <DropdownMenuItem key={role} onClick={() => handleRoleSwitch(role)}>
+                        <Check className={cn("mr-2 h-4 w-4", role !== user.role && "invisible")} />
+                        {roleLabels[role] || role}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
                 {user?.role === 'ADMIN' && (
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>

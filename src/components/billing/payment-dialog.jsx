@@ -139,6 +139,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const [card, setCard] = useState(emptyCard);
   const [touched, setTouched] = useState({});
   const [attempted, setAttempted] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState(1);
+  const [paymentPlanAccepted, setPaymentPlanAccepted] = useState(false);
   const recaptchaVersion = catalog?.recaptchaVersion === "v3" ? "v3" : "v2";
   const usesRecaptchaV3 = recaptchaVersion === "v3";
 
@@ -202,6 +204,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     setCaptchaError("");
     setTouched({});
     setAttempted(false);
+    setInstallmentCount(1);
+    setPaymentPlanAccepted(false);
     if (!usesRecaptchaV3 && window.grecaptcha && widgetRef.current !== null) {
       try { window.grecaptcha.reset(widgetRef.current); } catch {}
     }
@@ -215,15 +219,26 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const markTouched = (field) => setTouched((current) => ({ ...current, [field]: true }));
   const cardErrors = validateCard(card);
   const visibleError = (field) => (attempted || touched[field]) ? cardErrors[field] : "";
-  const amountCents = purchase?.amount_cents ?? selection?.amountCents ?? 0;
   const description = purchase?.package_name ?? selection?.name ?? "Package purchase";
   const isInstructionPayment = (purchase?.payment_kind || selection?.paymentKind) === "INSTRUCTION_DEBT";
+  const canChoosePaymentPlan = !purchase
+    && !isInstructionPayment
+    && catalog?.paymentPlansEnabled
+    && selection?.paymentPlanEligible;
+  const totalAmountCents = purchase?.amount_cents ?? selection?.amountCents ?? 0;
+  const amountCents = installmentCount > 1 && !purchase
+    ? Math.floor(Number(totalAmountCents) / installmentCount) + (Number(totalAmountCents) % installmentCount > 0 ? 1 : 0)
+    : totalAmountCents;
 
   const submit = async () => {
     if (busyRef.current) return;
     setAttempted(true);
     if (Object.keys(cardErrors).length) {
       setError("Review the highlighted payment fields and try again.");
+      return;
+    }
+    if (installmentCount > 1 && !paymentPlanAccepted) {
+      setError("Accept the payment plan agreement to continue.");
       return;
     }
     if (!usesRecaptchaV3 && !captchaToken) {
@@ -252,7 +267,13 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
       if (!target) {
         const created = isInstructionPayment
           ? await billingAPI.createInstructionPayment({ instructionType: selection.instructionType, hours: selection.hours })
-          : await billingAPI.createPurchase({ packageId: selection.packageId, customHours: selection.customHours, checkout: true });
+          : await billingAPI.createPurchase({
+            packageId: selection.packageId,
+            customHours: selection.customHours,
+            checkout: true,
+            installmentCount,
+            paymentPlanAccepted: installmentCount > 1 && paymentPlanAccepted,
+          });
         target = created.data;
         pendingPurchaseRef.current = target;
       }
@@ -295,6 +316,10 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     setCanceling(true);
     setError("");
     try {
+      if (purchase?.payment_plan_id) {
+        onOpenChange(false);
+        return;
+      }
       const target = purchase || pendingPurchaseRef.current;
       if (target) {
         if (isInstructionPayment) await billingAPI.cancelInstructionPayment(target.id);
@@ -334,6 +359,43 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <p className="text-xs text-muted-foreground">{receipt.processorDisclosure}</p>
         <p className="text-sm text-muted-foreground">This receipt remains available from Billing under Transactions.</p>
       </div> : <div className="space-y-4">
+        {canChoosePaymentPlan && (
+          <section className="space-y-3 rounded-md border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="payment-option">Payment option</Label>
+              <select
+                id="payment-option"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={installmentCount}
+                onChange={(event) => {
+                  const count = Number(event.target.value);
+                  setInstallmentCount(count);
+                  setPaymentPlanAccepted(false);
+                }}
+              >
+                <option value={1}>Pay in full - {money.format(Number(totalAmountCents) / 100)}</option>
+                {(catalog.paymentPlanInstallmentOptions || []).map((count) => (
+                  <option key={count} value={count}>
+                    {count} monthly installments - about {money.format(Number(totalAmountCents) / count / 100)} each
+                  </option>
+                ))}
+              </select>
+            </div>
+            {installmentCount > 1 && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={paymentPlanAccepted}
+                  onChange={(event) => setPaymentPlanAccepted(event.target.checked)}
+                />
+                <span>
+                  I agree to pay {installmentCount} monthly installments. Credits are released after each successful payment. Future installments are paid manually and are not automatically charged.
+                </span>
+              </label>
+            )}
+          </section>
+        )}
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Accepted payment cards">
           <Image src="/payments/visa.svg" alt="Visa" width={48} height={32} className="h-8 w-12 object-contain" />
           <Image src="/payments/mastercard.svg" alt="Mastercard" width={48} height={32} className="h-8 w-12 object-contain" />
@@ -370,7 +432,7 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
         <p className="text-xs text-muted-foreground">Card details are sent for this transaction only and are not saved by Wings CRM.</p>
       </div>}
       <DialogFooter>
-        {!receipt && <Button variant="outline" onClick={cancelCheckout} disabled={submitting || canceling}>{canceling ? "Canceling..." : isInstructionPayment ? "Cancel payment" : "Cancel purchase"}</Button>}
+        {!receipt && <Button variant="outline" onClick={cancelCheckout} disabled={submitting || canceling}>{canceling ? "Canceling..." : purchase?.payment_plan_id ? "Close" : isInstructionPayment ? "Cancel payment" : "Cancel purchase"}</Button>}
         {receipt ? <Button onClick={() => onOpenChange(false)}>Done</Button> : <Button onClick={submit} disabled={submitting || canceling}><CreditCard className="h-4 w-4" />{submitting ? "Processing..." : `Pay ${money.format(Number(amountCents) / 100)}`}</Button>}
       </DialogFooter>
     </DialogContent>

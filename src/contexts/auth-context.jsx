@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
           id: response.data.id,
           name: response.data.name,
           role: response.data.role,
+          roles: response.data.roles || [response.data.role],
           email: response.data.email || '',
           phone: response.data.phone || null,
           smsConsent: !!response.data.smsConsent,
@@ -67,6 +68,7 @@ export function AuthProvider({ children }) {
         id: payload.id,
         name: payload.name,
         role: payload.role,
+        roles: payload.roles || [payload.role],
         email: payload.email || '',
         phone: payload.phone || null,
         smsConsent: !!payload.smsConsent,
@@ -107,6 +109,7 @@ export function AuthProvider({ children }) {
       id: payload.id,
       name: payload.name,
       role: payload.role,
+      roles: payload.roles || [payload.role],
       email: payload.email || '',
       phone: payload.phone || null,
       smsConsent: !!payload.smsConsent,
@@ -116,12 +119,18 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
+  const switchRole = async (role) => {
+    const response = await authAPI.switchRole(role);
+    setSessionFromToken(response.data.access);
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
     setSessionFromToken,
+    switchRole,
     isAuthenticated: !!user,
   };
 

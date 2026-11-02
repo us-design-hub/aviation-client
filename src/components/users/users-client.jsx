@@ -70,7 +70,7 @@ export function UsersClient() {
       user.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
       user.email?.toLowerCase().includes(filters.search.toLowerCase());
     
-    const matchesRole = filters.role === "all" || user.role === filters.role;
+    const matchesRole = filters.role === "all" || (user.roles || [user.role]).includes(filters.role);
     const matchesStatus = filters.status === "all" || 
       (filters.status === "active" && user.is_active) ||
       (filters.status === "inactive" && !user.is_active);
@@ -81,11 +81,11 @@ export function UsersClient() {
   // Get user counts by role
   const userCounts = {
     total: users.length,
-    students: users.filter(u => u.role === "STUDENT").length,
-    instructors: users.filter(u => u.role === "INSTRUCTOR").length,
-    admins: users.filter(u => u.role === "ADMIN").length,
-    maintenance: users.filter(u => u.role === "MAINT").length,
-    renters: users.filter(u => u.role === "RENTER").length,
+    students: users.filter(u => (u.roles || [u.role]).includes("STUDENT")).length,
+    instructors: users.filter(u => (u.roles || [u.role]).includes("INSTRUCTOR")).length,
+    admins: users.filter(u => (u.roles || [u.role]).includes("ADMIN")).length,
+    maintenance: users.filter(u => (u.roles || [u.role]).includes("MAINT")).length,
+    renters: users.filter(u => (u.roles || [u.role]).includes("RENTER")).length,
     active: users.filter(u => u.is_active).length,
     inactive: users.filter(u => !u.is_active).length,
   };

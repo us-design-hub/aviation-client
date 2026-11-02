@@ -143,7 +143,9 @@ export function UsersTable({
                   
                   <TableCell>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {getRoleBadge(user.role, user.is_lead_instructor)}
+                      {(user.roles || [user.role]).map((role) => (
+                        <div key={role}>{getRoleBadge(role, role === 'INSTRUCTOR' && user.is_lead_instructor)}</div>
+                      ))}
                       {user.category && (
                         <Badge variant="outline" className="text-xs">
                           {user.category === 'PRIVATE_PILOT' ? 'Private Pilot' : user.category === 'INSTRUMENT' ? 'Instrument' : user.category === 'COMMERCIAL_PILOT' ? 'Commercial Pilot' : user.category}

@@ -19,7 +19,11 @@ const userSchema = z.object({
   role: z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"], {
     required_error: "Role is required",
   }),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  roles: z.array(z.enum(["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"])).optional(),
+  password: z.string().refine(
+    (value) => value === "" || value.length >= 6,
+    "Password must be at least 6 characters",
+  ),
   isLeadInstructor: z.boolean().optional(),
   is_active: z.boolean().optional(),
   category: z.string().optional(),
@@ -36,6 +40,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
       email: user?.email || "",
       name: user?.name || "",
       role: user?.role || "STUDENT",
+      roles: user?.roles || [user?.role || "STUDENT"],
       password: "",
       isLeadInstructor: user?.is_lead_instructor || false,
       is_active: user?.is_active !== undefined ? user.is_active : true,
@@ -45,6 +50,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
   });
 
   const watchedRole = form.watch("role");
+  const watchedRoles = form.watch("roles") || [];
 
   const handleSubmit = async (data) => {
     try {
@@ -54,9 +60,10 @@ export function UserForm({ user, onSubmit, onCancel }) {
         email: data.email,
         name: data.name,
         role: data.role,
+        roles: [...new Set([data.role, ...(data.roles || [])])],
         isLeadInstructor: data.isLeadInstructor,
         is_active: data.is_active,
-        category: data.role === "STUDENT" ? (data.category || null) : null,
+        category: [data.role, ...(data.roles || [])].includes("STUDENT") ? (data.category || null) : null,
         phone: data.phone || null,
       };
 
@@ -204,6 +211,8 @@ export function UserForm({ user, onSubmit, onCancel }) {
                       <Input 
                         type="password" 
                         placeholder="Enter password" 
+                        required
+                        minLength={6}
                         {...field} 
                       />
                     </FormControl>
@@ -234,7 +243,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
-                    Role
+                    Primary Role
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
@@ -276,14 +285,58 @@ export function UserForm({ user, onSubmit, onCancel }) {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    {getRoleDescription(watchedRole)}
+                    The profile used immediately after sign-in. {getRoleDescription(watchedRole)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {watchedRole === "INSTRUCTOR" && (
+            <FormField
+              control={form.control}
+              name="roles"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assigned Roles</FormLabel>
+                  <FormDescription>
+                    Users with multiple roles can switch profiles from the Account menu.
+                  </FormDescription>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {["STUDENT", "INSTRUCTOR", "ADMIN", "MAINT", "RENTER"].map((role) => {
+                      const checked = role === watchedRole || watchedRoles.includes(role);
+                      return (
+                        <label key={role} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-4 w-4 accent-current"
+                            checked={checked}
+                            disabled={role === watchedRole}
+                            onChange={(event) => {
+                              const current = field.value || [];
+                              field.onChange(event.target.checked
+                                ? [...new Set([...current, role])]
+                                : current.filter((item) => item !== role));
+                            }}
+                          />
+                          <span>
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              {getRoleIcon(role)}
+                              {role === "MAINT" ? "Maintenance" : role.charAt(0) + role.slice(1).toLowerCase()}
+                            </span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {getRoleDescription(role)}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {(watchedRole === "INSTRUCTOR" || watchedRoles.includes("INSTRUCTOR")) && (
               <FormField
                 control={form.control}
                 name="isLeadInstructor"
@@ -309,7 +362,7 @@ export function UserForm({ user, onSubmit, onCancel }) {
               />
             )}
 
-            {watchedRole === "STUDENT" && (
+            {(watchedRole === "STUDENT" || watchedRoles.includes("STUDENT")) && (
               <FormField
                 control={form.control}
                 name="category"
