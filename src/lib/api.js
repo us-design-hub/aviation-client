@@ -97,7 +97,7 @@ export const usersAPI = {
   getInstructors: () => api.get('/users/instructors'),
   getRenters: () => api.get('/users/renters'),
   create: (userData) => api.post('/users', userData),
-  update: (id, userData) => api.patch(`/users/${id}`, userData),
+  update: (id, userData) => api.patch(`/users/${id}`, userData, { timeout: 15000 }),
   delete: (id) => api.delete(`/users/${id}`),
   resetPassword: (id, password) => api.post(`/users/${id}/reset-password`, { password }),
   // Instructor assignments

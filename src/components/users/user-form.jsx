@@ -128,6 +128,16 @@ export function UserForm({ user, onSubmit, onCancel }) {
     }
   };
 
+  const submitCurrentValues = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      const firstError = Object.keys(form.formState.errors)[0];
+      if (firstError) form.setFocus(firstError);
+      return;
+    }
+    await handleSubmit(form.getValues());
+  };
+
   const getRoleDescription = (role) => {
     switch (role) {
       case "STUDENT":
@@ -164,7 +174,13 @@ export function UserForm({ user, onSubmit, onCancel }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submitCurrentValues();
+        }}
+        className="space-y-6"
+      >
         {/* Basic Information */}
         <Card>
           <CardHeader className="pb-3">
@@ -504,7 +520,8 @@ export function UserForm({ user, onSubmit, onCancel }) {
             Cancel
           </Button>
           <Button 
-            type="submit" 
+            type="button"
+            onClick={submitCurrentValues}
             disabled={loading}
             className="bg-golden-gradient hover:bg-golden-gradient/90"
           >
