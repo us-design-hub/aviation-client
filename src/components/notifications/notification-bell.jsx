@@ -165,6 +165,8 @@ export function NotificationBell() {
       case 'instruction_billing_warning':
       case 'instruction_billing_blocked':
         return '/dashboard';
+      case 'payment_installment_reminder':
+        return '/billing';
       default:
         return '/dashboard';
     }
@@ -259,6 +261,11 @@ export function NotificationBell() {
         return {
           title: 'Scheduling Hold',
           message: payload.message || 'Flight scheduling is blocked until instructor time is paid down',
+        };
+      case 'payment_installment_reminder':
+        return {
+          title: 'Installment Payment Reminder',
+          message: payload.message || 'A payment-plan installment is due soon',
         };
       default:
         return {

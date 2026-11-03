@@ -229,6 +229,8 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
   const amountCents = installmentCount > 1 && !purchase
     ? Math.floor(Number(totalAmountCents) / installmentCount) + (Number(totalAmountCents) % installmentCount > 0 ? 1 : 0)
     : totalAmountCents;
+  const isPaymentPlan = installmentCount > 1 || Boolean(purchase?.payment_plan_id);
+  const headerTotalCents = purchase?.plan_total_amount_cents ?? totalAmountCents;
 
   const submit = async () => {
     if (busyRef.current) return;
@@ -342,7 +344,9 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
       <DialogHeader>
         <DialogTitle>{receipt ? "Payment Complete" : "Secure Payment"}</DialogTitle>
-        <DialogDescription>{description} · {money.format(Number(amountCents) / 100)}</DialogDescription>
+        <DialogDescription>
+          {description} - {money.format(Number(headerTotalCents) / 100)}{isPaymentPlan ? " total" : ""}
+        </DialogDescription>
       </DialogHeader>
       {!receipt && <p className="text-xs text-muted-foreground">Payment services are provided by Intuit Payments Inc.</p>}
       {receipt ? <div className="space-y-4 py-4">
@@ -382,17 +386,20 @@ export function PaymentDialog({ open, onOpenChange, purchase, selection, catalog
               </select>
             </div>
             {installmentCount > 1 && (
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4"
-                  checked={paymentPlanAccepted}
-                  onChange={(event) => setPaymentPlanAccepted(event.target.checked)}
-                />
-                <span>
-                  I agree to pay {installmentCount} monthly installments. Credits are released after each successful payment. Future installments are paid manually and are not automatically charged.
-                </span>
-              </label>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Due today: {money.format(Number(amountCents) / 100)}</p>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={paymentPlanAccepted}
+                    onChange={(event) => setPaymentPlanAccepted(event.target.checked)}
+                  />
+                  <span>
+                    I agree to pay {installmentCount} monthly installments. Credits are released after each successful payment. Future installments are paid manually and are not automatically charged. Email and portal reminders begin 3 days before each due date and repeat every 24 hours; text reminders are also sent when SMS notifications are enabled.
+                  </span>
+                </label>
+              </div>
             )}
           </section>
         )}
