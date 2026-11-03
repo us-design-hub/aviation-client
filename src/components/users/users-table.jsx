@@ -35,7 +35,7 @@ export function UsersTable({
         )}>
           {labels[role] || role}{isRoleActive ? "" : " (Inactive)"}
         </span>
-        {isLeadInstructor && (
+        {!!isLeadInstructor && (
           <span className="inline-flex items-center rounded-full bg-golden/12 px-2 py-0.5 text-xs font-semibold text-golden">
             Lead
           </span>
@@ -204,7 +204,7 @@ export function UsersTable({
                           Reset Password
                         </DropdownMenuItem>
                         
-                        {(user.role === "INSTRUCTOR" || user.role === "STUDENT") && (
+                        {(user.roles || [user.role]).some((role) => role === "INSTRUCTOR" || role === "STUDENT") && (
                           <DropdownMenuItem 
                             onClick={(e) => {
                               e.stopPropagation();

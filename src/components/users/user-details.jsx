@@ -31,6 +31,8 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const formatMoney = (cents = 0) => money.format(Number(cents || 0) / 100);
 
 export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onManageAssignments }) {
+  const assignedRoles = user.roles || [user.role];
+  const activeRoles = user.activeRoles || assignedRoles;
   const [userStats, setUserStats] = useState({
     totalLessons: 0,
     completedLessons: 0,
@@ -202,7 +204,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
           {user.name || user.email}
         </SheetTitle>
         <SheetDescription>
-          {getRoleName(user.role)} • {user.is_active ? "Active" : "Inactive"}
+          {assignedRoles.map(getRoleName).join(" / ")} - {user.is_active ? "Account active" : "Account inactive"}
         </SheetDescription>
       </SheetHeader>
 
@@ -218,7 +220,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
           Reset Password
         </Button>
         
-        {(user.role === "INSTRUCTOR" || user.role === "STUDENT") && (
+        {(assignedRoles.includes("INSTRUCTOR") || assignedRoles.includes("STUDENT")) && (
           <Button variant="outline" size="sm" onClick={onManageAssignments}>
             <Users2 className="h-4 w-4 mr-2" />
             Manage Assignments
@@ -260,19 +262,27 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
               <div className="flex items-center gap-3">
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Role</p>
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn(
-                      "text-xs",
-                      user.role === "STUDENT" && "bg-blue-50 text-blue-700 border-blue-200",
-                      user.role === "RENTER" && "bg-amber-50 text-amber-700 border-amber-200",
-                      user.role === "INSTRUCTOR" && "bg-purple-50 text-purple-700 border-purple-200",
-                      user.role === "ADMIN" && "bg-green-50 text-green-700 border-green-200",
-                      user.role === "MAINT" && "bg-orange-50 text-orange-700 border-orange-200"
-                    )}>
-                      {getRoleName(user.role)}
-                    </Badge>
-                    {user.is_lead_instructor && (
+                  <p className="text-sm font-medium">Assigned Roles</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {assignedRoles.map((role) => {
+                      const isRoleActive = activeRoles.includes(role);
+                      return (
+                        <Badge key={role} className={cn(
+                          "text-xs",
+                          !isRoleActive && "bg-muted text-muted-foreground border-border",
+                          isRoleActive && role === "STUDENT" && "bg-blue-50 text-blue-700 border-blue-200",
+                          isRoleActive && role === "RENTER" && "bg-amber-50 text-amber-700 border-amber-200",
+                          isRoleActive && role === "INSTRUCTOR" && "bg-purple-50 text-purple-700 border-purple-200",
+                          isRoleActive && role === "ADMIN" && "bg-green-50 text-green-700 border-green-200",
+                          isRoleActive && role === "MAINT" && "bg-orange-50 text-orange-700 border-orange-200"
+                        )}>
+                          {getRoleName(role)}
+                          {role === user.role ? " (Primary)" : ""}
+                          {isRoleActive ? "" : " (Inactive)"}
+                        </Badge>
+                      );
+                    })}
+                    {!!user.is_lead_instructor && assignedRoles.includes("INSTRUCTOR") && (
                       <Badge variant="outline" className="text-xs">
                         Lead Instructor
                       </Badge>
@@ -284,7 +294,7 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
               <div className="flex items-center gap-3">
                 <Activity className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Status</p>
+                  <p className="text-sm font-medium">Account Status</p>
                   <Badge 
                     variant={user.is_active ? "secondary" : "outline"}
                     className={user.is_active 
@@ -554,11 +564,17 @@ export function UserDetails({ user, onEdit, onResetPassword, onDeleteUser, onMan
             </div>
             
             <div>
-              <p className="font-medium">Account Type</p>
-              <p className="text-muted-foreground">{getRoleName(user.role)}</p>
+              <p className="font-medium">Assigned Roles</p>
+              <p className="text-muted-foreground">
+                {assignedRoles.map((role) => {
+                  const state = activeRoles.includes(role) ? "active" : "inactive";
+                  const primary = role === user.role ? ", primary" : "";
+                  return `${getRoleName(role)} (${state}${primary})`;
+                }).join(" / ")}
+              </p>
             </div>
             
-            {user.role === "INSTRUCTOR" && (
+            {assignedRoles.includes("INSTRUCTOR") && (
               <div>
                 <p className="font-medium">Instructor Level</p>
                 <p className="text-muted-foreground">
