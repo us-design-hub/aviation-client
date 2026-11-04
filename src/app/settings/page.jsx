@@ -236,14 +236,21 @@ function SettingsClient() {
   };
 
   const handleTestSms = async () => {
-    if (!testPhone.trim()) {
+    const phone = testPhone.trim();
+    if (!phone) {
       toast.error("Enter a phone number first");
+      return;
+    }
+
+    const digits = phone.replace(/\D/g, "");
+    if (!(digits.length === 10 || (digits.length === 11 && digits.startsWith("1")))) {
+      toast.error("Enter a valid US phone number, for example +1 631 791 6667");
       return;
     }
 
     try {
       setTestingSms(true);
-      const response = await settingsAPI.testSms(testPhone.trim());
+      const response = await settingsAPI.testSms(phone);
       const result = response.data;
 
       if (result.success) {
@@ -254,7 +261,12 @@ function SettingsClient() {
       }
     } catch (error) {
       console.error("Error testing SMS:", error);
-      toast.error(error.response?.data?.message || error.response?.data?.error || "Failed to send test SMS");
+      const result = error.response?.data;
+      toast.error(result?.error || result?.message || "Failed to send test SMS", {
+        description: result?.code ? `Twilio error ${result.code}` : undefined,
+        duration: 10000,
+      });
+      await fetchSmsStatus();
     } finally {
       setTestingSms(false);
     }
@@ -706,7 +718,7 @@ function SettingsClient() {
                   <Input
                     id="test-phone"
                     type="tel"
-                    placeholder="+1XXXXXXXXXX"
+                    placeholder="+1 631 791 6667"
                     value={testPhone}
                     onChange={(e) => setTestPhone(e.target.value)}
                   />
