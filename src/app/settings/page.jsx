@@ -54,6 +54,8 @@ function SettingsClient() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testingSms, setTestingSms] = useState(false);
+  const [loadingSmsStatus, setLoadingSmsStatus] = useState(true);
+  const [smsStatus, setSmsStatus] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testPhone, setTestPhone] = useState("");
@@ -81,7 +83,21 @@ function SettingsClient() {
   useEffect(() => {
     fetchSettings();
     fetchUserEmail();
+    fetchSmsStatus();
   }, []);
+
+  const fetchSmsStatus = async () => {
+    try {
+      setLoadingSmsStatus(true);
+      const response = await settingsAPI.getSmsStatus();
+      setSmsStatus(response.data);
+    } catch (error) {
+      console.error("Error fetching SMS status:", error);
+      setSmsStatus(null);
+    } finally {
+      setLoadingSmsStatus(false);
+    }
+  };
 
   const fetchUserEmail = async () => {
     try {
@@ -232,6 +248,7 @@ function SettingsClient() {
 
       if (result.success) {
         toast.success(result.message || "Test SMS sent");
+        await fetchSmsStatus();
       } else {
         toast.error(result.message || result.error || "Test SMS failed");
       }
@@ -643,17 +660,31 @@ function SettingsClient() {
 
         <TabsContent value="sms" className="space-y-5">
           <Card>
-            <CardContent className="flex gap-3 pt-6">
-              <Info className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-              <div className="text-sm text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">Twilio is configured on the server</p>
-                <p>
-                  SMS credentials come from the <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_ACCOUNT_SID</code>,{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_AUTH_TOKEN</code>, and{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 text-xs">TWILIO_PHONE_NUMBER</code> environment
-                  variables, not from this page. Recipients must also opt in to SMS on their own profile.
-                </p>
-              </div>
+            <CardContent className="pt-6">
+              {loadingSmsStatus ? <Skeleton className="h-20 w-full" /> : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex gap-3">
+                    {smsStatus?.configured
+                      ? <Check className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                      : <X className="mt-0.5 size-5 shrink-0 text-red-600" />}
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground">
+                        {smsStatus?.configured ? "Twilio SMS is configured" : "Twilio SMS configuration is incomplete"}
+                      </p>
+                      {smsStatus?.missing?.length > 0 && (
+                        <p>Missing Railway variables: {smsStatus.missing.join(", ")}</p>
+                      )}
+                      <p>
+                        Delivery tracking is {smsStatus?.statusCallback ? "active" : "not configured"}. Recipients must opt in from their Profile.
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchSmsStatus} disabled={loadingSmsStatus}>
+                    <RefreshCw className="mr-2 size-4" />
+                    Refresh
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
       <Card>
@@ -699,6 +730,43 @@ function SettingsClient() {
             </div>
           </CardContent>
         </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent delivery activity</CardTitle>
+              <CardDescription>Twilio acceptance and carrier delivery results for the latest messages.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingSmsStatus ? <Skeleton className="h-24 w-full" /> : smsStatus?.recentMessages?.length ? (
+                <div className="divide-y rounded-md border">
+                  {smsStatus.recentMessages.map((message) => (
+                    <div key={message.message_sid} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm">
+                      <div>
+                        <p className="font-medium">{message.message_type.replaceAll("_", " ")}</p>
+                        <p className="text-xs text-muted-foreground">{message.to_phone || "Recipient unavailable"}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className={message.status === "delivered"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : ["failed", "undelivered"].includes(message.status)
+                            ? "border-red-200 bg-red-50 text-red-700"
+                            : ""}>
+                          {message.status}
+                        </Badge>
+                        {(message.error_code || message.error_message) && (
+                          <p className="mt-1 max-w-sm text-xs text-red-600">
+                            {[message.error_code, message.error_message].filter(Boolean).join(": ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No tracked SMS messages yet. Send a test message to begin.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-5">
@@ -720,6 +788,7 @@ function SettingsClient() {
           </Button>
         </CardContent>
       </Card>
+
         </TabsContent>
       </Tabs>
     </div>

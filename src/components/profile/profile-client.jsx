@@ -242,6 +242,15 @@ export function ProfileClient() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const phoneDigits = profile.phone.replace(/\D/g, "");
+    if (profile.smsConsent && !profile.phone.trim()) {
+      toast.error('Add a mobile number before enabling SMS notifications');
+      return;
+    }
+    if (profile.phone.trim() && (phoneDigits.length < 8 || phoneDigits.length > 15)) {
+      toast.error('Enter a valid mobile number with country and area code');
+      return;
+    }
     try {
       setSaving(true);
       const payload = {
@@ -255,7 +264,10 @@ export function ProfileClient() {
         setSessionFromToken(res.data.access);
       }
       // Mirror the trimmed values back so a saved form does not read as dirty.
-      const normalized = { ...payload, phone: payload.phone || '' };
+      const normalized = {
+        ...payload,
+        phone: res.data?.user?.phone || payload.phone || '',
+      };
       setProfile(normalized);
       setSaved(normalized);
       toast.success('Profile updated');

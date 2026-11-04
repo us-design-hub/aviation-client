@@ -264,6 +264,7 @@ export const settingsAPI = {
   getSmtp: () => api.get('/settings/smtp'),
   updateSmtp: (config) => api.post('/settings/smtp', config),
   testSmtp: (sendTestTo) => api.post('/settings/smtp/test', { sendTestTo }),
+  getSmsStatus: () => api.get('/settings/sms/status'),
   testSms: (to) => api.post('/settings/sms/test', { to }),
 };
 
